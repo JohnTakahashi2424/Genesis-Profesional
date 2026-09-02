@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "Vue.volar",
+  "[vue]": {
+    "editor.defaultFormatter": "Vue.volar"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    "class:\\s*?[\"'`]([^\"'`]*).*?,"
+  ],
+  "tailwindCSS.includeLanguages": {
+    "vue": "html"
+  }
+}
