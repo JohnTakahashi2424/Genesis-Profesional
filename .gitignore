@@ -8,6 +8,10 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+/vendor/
+composer.phar
+.phpunit.result.cache
+/storage/*.key
 
 # Logs
 npm-debug.log*
