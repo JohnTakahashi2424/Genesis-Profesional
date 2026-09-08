@@ -1,7 +1,16 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import LandingPage from './components/LandingPage.vue'
+
+const handleLogin = () => {
+  console.log('Navegar a login')
+}
+
+const handleRegistro = () => {
+  console.log('Navegar a registro')
+}
 </script>
 
 <template>
-  <HelloWorld />
+  <LandingPage @login="handleLogin" @registro="handleRegistro" />
 </template>
+
