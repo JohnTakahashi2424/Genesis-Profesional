@@ -127,14 +127,14 @@ const continuarAPaso2 = async () => {
       errores.value.correo = ''
       estadoFlujo.value = 2
     } else {
-      estadoFlujo.value = 2
+      errores.value.correo = res?.mensaje || 'No fue posible procesar el correo institucional'
     }
   } catch (err) {
-    if (err.response && err.response.status === 422 && err.response.data) {
-      errores.value.correo = err.response.data.mensaje || 'Correo institucional ya registrado'
+    if (err.response && err.response.data) {
+      const datos = err.response.data
+      errores.value.correo = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional no válido o no disponible'
     } else {
-      // Si el endpoint aún no está desplegado en el backend (ej. 404), avanzar directamente al Paso 2
-      estadoFlujo.value = 2
+      errores.value.correo = 'No se pudo conectar con el servidor para verificar el correo'
     }
   } finally {
     loading.value = false

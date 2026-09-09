@@ -107,7 +107,9 @@ class AuthController extends Controller
         // Comprobar si el estudiante está registrado y activo en la tabla de estudiantes
         $estudiante = null;
         if ($rol === 'estudiante') {
-            $estudiante = Estudiante::where('correo_secundario', $correo)->first();
+            $estudiante = Estudiante::where('correo_secundario', $correo)
+                ->orWhere('correo_principal', $correo)
+                ->first();
 
             // Verificación: existencia del estudiante en la base de datos de estudiantes
             if (!$estudiante) {
@@ -191,19 +193,51 @@ class AuthController extends Controller
 
         $correo = strtolower(trim($request->correo));
 
+        // 1. Verificar si ya existe una cuenta de usuario con este correo
         $existe = User::where('correo_institucional', $correo)->exists();
         if ($existe) {
             return response()->json([
                 'status' => 'error',
                 'disponible' => false,
-                'mensaje' => 'Correo institucional ya registrado'
+                'mensaje' => 'Correo institucional ya registrado. Intente iniciar sesión.'
             ], 422);
+        }
+
+        // 2. Determinación de rol inicial
+        $rol = 'estudiante';
+        if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano')) {
+            $rol = 'vice_decano';
+        } elseif (!Str::startsWith($correo, 'us')) {
+            $rol = 'supervisor';
+        }
+
+        // 3. Verificación en la tabla 'estudiantes' si es rol estudiante
+        if ($rol === 'estudiante') {
+            $estudiante = Estudiante::where('correo_secundario', $correo)
+                ->orWhere('correo_principal', $correo)
+                ->first();
+
+            if (!$estudiante) {
+                return response()->json([
+                    'status' => 'error',
+                    'disponible' => false,
+                    'mensaje' => 'No fue posible procesar el registro con el correo institucional proporcionado. Verifique sus datos o contacte a administración.'
+                ], 422);
+            }
+
+            if (!$estudiante->es_estudiante_activo) {
+                return response()->json([
+                    'status' => 'error',
+                    'disponible' => false,
+                    'mensaje' => 'El estudiante asociado a este correo institucional no se encuentra en estado activo en el sistema académico.'
+                ], 422);
+            }
         }
 
         return response()->json([
             'status' => 'success',
             'disponible' => true,
-            'mensaje' => 'Correo institucional disponible'
+            'mensaje' => 'Correo institucional disponible y verificado'
         ], 200);
     }
 
