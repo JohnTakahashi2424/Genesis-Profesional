@@ -22,4 +22,13 @@ Route::prefix('auth')->group(function () {
 
     // Inicio de sesión con protección contra enumeración de usuarios
     Route::post('/login', [AuthController::class, 'login'])->name('api.auth.login');
+
+    // Recuperación de contraseña: envío de código vía Brevo SMTP
+    Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigo'])->name('api.auth.enviar_codigo');
+
+    // Recuperación de contraseña: comprobación del código de 6 dígitos
+    Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo'])->name('api.auth.verificar_codigo');
+
+    // Recuperación de contraseña: cambio seguro de contraseña
+    Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
