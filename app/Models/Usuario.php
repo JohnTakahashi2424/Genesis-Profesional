@@ -26,6 +26,10 @@ class Usuario extends Model
         'password',
     ];
 
+    protected $casts = [
+        'fecha_registro' => 'datetime',
+    ];
+
     /**
      * Un usuario tiene un perfil de pasante.
      */

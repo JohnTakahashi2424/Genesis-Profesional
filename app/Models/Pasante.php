@@ -4,13 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pasante extends Model
 {
     protected $table = 'pasantes';
 
-    // La base de datos tiene created_at y updated_at pero tal vez no estables. Mantenemos true para Eloquent.
     public $timestamps = true;
 
     protected $fillable = [
@@ -21,6 +19,10 @@ class Pasante extends Model
         'fase_actual',
         'supervisor_id',
         'horas_aprobadas',
+    ];
+
+    protected $casts = [
+        'horas_aprobadas' => 'decimal:2',
     ];
 
     /**

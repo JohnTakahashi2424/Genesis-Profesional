@@ -1,14 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-
-// Rutas de API
-Route::prefix('api')->group(function () {
-    // Autenticación
-    Route::post('/auth/login', [AuthController::class, 'login'])->name('api.login');
-    Route::post('/auth/registro', [AuthController::class, 'registro'])->name('api.registro');
-});
 
 // Ruta para la vista de login (Blade) - Si prefieren usar blade en vez de Vue
 Route::get('/login', function () {

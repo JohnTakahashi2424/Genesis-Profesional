@@ -4,182 +4,174 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\Models\Usuario;
-use App\Models\PersonalAdministrativo;
+use App\Http\Requests\RegistroRequest;
+use App\Models\User;
 use App\Models\Estudiante;
-use App\Models\Pasante;
 
 class AuthController extends Controller
 {
     /**
-     * Endpoint de Inicio de Sesión
+     * Endpoint de Inicio de Sesión (Protegido contra enumeración de usuarios / phishing)
      * POST /api/auth/login
      */
     public function login(Request $request)
     {
         $request->validate([
             'correo' => 'required|email',
-            'contrasena' => 'required'
+            'contrasena' => 'required|string'
+        ], [
+            'correo.required' => 'El correo institucional es obligatorio.',
+            'correo.email' => 'El formato del correo institucional es inválido.',
+            'contrasena.required' => 'La contraseña es obligatoria.',
         ]);
 
         $correo = strtolower(trim($request->correo));
         $contrasena = $request->contrasena;
 
-        $usuario = null;
-        $rol = null;
+        // Buscar el usuario en la tabla 'users'
+        $user = User::where('correo_institucional', $correo)->first();
 
-        // 1. Buscar en tabla usuarios (Tabla principal unificada)
-        $usuarioDb = Usuario::where('correo_institucional', $correo)->first();
-
-        if ($usuarioDb && Hash::check($contrasena, $usuarioDb->password)) {
-            $usuario = [
-                'id' => $usuarioDb->id,
-                'nombres' => $usuarioDb->nombres,
-                'apellidos' => $usuarioDb->apellidos,
-                'correo' => $usuarioDb->correo_institucional
-            ];
-            $rol = $usuarioDb->rol; // Rol asignado en la BD
-
-            // Regla: Si el rol es pasante, su correo debe empezar con "us"
-            if ($rol === 'pasante' && !Str::startsWith($correo, 'us')) {
-                return response()->json(['mensaje' => 'El correo de pasante debe iniciar con "us".'], 400);
-            }
+        // Política Anti-Phishing (OWASP): No revelar si el fallo se debe al correo o a la contraseña
+        if (!$user || !Hash::check($contrasena, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'Credenciales de acceso incorrectas o cuenta no autorizada.'
+            ], 401);
         }
 
-        // 2. Buscar en tabla personal_administrativo (caso alterno / sincronización)
-        if (!$usuario) {
-            $personalDb = PersonalAdministrativo::where('correo_institucional', $correo)->first();
-
-            if ($personalDb && Hash::check($contrasena, $personalDb->password)) {
-                $usuario = [
-                    'id' => $personalDb->id,
-                    'nombres' => $personalDb->nombres,
-                    'apellidos' => $personalDb->apellidos,
-                    'correo' => $personalDb->correo_institucional
-                ];
-                
-                $cargo = strtolower($personalDb->cargo);
-                if (str_contains($cargo, 'decano')) {
-                    $rol = 'vice_decano';
-                } else {
-                    $rol = 'supervisor';
-                }
-            }
+        // Verificar estado de la cuenta
+        if ($user->estado !== 'activo') {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'La cuenta no se encuentra activa en el sistema.'
+            ], 403);
         }
 
-        if (!$usuario || !$rol) {
-            return response()->json(['mensaje' => 'Correo o contraseña incorrectos.'], 401);
+        $usuarioData = [
+            'id' => $user->id,
+            'nombres' => $user->nombres,
+            'apellidos' => $user->apellidos,
+            'correo' => $user->correo_institucional,
+            'rol' => $user->rol,
+        ];
+
+        // Si es un estudiante, enriquecer los datos con su información del padrón de estudiantes
+        if ($user->rol === 'estudiante' && $user->estudiante) {
+            $usuarioData['codigo_estudiante'] = $user->estudiante->codigo_estudiante;
+            $usuarioData['carrera'] = $user->estudiante->carrera;
         }
 
-        $usuario['rol'] = $rol;
-
-        // Rutas de redirección sugeridas según rol
+        // Rutas sugeridas para redirección en frontend
         $rutas = [
+            'estudiante' => '/dashboard/estudiante',
             'pasante' => '/dashboard/pasante',
             'supervisor' => '/dashboard/supervisor',
             'vice_decano' => '/dashboard/vicedecano'
         ];
 
         return response()->json([
+            'status' => 'success',
             'mensaje' => 'Inicio de sesión exitoso.',
-            'usuario' => $usuario,
-            'redireccion' => $rutas[$rol] ?? '/login'
-        ]);
+            'usuario' => $usuarioData,
+            'redireccion' => $rutas[$user->rol] ?? '/dashboard'
+        ], 200);
     }
 
     /**
-     * Endpoint de Registro Institucional
+     * Endpoint de Registro con la Entidad User
      * POST /api/auth/registro
      */
-    public function registro(Request $request)
+    public function registro(RegistroRequest $request)
     {
-        $request->validate([
-            'correo' => 'required|email',
-            'contrasena' => 'required|string|min:4'
-        ]);
-
+        // 1. Sanitización de entradas (limpieza de espacios múltiples y normalización a minúsculas)
+        $nombres = trim(preg_replace('/\s+/', ' ', $request->nombres));
+        $apellidos = trim(preg_replace('/\s+/', ' ', $request->apellidos));
         $correo = strtolower(trim($request->correo));
+        $contrasena = $request->contrasena;
 
-        // Si el correo empieza con "us" se trata de un Estudiante/Pasante
-        if (Str::startsWith($correo, 'us')) {
-            // 1. Validar que el estudiante exista en la base de datos institucional (usando el correo secundario o principal)
-            $estudiante = Estudiante::where('correo_secundario', $correo)
-                ->orWhere('correo_principal', $correo)
-                ->first();
-            
-            if (!$estudiante) {
-                return response()->json(['mensaje' => 'Este correo no pertenece a un estudiante activo matriculado.'], 400);
-            }
-
-            // 2. Verificar si ya se le creó una cuenta en la tabla 'usuarios'
-            $existe = Usuario::where('correo_institucional', $correo)->exists();
-            if ($existe) {
-                return response()->json(['mensaje' => 'Esta cuenta ya está registrada. Por favor inicia sesión.'], 400);
-            }
-
-            // 3. Insertar usuario usando los datos oficiales de la base de datos institucional de estudiantes
-            $usuario = Usuario::create([
-                'nombres' => $estudiante->nombres,
-                'apellidos' => $estudiante->apellidos,
-                'correo_institucional' => $correo,
-                'password' => Hash::make($request->contrasena),
-                'estado' => 'activo',
-                'rol' => 'pasante',
-                'fecha_registro' => now()
-            ]);
-
-            // 4. Crear registro asociado en la tabla pasantes automáticamente
-            Pasante::create([
-                'usuario_id' => $usuario->id,
-                'area' => $estudiante->carrera ?? 'Ingeniería en Sistemas',
-                'tipo_pasantia' => 'Por definir',
-                'estado' => 'en_proceso',
-                'fase_actual' => 'Pendiente',
-            ]);
-
-            return response()->json([
-                'mensaje' => 'Cuenta de pasante verificada y creada con éxito. Ahora puedes iniciar sesión.'
-            ], 201);
-        } else {
-            // Se trata de Personal Administrativo (Supervisor o Vicedecano)
-            // 1. Validar que el personal exista en la base de datos institucional (personal_administrativo)
-            $personal = PersonalAdministrativo::where('correo_institucional', $correo)->first();
-            if (!$personal) {
-                return response()->json(['mensaje' => 'Este correo no pertenece al personal administrativo registrado.'], 400);
-            }
-
-            // 2. Verificar si ya tiene cuenta en la tabla 'usuarios'
-            $existeUser = Usuario::where('correo_institucional', $correo)->exists();
-            if ($existeUser) {
-                return response()->json(['mensaje' => 'Esta cuenta administrativa ya está registrada. Por favor inicia sesión.'], 400);
-            }
-
-            // 3. Determinar rol
+        // 2. Determinación de rol inicial escalable
+        $rol = 'estudiante';
+        if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano')) {
+            $rol = 'vice_decano';
+        } elseif (!Str::startsWith($correo, 'us')) {
             $rol = 'supervisor';
-            if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano') || strtolower($personal->cargo) === 'vice_decano') {
-                $rol = 'vice_decano';
+        }
+
+        // 3. Verificación contra el padrón de Estudiantes
+        // Comprobar si el estudiante está registrado y activo en la tabla de estudiantes
+        $estudiante = null;
+        if ($rol === 'estudiante') {
+            $estudiante = Estudiante::where('correo_secundario', $correo)->first();
+
+            // Verificación: existencia del estudiante en la base de datos de estudiantes
+            if (!$estudiante) {
+                return response()->json([
+                    'status' => 'error',
+                    'mensaje' => 'No fue posible procesar el registro con el correo institucional proporcionado. Verifique sus datos o contacte a administración.'
+                ], 400);
             }
 
-            // 4. Crear en tabla usuarios (tabla de login unificada)
-            $usuario = Usuario::create([
-                'nombres' => $personal->nombres,
-                'apellidos' => $personal->apellidos,
+            // Verificación: estado académico activo
+            if (!$estudiante->es_estudiante_activo) {
+                return response()->json([
+                    'status' => 'error',
+                    'mensaje' => 'El estudiante asociado a este correo institucional no se encuentra en estado activo en el sistema académico.'
+                ], 403);
+            }
+        }
+
+        // 4. Transacción atómica en la base de datos PostgreSQL
+        DB::beginTransaction();
+
+        try {
+            $user = User::create([
+                'nombres' => $nombres,
+                'apellidos' => $apellidos,
                 'correo_institucional' => $correo,
-                'password' => Hash::make($request->contrasena),
-                'estado' => 'activo',
+                'password' => $contrasena, // Cast automático a hashed en el modelo User
                 'rol' => $rol,
-                'fecha_registro' => now()
+                'estado' => 'activo',
             ]);
 
-            // 5. Actualizar la contraseña en la tabla personal_administrativo para mantener sincronía
-            $personal->update([
-                'password' => Hash::make($request->contrasena)
-            ]);
+            DB::commit();
+
+            $usuarioData = [
+                'id' => $user->id,
+                'nombres' => $user->nombres,
+                'apellidos' => $user->apellidos,
+                'correo' => $user->correo_institucional,
+                'rol' => $user->rol,
+            ];
+
+            if ($estudiante) {
+                $usuarioData['codigo_estudiante'] = $estudiante->codigo_estudiante;
+                $usuarioData['carrera'] = $estudiante->carrera;
+            }
 
             return response()->json([
-                'mensaje' => 'Cuenta de personal administrativo creada con éxito. Ahora puedes iniciar sesión.'
+                'status' => 'success',
+                'mensaje' => 'Usuario registrado exitosamente. Ahora puedes iniciar sesión con tus credenciales.',
+                'usuario' => $usuarioData
             ], 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Error en registro de usuario en PostgreSQL (nueva BD): ' . $e->getMessage(), [
+                'correo' => $correo,
+                'exception' => $e->getTraceAsString()
+            ]);
+
+            // Mensaje de respuesta general para evitar fugas de información
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'No fue posible completar el registro en este momento. Por favor intente más tarde.'
+            ], 500);
         }
     }
 }
+
+

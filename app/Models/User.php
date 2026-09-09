@@ -19,9 +19,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
+        'nombres',
+        'apellidos',
+        'correo_institucional',
         'password',
+        'rol',
+        'estado',
     ];
 
     /**
@@ -42,8 +45,15 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Relación con el registro de estudiante institucional.
+     */
+    public function estudiante()
+    {
+        return $this->hasOne(Estudiante::class, 'correo_secundario', 'correo_institucional');
     }
 }
