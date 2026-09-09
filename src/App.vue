@@ -3,23 +3,34 @@ import { ref } from 'vue'
 import LandingPage from './components/LandingPage.vue'
 import RegistroModal from './components/RegistroModal.vue'
 import LoginModal from './components/LoginModal.vue'
+import RecuperarPasswordModal from './components/RecuperarPasswordModal.vue'
 
 const mostrarRegistro = ref(false)
 const mostrarLogin = ref(false)
+const mostrarRecuperar = ref(false)
 
 const handleLogin = () => {
   mostrarRegistro.value = false
+  mostrarRecuperar.value = false
   mostrarLogin.value = true
 }
 
 const handleRegistro = () => {
   mostrarLogin.value = false
+  mostrarRecuperar.value = false
   mostrarRegistro.value = true
+}
+
+const handleRecuperar = () => {
+  mostrarLogin.value = false
+  mostrarRegistro.value = false
+  mostrarRecuperar.value = true
 }
 
 const cerrarModales = () => {
   mostrarRegistro.value = false
   mostrarLogin.value = false
+  mostrarRecuperar.value = false
 }
 
 const handleRegistroExitoso = (respuesta) => {
@@ -51,7 +62,15 @@ const handleLoginExitoso = (respuesta) => {
       v-if="mostrarLogin"
       @close="cerrarModales"
       @abrir-registro="handleRegistro"
+      @olvide-contrasena="handleRecuperar"
       @login-exitoso="handleLoginExitoso"
+    />
+
+    <!-- Modal de Recuperación de Contraseña -->
+    <RecuperarPasswordModal
+      v-if="mostrarRecuperar"
+      @close="cerrarModales"
+      @volver-login="handleLogin"
     />
   </div>
 </template>
