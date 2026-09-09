@@ -55,6 +55,13 @@ class PasantiaController extends Controller
 
         return response()->json([
             'status' => 'success',
+            'usuario' => [
+                'id' => $user->id,
+                'nombres' => $user->nombres,
+                'apellidos' => $user->apellidos,
+                'correo' => $user->correo_institucional,
+                'rol' => $user->rol,
+            ],
             'pasantia' => [
                 'id' => $pasante->id,
                 'user_id' => $pasante->user_id,

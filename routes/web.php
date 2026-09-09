@@ -69,3 +69,19 @@ Route::get('/dashboard/{any}', function () {
     }
     return redirect('/');
 })->where('any', '.*');
+
+Route::get('/panel-pasante/{any}', function () {
+    $indexPath = base_path('dist/index.html');
+    if (file_exists($indexPath)) {
+        return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
+    }
+    return redirect('/');
+})->where('any', '.*');
+
+Route::get('/panel/{any}', function () {
+    $indexPath = base_path('dist/index.html');
+    if (file_exists($indexPath)) {
+        return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
+    }
+    return redirect('/');
+})->where('any', '.*');
