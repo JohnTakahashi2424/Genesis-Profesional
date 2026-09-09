@@ -41,6 +41,7 @@ class RegistroRequest extends FormRequest
                 'string',
                 'email',
                 'max:100',
+                'regex:/^[a-zA-Z0-9._%+-]+@ugb\.edu\.sv$/i',
                 'unique:users,correo_institucional',
             ],
             'contrasena' => [
@@ -77,6 +78,7 @@ class RegistroRequest extends FormRequest
             'correo.required' => 'El campo correo es obligatorio.',
             'correo.string' => 'El campo correo debe ser una cadena de texto.',
             'correo.email' => 'El correo electrónico debe tener un formato válido.',
+            'correo.regex' => 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv).',
             'correo.max' => 'El campo correo no puede exceder los 100 caracteres.',
             // Mensaje de protección anti-phishing/enumeración de usuarios
             'correo.unique' => 'No es posible procesar el registro con este correo. Verifique la información o intente iniciar sesión.',

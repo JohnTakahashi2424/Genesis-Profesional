@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import authService from '../services/authService'
 
 const emit = defineEmits(['close', 'abrir-registro', 'login-exitoso', 'olvide-contrasena'])
@@ -22,6 +22,25 @@ const errorCorreo = ref('')
 const errorContrasena = ref('')
 const errorGeneral = ref('')
 
+// Validación en vivo del correo institucional
+watch(() => form.value.correo, (nuevoCorreo) => {
+  const correoLimpio = (nuevoCorreo || '').trim().toLowerCase()
+  if (!correoLimpio) {
+    errorCorreo.value = ''
+    return
+  }
+  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!regexEmail.test(correoLimpio)) {
+    errorCorreo.value = 'El formato del correo institucional es inválido.'
+    return
+  }
+  if (!correoLimpio.endsWith('@ugb.edu.sv')) {
+    errorCorreo.value = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
+    return
+  }
+  errorCorreo.value = ''
+})
+
 // Manejo del envío del formulario y consumo de la API
 const handleLogin = async () => {
   // Limpiar errores previos
@@ -32,16 +51,21 @@ const handleLogin = async () => {
   const correoLimpio = form.value.correo.trim().toLowerCase()
   const pass = form.value.contrasena
 
-  // 1. Validación de campos obligatorios (según Imagen 1)
+  // 1. Validación de campos obligatorios
   if (!correoLimpio || !pass) {
     errorCorreo.value = 'Debe completar todos los campos para continuar'
     return
   }
 
-  // 2. Validación sintáctica de correo electrónico
+  // 2. Validación sintáctica y dominio del correo
   const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!regexEmail.test(correoLimpio)) {
     errorCorreo.value = 'El formato del correo institucional es inválido.'
+    return
+  }
+
+  if (!correoLimpio.endsWith('@ugb.edu.sv')) {
+    errorCorreo.value = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
     return
   }
 

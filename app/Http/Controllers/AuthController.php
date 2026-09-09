@@ -29,19 +29,32 @@ class AuthController extends Controller
         $correo = strtolower(trim($request->correo));
         $contrasena = $request->contrasena;
 
-        // Buscar el usuario en la tabla 'users'
+        // 1. Validar dominio institucional obligatorio @ugb.edu.sv
+        if (!str_ends_with($correo, '@ugb.edu.sv')) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv).'
+            ], 422);
+        }
+
+        // 2. Buscar el usuario en la tabla 'users'
         $user = User::where('correo_institucional', $correo)->first();
 
-        // Política Anti-Phishing (OWASP): No revelar si el fallo se debe al correo o a la contraseña
-        // Coincide con mensaje exacto de la interfaz gráfica: "Correo o contraseña incorrectos. Intentalo de nuevo."
-        if (!$user || !Hash::check($contrasena, $user->password)) {
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'No se encontró ninguna cuenta registrada con este correo institucional.'
+            ], 404);
+        }
+
+        if (!Hash::check($contrasena, $user->password)) {
             return response()->json([
                 'status' => 'error',
                 'mensaje' => 'Correo o contraseña incorrectos. Intentalo de nuevo.'
             ], 401);
         }
 
-        // Verificar estado de la cuenta
+        // 3. Verificar estado activo de la cuenta
         if ($user->estado !== 'activo') {
             return response()->json([
                 'status' => 'error',
@@ -89,46 +102,61 @@ class AuthController extends Controller
      */
     public function registro(RegistroRequest $request)
     {
-        // 1. Sanitización de entradas (limpieza de espacios múltiples y normalización a minúsculas)
+        // 1. Sanitización de entradas
         $nombres = trim(preg_replace('/\s+/', ' ', $request->nombres));
         $apellidos = trim(preg_replace('/\s+/', ' ', $request->apellidos));
         $correo = strtolower(trim($request->correo));
         $contrasena = $request->contrasena;
 
-        // 2. Determinación de rol inicial escalable
-        $rol = 'estudiante';
-        if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano')) {
-            $rol = 'vice_decano';
-        } elseif (!Str::startsWith($correo, 'us')) {
-            $rol = 'supervisor';
+        // 2. Validar dominio obligatorio @ugb.edu.sv
+        if (!str_ends_with($correo, '@ugb.edu.sv')) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv).'
+            ], 422);
         }
 
-        // 3. Verificación contra el padrón de Estudiantes
-        // Comprobar si el estudiante está registrado y activo en la tabla de estudiantes
-        $estudiante = null;
-        if ($rol === 'estudiante') {
-            $estudiante = Estudiante::where('correo_secundario', $correo)
-                ->orWhere('correo_principal', $correo)
+        // 3. Comprobar que no exista ya registrado en users
+        if (User::where('correo_institucional', $correo)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'No es posible procesar el registro: este correo ya se encuentra registrado.'
+            ], 422);
+        }
+
+        // 4. Verificación obligatoria contra el padrón en la BD (estudiantes o personal)
+        $estudiante = Estudiante::where('correo_secundario', $correo)
+            ->orWhere('correo_principal', $correo)
+            ->first();
+
+        $personal = null;
+        if (!$estudiante) {
+            $personal = DB::table('personal_administrativo')
+                ->where('correo_institucional', $correo)
                 ->first();
-
-            // Verificación: existencia del estudiante en la base de datos de estudiantes
-            if (!$estudiante) {
-                return response()->json([
-                    'status' => 'error',
-                    'mensaje' => 'No fue posible procesar el registro con el correo institucional proporcionado. Verifique sus datos o contacte a administración.'
-                ], 400);
-            }
-
-            // Verificación: estado académico activo
-            if (!$estudiante->es_estudiante_activo) {
-                return response()->json([
-                    'status' => 'error',
-                    'mensaje' => 'El estudiante asociado a este correo institucional no se encuentra en estado activo en el sistema académico.'
-                ], 403);
-            }
         }
 
-        // 4. Transacción atómica en la base de datos PostgreSQL
+        if (!$estudiante && !$personal) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'No se puede crear la cuenta: el correo no fue encontrado en la base de datos de la universidad.'
+            ], 400);
+        }
+
+        if ($estudiante && !$estudiante->es_estudiante_activo) {
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'El usuario asociado a este correo no se encuentra en estado activo en el sistema académico.'
+            ], 403);
+        }
+
+        // 5. Determinación de rol inicial
+        $rol = 'estudiante';
+        if ($personal) {
+            $rol = $personal->cargo ?? 'supervisor';
+        }
+
+        // 6. Transacción atómica en la base de datos
         DB::beginTransaction();
 
         try {
@@ -165,12 +193,11 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            Log::error('Error en registro de usuario en PostgreSQL (nueva BD): ' . $e->getMessage(), [
+            Log::error('Error en registro de usuario: ' . $e->getMessage(), [
                 'correo' => $correo,
                 'exception' => $e->getTraceAsString()
             ]);
 
-            // Mensaje de respuesta general para evitar fugas de información
             return response()->json([
                 'status' => 'error',
                 'mensaje' => 'No fue posible completar el registro en este momento. Por favor intente más tarde.'
@@ -193,51 +220,57 @@ class AuthController extends Controller
 
         $correo = strtolower(trim($request->correo));
 
-        // 1. Verificar si ya existe una cuenta de usuario con este correo
+        // 1. Validar dominio obligatorio @ugb.edu.sv
+        if (!str_ends_with($correo, '@ugb.edu.sv')) {
+            return response()->json([
+                'status' => 'error',
+                'disponible' => false,
+                'mensaje' => 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv).'
+            ], 422);
+        }
+
+        // 2. Verificar si ya existe una cuenta de usuario con este correo
         $existe = User::where('correo_institucional', $correo)->exists();
         if ($existe) {
             return response()->json([
                 'status' => 'error',
                 'disponible' => false,
-                'mensaje' => 'Correo institucional ya registrado. Intente iniciar sesión.'
+                'mensaje' => 'Este correo institucional ya tiene una cuenta registrada. Intente iniciar sesión.'
             ], 422);
         }
 
-        // 2. Determinación de rol inicial
-        $rol = 'estudiante';
-        if (str_contains($correo, 'decano') || str_contains($correo, 'vicedecano')) {
-            $rol = 'vice_decano';
-        } elseif (!Str::startsWith($correo, 'us')) {
-            $rol = 'supervisor';
+        // 3. Verificación OBLIGATORIA en la base de datos (padrón de estudiantes o personal)
+        $estudiante = Estudiante::where('correo_secundario', $correo)
+            ->orWhere('correo_principal', $correo)
+            ->first();
+
+        $personal = null;
+        if (!$estudiante) {
+            $personal = DB::table('personal_administrativo')
+                ->where('correo_institucional', $correo)
+                ->first();
         }
 
-        // 3. Verificación en la tabla 'estudiantes' si es rol estudiante
-        if ($rol === 'estudiante') {
-            $estudiante = Estudiante::where('correo_secundario', $correo)
-                ->orWhere('correo_principal', $correo)
-                ->first();
+        if (!$estudiante && !$personal) {
+            return response()->json([
+                'status' => 'error',
+                'disponible' => false,
+                'mensaje' => 'El correo no se encuentra registrado en el padrón de la base de datos de la universidad.'
+            ], 422);
+        }
 
-            if (!$estudiante) {
-                return response()->json([
-                    'status' => 'error',
-                    'disponible' => false,
-                    'mensaje' => 'No fue posible procesar el registro con el correo institucional proporcionado. Verifique sus datos o contacte a administración.'
-                ], 422);
-            }
-
-            if (!$estudiante->es_estudiante_activo) {
-                return response()->json([
-                    'status' => 'error',
-                    'disponible' => false,
-                    'mensaje' => 'El estudiante asociado a este correo institucional no se encuentra en estado activo en el sistema académico.'
-                ], 422);
-            }
+        if ($estudiante && !$estudiante->es_estudiante_activo) {
+            return response()->json([
+                'status' => 'error',
+                'disponible' => false,
+                'mensaje' => 'El estudiante asociado a este correo no se encuentra en estado activo en la universidad.'
+            ], 422);
         }
 
         return response()->json([
             'status' => 'success',
             'disponible' => true,
-            'mensaje' => 'Correo institucional disponible y verificado'
+            'mensaje' => 'Correo institucional disponible y verificado en la base de datos'
         ], 200);
     }
 

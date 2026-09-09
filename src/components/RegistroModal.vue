@@ -93,6 +93,11 @@ watch(() => form.value.correo, (nuevoCorreo) => {
     return
   }
 
+  if (!correoLimpio.endsWith('@ugb.edu.sv')) {
+    if (tocados.value.correo) errores.value.correo = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
+    return
+  }
+
   errores.value.correo = ''
 
   debounceTimerCorreo = setTimeout(async () => {
@@ -141,6 +146,9 @@ const validarPaso1 = () => {
     valido = false
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoNormalizado)) {
     errores.value.correo = 'Ingrese un correo electrónico válido'
+    valido = false
+  } else if (!correoNormalizado.endsWith('@ugb.edu.sv')) {
+    errores.value.correo = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
     valido = false
   }
 
