@@ -41,13 +41,27 @@ export const authService = {
 
   /**
    * Registrar nuevo usuario (Estudiante / Pasante)
-   * @param {Object} datos - { correo, contrasena }
-   * @returns {Promise<Object>} { mensaje }
+   * @param {Object} datos - { nombres, apellidos, correo, contrasena }
+   * @returns {Promise<Object>} { mensaje, usuario }
    */
   async registro(datos) {
     const response = await apiClient.post('/auth/registro', {
+      nombres: datos.nombres,
+      apellidos: datos.apellidos,
       correo: datos.correo,
       contrasena: datos.contrasena
+    })
+    return response.data
+  },
+
+  /**
+   * Comprobar disponibilidad preliminar del correo institucional
+   * @param {string} correo
+   * @returns {Promise<Object>} { status, disponible, mensaje }
+   */
+  async verificarCorreo(correo) {
+    const response = await apiClient.post('/auth/verificar-correo', {
+      correo
     })
     return response.data
   },
