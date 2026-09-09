@@ -2,6 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
+import CvModulo from './CvModulo.vue'
+import ReportesModulo from './ReportesModulo.vue'
+import PerfilModulo from './PerfilModulo.vue'
+import HistorialModulo from './HistorialModulo.vue'
+import IaModulo from './IaModulo.vue'
+import ConfiguracionModulo from './ConfiguracionModulo.vue'
+
 const emit = defineEmits(['logout'])
 
 // Obtener datos del usuario desde localStorage o fallback
@@ -166,7 +173,7 @@ const handleLogout = () => {
       <div class="py-6">
         <button 
           @click="handleLogout"
-          class="w-full flex items-center gap-4 px-8 text-[18px] font-medium text-black hover:text-red-600 transition-all cursor-pointer rounded-none text-left"
+          class="w-full flex items-center gap-4 px-8 py-2 text-[18px] font-medium text-black hover:bg-gray-50 transition-all cursor-pointer rounded-none text-left"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 23 23" fill="none" class="shrink-0">
             <path d="M20.125 2.875H2.875C2.08437 2.875 1.4375 3.52187 1.4375 4.3125V18.6875C1.4375 19.4781 2.08437 20.125 2.875 20.125H20.125C20.9156 20.125 21.5625 19.4781 21.5625 18.6875V4.3125C21.5625 3.52187 20.9156 2.875 20.125 2.875ZM20.125 10.7812H12.7937L15.3812 8.19375L14.375 7.1875L10.0625 11.5L14.375 15.8125L15.3812 14.8063L12.7937 12.2188H20.125V18.6875H8.625V4.3125H20.125V10.7812Z" fill="currentColor"/>
@@ -182,155 +189,166 @@ const handleLogout = () => {
     <!-- CONTENIDO PRINCIPAL (DERECHA) -->
     <main class="flex-1 p-8 overflow-y-auto">
       
-      <!-- 1. BANNER DE BIENVENIDA -->
-      <div class="relative bg-[#000B58] rounded-[20px] p-8 text-white shadow-xl overflow-hidden mb-8 flex items-center justify-between">
-        <div class="max-w-2xl z-10">
-          <h1 class="text-3xl font-bold mb-2.5 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
-            Hola de nuevo, {{ primerNombre }}
-          </h1>
-          <p class="text-sm text-white/90 leading-relaxed font-normal">
-            Bienvenida de nuevo al portal de Génesis Profesional, aquí puedes gestionar tu curriculum, subir informes y monitorear tu proceso de pasantías
-          </p>
-        </div>
+      <!-- COMPONENTES DE MÓDULOS EN DESARROLLO -->
+      <CvModulo v-if="itemActivo === 'cv'" @volver="itemActivo = 'inicio'" />
+      <ReportesModulo v-else-if="itemActivo === 'reportes'" @volver="itemActivo = 'inicio'" />
+      <PerfilModulo v-else-if="itemActivo === 'perfil'" @volver="itemActivo = 'inicio'" />
+      <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="itemActivo = 'inicio'" />
+      <IaModulo v-else-if="itemActivo === 'ia'" @volver="itemActivo = 'inicio'" />
+      <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="itemActivo = 'inicio'" />
 
-        <!-- Gorro de Graduación SVG en Marca de agua a la derecha -->
-        <div class="shrink-0 opacity-70 transform translate-x-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="75" height="75" viewBox="0 0 73 73" fill="none">
-            <g clip-path="url(#clip0_4248_287_banner)">
-              <path d="M36.0358 6.00604L-0.00012207 27.027L36.0358 48.0479L66.0657 30.5315V52.5524H72.0717V27.027L36.0358 6.00604ZM12.0088 40.5104V54.0539C14.8044 57.7852 18.4312 60.8136 22.6014 62.8987C26.7716 64.9838 31.3704 66.0682 36.0328 66.0659C40.6957 66.0687 45.2951 64.9845 49.4658 62.8994C53.6366 60.8143 57.2638 57.7856 60.0597 54.0539V40.5134L36.0358 54.5284L12.0088 40.5104Z" fill="white" fill-opacity="0.5"/>
-            </g>
-            <defs>
-              <clipPath id="clip0_4248_287_banner">
-                <rect width="72.0718" height="72.0718" fill="white"/>
-              </clipPath>
-            </defs>
-          </svg>
-        </div>
-      </div>
-
-      <!-- 2. TARJETA "ESTADO DE MI PASANTÍA" -->
-      <div class="bg-white rounded-[18px] p-6 shadow-sm border border-gray-100 mb-8">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-base font-bold text-gray-900 tracking-tight">
-            Estado de mi pasantía
-          </h2>
-        </div>
-
-        <!-- 4 Fases Horizontales -->
-        <div class="grid grid-cols-4 gap-4 text-center">
-          
-          <!-- Fase 1: Currículum -->
-          <div class="flex flex-col items-center">
-            <div class="mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
-                <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
-              </svg>
-            </div>
-            <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 1: Currículum</span>
-            <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-white shadow-xs">
-              ✓ Completado
-            </span>
+      <!-- VISTA PRINCIPAL (INICIO / DASHBOARD) -->
+      <template v-else>
+        <!-- 1. BANNER DE BIENVENIDA -->
+        <div class="relative bg-[#000B58] rounded-[20px] p-8 text-white shadow-xl overflow-hidden mb-8 flex items-center justify-between">
+          <div class="max-w-2xl z-10">
+            <h1 class="text-3xl font-bold mb-2.5 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+              Hola de nuevo, {{ primerNombre }}
+            </h1>
+            <p class="text-sm text-white/90 leading-relaxed font-normal">
+              Bienvenida de nuevo al portal de Génesis Profesional, aquí puedes gestionar tu curriculum, subir informes y monitorear tu proceso de pasantías
+            </p>
           </div>
 
-          <!-- Fase 2: Aceptado -->
-          <div class="flex flex-col items-center">
-            <div class="mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 25 21" fill="none">
-                <path d="M24.1466 12.1559V16.945C24.1466 17.7876 23.765 18.5958 23.0858 19.1916C22.4065 19.7874 21.4852 20.1222 20.5246 20.1222H3.62199C2.66138 20.1222 1.74011 19.7874 1.06086 19.1916C0.381602 18.5958 0 17.7876 0 16.945V12.1559L0.667654 12.4493C4.20625 14.0127 8.1133 14.8269 12.0754 14.8265C16.0375 14.8261 19.9444 14.0112 23.4826 12.4472L24.1466 12.1559ZM14.488 0C15.4486 0 16.3698 0.334738 17.0491 0.930576C17.7284 1.52641 18.11 2.33454 18.11 3.17719V4.23625H20.5246C21.4852 4.23625 22.4065 4.57099 23.0858 5.16682C23.765 5.76266 24.1466 6.57079 24.1466 7.41343V9.78785L22.3996 10.5546C19.2739 11.9368 15.829 12.6732 12.3287 12.7073C8.82851 12.7415 5.3658 12.0725 2.20579 10.7516L1.42465 10.4127L0 9.78785V7.41343C0 6.57079 0.381602 5.76266 1.06086 5.16682C1.74011 4.57099 2.66138 4.23625 3.62199 4.23625H6.03665V3.17719C6.03665 2.33454 6.41825 1.52641 7.09751 0.930576C7.77676 0.334738 8.69803 0 9.65864 0H14.488ZM12.0733 8.47249C11.7531 8.47249 11.446 8.58407 11.2196 8.78269C10.9932 8.9813 10.866 9.25068 10.866 9.53156C10.8652 9.67063 10.8956 9.80849 10.9556 9.93724C11.0155 10.066 11.1038 10.1831 11.2153 10.282C11.3269 10.3808 11.4595 10.4594 11.6057 10.5133C11.7519 10.5671 11.9087 10.5952 12.0673 10.5959C12.2258 10.5966 12.383 10.5699 12.5298 10.5173C12.6765 10.4647 12.8101 10.3873 12.9227 10.2895C13.0354 10.1916 13.125 10.0753 13.1864 9.94703C13.2478 9.8188 13.2798 9.68122 13.2806 9.54215C13.2806 8.94695 12.7398 8.47249 12.0733 8.47249ZM14.488 2.11812H9.65864C9.33844 2.11812 9.03135 2.2297 8.80493 2.42832C8.57851 2.62693 8.45131 2.8963 8.45131 3.17719V4.23625H15.6953V3.17719C15.6953 2.8963 15.5681 2.62693 15.3417 2.42832C15.1153 2.2297 14.8082 2.11812 14.488 2.11812Z" fill="black"/>
-              </svg>
-            </div>
-            <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 2: Aceptado</span>
-            <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-white shadow-xs">
-              ✓ Completado
-            </span>
-          </div>
-
-          <!-- Fase 3: Prácticas -->
-          <div class="flex flex-col items-center">
-            <div class="mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
-                <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
-              </svg>
-            </div>
-            <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 3: Prácticas</span>
-            <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
-              Pendiente
-            </span>
-          </div>
-
-          <!-- Fase 4: Informe final -->
-          <div class="flex flex-col items-center">
-            <div class="mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
-                <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
-              </svg>
-            </div>
-            <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 4: Informe final</span>
-            <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
-              Pendiente
-            </span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- 3. TARJETAS DE ACCESOS RÁPIDOS (DISPOSICIÓN 2 COLUMNAS) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Perfil profesional -->
-        <div class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
-          <div class="shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" fill="none">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M29.3967 16.5355C29.3967 18.4846 28.6225 20.3539 27.2442 21.7322C25.866 23.1104 23.9967 23.8847 22.0476 23.8847C20.0985 23.8847 18.2292 23.1104 16.851 21.7322C15.4728 20.3539 14.6985 18.4846 14.6985 16.5355C14.6985 14.5864 15.4728 12.7171 16.851 11.3389C18.2292 9.96068 20.0985 9.1864 22.0476 9.1864C23.9967 9.1864 25.866 9.96068 27.2442 11.3389C28.6225 12.7171 29.3967 14.5864 29.3967 16.5355ZM25.7222 16.5355C25.7222 17.5101 25.335 18.4447 24.6459 19.1338C23.9568 19.823 23.0222 20.2101 22.0476 20.2101C21.0731 20.2101 20.1384 19.823 19.4493 19.1338C18.7602 18.4447 18.3731 17.5101 18.3731 16.5355C18.3731 15.561 18.7602 14.6263 19.4493 13.9372C20.1384 13.2481 21.0731 12.861 22.0476 12.861C23.0222 12.861 23.9568 13.2481 24.6459 13.9372C25.335 14.6263 25.7222 15.561 25.7222 16.5355Z" fill="#00589B"/>
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M22.0475 1.83728C10.886 1.83728 1.8374 10.8859 1.8374 22.0474C1.8374 33.2089 10.886 42.2575 22.0475 42.2575C33.209 42.2575 42.2576 33.2089 42.2576 22.0474C42.2576 10.8859 33.209 1.83728 22.0475 1.83728ZM5.51197 22.0474C5.51197 25.8873 6.82195 29.4222 9.0175 32.2296C10.5598 30.2052 12.549 28.5645 14.83 27.4356C17.111 26.3068 19.6219 25.7203 22.1669 25.7219C24.6792 25.719 27.159 26.2898 29.4171 27.3909C31.6752 28.4919 33.6521 30.0941 35.1969 32.0753C36.7888 29.9874 37.8607 27.5504 38.3238 24.9661C38.7869 22.3817 38.6279 19.7242 37.8601 17.2135C37.0922 14.7027 35.7375 12.4109 33.9081 10.5277C32.0786 8.64446 29.827 7.22393 27.3396 6.38365C24.8521 5.54337 22.2004 5.30749 19.6037 5.69552C17.007 6.08356 14.54 7.08436 12.4069 8.61511C10.2737 10.1459 8.53579 12.1626 7.33681 14.4984C6.13783 16.8341 5.5123 19.4219 5.51197 22.0474ZM22.0475 38.5829C18.2515 38.5891 14.57 37.2832 11.6264 34.8863C12.8111 33.1898 14.3882 31.8046 16.2235 30.8488C18.0587 29.893 20.0977 29.3947 22.1669 29.3965C24.2103 29.3947 26.2246 29.8806 28.0425 30.8136C29.8604 31.7467 31.4294 33.1001 32.6192 34.7614C29.6529 37.2362 25.9107 38.589 22.0475 38.5829Z" fill="#00589B"/>
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-gray-900 leading-tight">Perfil profesional</h3>
-            <p class="text-xs text-gray-600 mt-0.5">Mira y edita tus datos institucionales</p>
-          </div>
-        </div>
-
-        <!-- Crear nuevo CV -->
-        <div class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
-          <div class="shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="43" height="43" viewBox="0 0 43 43" fill="none">
-              <g clip-path="url(#clip0_6048_420_cv)">
-                <path d="M36.1687 0H4.01874C1.80843 0 0 1.80843 0 4.01874V38.8478C0 41.0581 1.80843 42.8666 4.01874 42.8666H36.1687C38.379 42.8666 40.1874 41.0581 40.1874 38.8478V4.01874C40.1874 1.80843 38.379 0 36.1687 0ZM34.8291 37.5082H5.35832V5.35832H34.8291V37.5082ZM10.7166 24.1124H29.4708V26.7916H10.7166V24.1124ZM10.7166 29.4708H29.4708V32.1499H10.7166V29.4708ZM13.3958 12.0562C13.396 11.5283 13.5001 11.0056 13.7023 10.5179C13.9045 10.0302 14.2008 9.58716 14.5742 9.21399C14.9476 8.84081 15.3909 8.54484 15.8787 8.34298C16.3665 8.14111 16.8893 8.0373 17.4172 8.03748C17.9451 8.03766 18.4679 8.14181 18.9555 8.344C19.4432 8.54619 19.8863 8.84246 20.2595 9.21588C20.6326 9.5893 20.9286 10.0326 21.1305 10.5204C21.3323 11.0082 21.4361 11.531 21.436 12.0589C21.4356 13.1251 21.0117 14.1475 20.2576 14.9011C19.5034 15.6548 18.4807 16.078 17.4145 16.0776C16.3483 16.0773 15.326 15.6534 14.5723 14.8992C13.8186 14.1451 13.3954 13.1224 13.3958 12.0562ZM20.0937 16.075H14.7354C12.5251 16.075 10.7166 17.2806 10.7166 18.7541V21.4333H24.1124V18.7541C24.1124 17.2806 22.304 16.075 20.0937 16.075Z" fill="#00589B"/>
+          <!-- Gorro de Graduación SVG en Marca de agua a la derecha -->
+          <div class="shrink-0 opacity-70 transform translate-x-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="75" height="75" viewBox="0 0 73 73" fill="none">
+              <g clip-path="url(#clip0_4248_287_banner)">
+                <path d="M36.0358 6.00604L-0.00012207 27.027L36.0358 48.0479L66.0657 30.5315V52.5524H72.0717V27.027L36.0358 6.00604ZM12.0088 40.5104V54.0539C14.8044 57.7852 18.4312 60.8136 22.6014 62.8987C26.7716 64.9838 31.3704 66.0682 36.0328 66.0659C40.6957 66.0687 45.2951 64.9845 49.4658 62.8994C53.6366 60.8143 57.2638 57.7856 60.0597 54.0539V40.5134L36.0358 54.5284L12.0088 40.5104Z" fill="white" fill-opacity="0.5"/>
               </g>
               <defs>
-                <clipPath id="clip0_6048_420_cv">
-                  <rect width="42.8666" height="42.8666" fill="white"/>
+                <clipPath id="clip0_4248_287_banner">
+                  <rect width="72.0718" height="72.0718" fill="white"/>
                 </clipPath>
               </defs>
             </svg>
           </div>
-          <div>
-            <h3 class="text-sm font-bold text-gray-900 leading-tight">Crear nuevo CV</h3>
-            <p class="text-xs text-gray-600 mt-0.5">Genera un cv PDF estructurado usando nuestra plantilla</p>
+        </div>
+
+        <!-- 2. TARJETA "ESTADO DE MI PASANTÍA" -->
+        <div class="bg-white rounded-[18px] p-6 shadow-sm border border-gray-100 mb-8">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-base font-bold text-gray-900 tracking-tight">
+              Estado de mi pasantía
+            </h2>
+          </div>
+
+          <!-- 4 Fases Horizontales -->
+          <div class="grid grid-cols-4 gap-4 text-center">
+            
+            <!-- Fase 1: Currículum -->
+            <div @click="itemActivo = 'cv'" class="flex flex-col items-center cursor-pointer group">
+              <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
+                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 1: Currículum</span>
+              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-white shadow-xs">
+                ✓ Completado
+              </span>
+            </div>
+
+            <!-- Fase 2: Aceptado -->
+            <div class="flex flex-col items-center">
+              <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 25 21" fill="none">
+                  <path d="M24.1466 12.1559V16.945C24.1466 17.7876 23.765 18.5958 23.0858 19.1916C22.4065 19.7874 21.4852 20.1222 20.5246 20.1222H3.62199C2.66138 20.1222 1.74011 19.7874 1.06086 19.1916C0.381602 18.5958 0 17.7876 0 16.945V12.1559L0.667654 12.4493C4.20625 14.0127 8.1133 14.8269 12.0754 14.8265C16.0375 14.8261 19.9444 14.0112 23.4826 12.4472L24.1466 12.1559ZM14.488 0C15.4486 0 16.3698 0.334738 17.0491 0.930576C17.7284 1.52641 18.11 2.33454 18.11 3.17719V4.23625H20.5246C21.4852 4.23625 22.4065 4.57099 23.0858 5.16682C23.765 5.76266 24.1466 6.57079 24.1466 7.41343V9.78785L22.3996 10.5546C19.2739 11.9368 15.829 12.6732 12.3287 12.7073C8.82851 12.7415 5.3658 12.0725 2.20579 10.7516L1.42465 10.4127L0 9.78785V7.41343C0 6.57079 0.381602 5.76266 1.06086 5.16682C1.74011 4.57099 2.66138 4.23625 3.62199 4.23625H6.03665V3.17719C6.03665 2.33454 6.41825 1.52641 7.09751 0.930576C7.77676 0.334738 8.69803 0 9.65864 0H14.488ZM12.0733 8.47249C11.7531 8.47249 11.446 8.58407 11.2196 8.78269C10.9932 8.9813 10.866 9.25068 10.866 9.53156C10.8652 9.67063 10.8956 9.80849 10.9556 9.93724C11.0155 10.066 11.1038 10.1831 11.2153 10.282C11.3269 10.3808 11.4595 10.4594 11.6057 10.5133C11.7519 10.5671 11.9087 10.5952 12.0673 10.5959C12.2258 10.5966 12.383 10.5699 12.5298 10.5173C12.6765 10.4647 12.8101 10.3873 12.9227 10.2895C13.0354 10.1916 13.125 10.0753 13.1864 9.94703C13.2478 9.8188 13.2798 9.68122 13.2806 9.54215C13.2806 8.94695 12.7398 8.47249 12.0733 8.47249ZM14.488 2.11812H9.65864C9.33844 2.11812 9.03135 2.2297 8.80493 2.42832C8.57851 2.62693 8.45131 2.8963 8.45131 3.17719V4.23625H15.6953V3.17719C15.6953 2.8963 15.5681 2.62693 15.3417 2.42832C15.1153 2.2297 14.8082 2.11812 14.488 2.11812Z" fill="black"/>
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 2: Aceptado</span>
+              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-white shadow-xs">
+                ✓ Completado
+              </span>
+            </div>
+
+            <!-- Fase 3: Prácticas -->
+            <div class="flex flex-col items-center">
+              <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
+                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 3: Prácticas</span>
+              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
+                Pendiente
+              </span>
+            </div>
+
+            <!-- Fase 4: Informe final -->
+            <div @click="itemActivo = 'reportes'" class="flex flex-col items-center cursor-pointer group">
+              <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
+                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 4: Informe final</span>
+              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
+                Pendiente
+              </span>
+            </div>
+
           </div>
         </div>
 
-        <!-- Subir reporte -->
-        <div class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
-          <div class="shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 59 59" fill="none">
-              <mask id="mask0_6048_433_rep" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="4" y="11" width="51" height="37">
-                <path d="M17.148 46.5445H44.0948C49.5086 46.5445 53.8936 42.1595 53.8936 36.7456C53.8936 31.3318 49.5086 26.9468 44.0948 26.9468H41.6451V24.4971C41.6451 17.7359 36.1577 12.2485 29.3965 12.2485C23.4682 12.2485 18.5198 16.462 17.3929 22.0474H17.148C10.3868 22.0474 4.89941 27.5347 4.89941 34.2959C4.89941 41.0571 10.3868 46.5445 17.148 46.5445Z" fill="white" stroke="white" stroke-width="1.72921" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M24.4971 41.645H34.2959V31.8462H41.645L29.3965 19.5977L17.1479 31.8462H24.4971V41.645Z" fill="black"/>
-              </mask>
-              <g mask="url(#mask0_6048_433_rep)">
-                <path d="M0 0H58.793V58.793H0V0Z" fill="#00589B"/>
-              </g>
-            </svg>
+        <!-- 3. TARJETAS DE ACCESOS RÁPIDOS (DISPOSICIÓN 2 COLUMNAS) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Perfil profesional -->
+          <div @click="itemActivo = 'perfil'" class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div class="shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M29.3967 16.5355C29.3967 18.4846 28.6225 20.3539 27.2442 21.7322C25.866 23.1104 23.9967 23.8847 22.0476 23.8847C20.0985 23.8847 18.2292 23.1104 16.851 21.7322C15.4728 20.3539 14.6985 18.4846 14.6985 16.5355C14.6985 14.5864 15.4728 12.7171 16.851 11.3389C18.2292 9.96068 20.0985 9.1864 22.0476 9.1864C23.9967 9.1864 25.866 9.96068 27.2442 11.3389C28.6225 12.7171 29.3967 14.5864 29.3967 16.5355ZM25.7222 16.5355C25.7222 17.5101 25.335 18.4447 24.6459 19.1338C23.9568 19.823 23.0222 20.2101 22.0476 20.2101C21.0731 20.2101 20.1384 19.823 19.4493 19.1338C18.7602 18.4447 18.3731 17.5101 18.3731 16.5355C18.3731 15.561 18.7602 14.6263 19.4493 13.9372C20.1384 13.2481 21.0731 12.861 22.0476 12.861C23.0222 12.861 23.9568 13.2481 24.6459 13.9372C25.335 14.6263 25.7222 15.561 25.7222 16.5355Z" fill="#00589B"/>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M22.0475 1.83728C10.886 1.83728 1.8374 10.8859 1.8374 22.0474C1.8374 33.2089 10.886 42.2575 22.0475 42.2575C33.209 42.2575 42.2576 33.2089 42.2576 22.0474C42.2576 10.8859 33.209 1.83728 22.0475 1.83728ZM5.51197 22.0474C5.51197 25.8873 6.82195 29.4222 9.0175 32.2296C10.5598 30.2052 12.549 28.5645 14.83 27.4356C17.111 26.3068 19.6219 25.7203 22.1669 25.7219C24.6792 25.719 27.159 26.2898 29.4171 27.3909C31.6752 28.4919 33.6521 30.0941 35.1969 32.0753C36.7888 29.9874 37.8607 27.5504 38.3238 24.9661C38.7869 22.3817 38.6279 19.7242 37.8601 17.2135C37.0922 14.7027 35.7375 12.4109 33.9081 10.5277C32.0786 8.64446 29.827 7.22393 27.3396 6.38365C24.8521 5.54337 22.2004 5.30749 19.6037 5.69552C17.007 6.08356 14.54 7.08436 12.4069 8.61511C10.2737 10.1459 8.53579 12.1626 7.33681 14.4984C6.13783 16.8341 5.5123 19.4219 5.51197 22.0474ZM22.0475 38.5829C18.2515 38.5891 14.57 37.2832 11.6264 34.8863C12.8111 33.1898 14.3882 31.8046 16.2235 30.8488C18.0587 29.893 20.0977 29.3947 22.1669 29.3965C24.2103 29.3947 26.2246 29.8806 28.0425 30.8136C29.8604 31.7467 31.4294 33.1001 32.6192 34.7614C29.6529 37.2362 25.9107 38.589 22.0475 38.5829Z" fill="#00589B"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900 leading-tight">Perfil profesional</h3>
+              <p class="text-xs text-gray-600 mt-0.5">Mira y edita tus datos institucionales</p>
+            </div>
           </div>
-          <div>
-            <h3 class="text-sm font-bold text-gray-900 leading-tight">Subir reporte</h3>
-            <p class="text-xs text-gray-600 mt-0.5">Entrega tus reportes de progreso mensuales o tu informe final.</p>
-          </div>
-        </div>
 
-      </div>
+          <!-- Crear nuevo CV -->
+          <div @click="itemActivo = 'cv'" class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div class="shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="43" height="43" viewBox="0 0 43 43" fill="none">
+                <g clip-path="url(#clip0_6048_420_cv)">
+                  <path d="M36.1687 0H4.01874C1.80843 0 0 1.80843 0 4.01874V38.8478C0 41.0581 1.80843 42.8666 4.01874 42.8666H36.1687C38.379 42.8666 40.1874 41.0581 40.1874 38.8478V4.01874C40.1874 1.80843 38.379 0 36.1687 0ZM34.8291 37.5082H5.35832V5.35832H34.8291V37.5082ZM10.7166 24.1124H29.4708V26.7916H10.7166V24.1124ZM10.7166 29.4708H29.4708V32.1499H10.7166V29.4708ZM13.3958 12.0562C13.396 11.5283 13.5001 11.0056 13.7023 10.5179C13.9045 10.0302 14.2008 9.58716 14.5742 9.21399C14.9476 8.84081 15.3909 8.54484 15.8787 8.34298C16.3665 8.14111 16.8893 8.0373 17.4172 8.03748C17.9451 8.03766 18.4679 8.14181 18.9555 8.344C19.4432 8.54619 19.8863 8.84246 20.2595 9.21588C20.6326 9.5893 20.9286 10.0326 21.1305 10.5204C21.3323 11.0082 21.4361 11.531 21.436 12.0589C21.4356 13.1251 21.0117 14.1475 20.2576 14.9011C19.5034 15.6548 18.4807 16.078 17.4145 16.0776C16.3483 16.0773 15.326 15.6534 14.5723 14.8992C13.8186 14.1451 13.3954 13.1224 13.3958 12.0562ZM20.0937 16.075H14.7354C12.5251 16.075 10.7166 17.2806 10.7166 18.7541V21.4333H24.1124V18.7541C24.1124 17.2806 22.304 16.075 20.0937 16.075Z" fill="#00589B"/>
+                </g>
+                <defs>
+                  <clipPath id="clip0_6048_420_cv">
+                    <rect width="42.8666" height="42.8666" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900 leading-tight">Crear nuevo CV</h3>
+              <p class="text-xs text-gray-600 mt-0.5">Genera un cv PDF estructurado usando nuestra plantilla</p>
+            </div>
+          </div>
+
+          <!-- Subir reporte -->
+          <div @click="itemActivo = 'reportes'" class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div class="shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 59 59" fill="none">
+                <mask id="mask0_6048_433_rep" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="4" y="11" width="51" height="37">
+                  <path d="M17.148 46.5445H44.0948C49.5086 46.5445 53.8936 42.1595 53.8936 36.7456C53.8936 31.3318 49.5086 26.9468 44.0948 26.9468H41.6451V24.4971C41.6451 17.7359 36.1577 12.2485 29.3965 12.2485C23.4682 12.2485 18.5198 16.462 17.3929 22.0474H17.148C10.3868 22.0474 4.89941 27.5347 4.89941 34.2959C4.89941 41.0571 10.3868 46.5445 17.148 46.5445Z" fill="white" stroke="white" stroke-width="1.72921" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M24.4971 41.645H34.2959V31.8462H41.645L29.3965 19.5977L17.1479 31.8462H24.4971V41.645Z" fill="black"/>
+                </mask>
+                <g mask="url(#mask0_6048_433_rep)">
+                  <path d="M0 0H58.793V58.793H0V0Z" fill="#00589B"/>
+                </g>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900 leading-tight">Subir reporte</h3>
+              <p class="text-xs text-gray-600 mt-0.5">Entrega tus reportes de progreso mensuales o tu informe final.</p>
+            </div>
+          </div>
+
+        </div>
+      </template>
 
     </main>
   </div>
