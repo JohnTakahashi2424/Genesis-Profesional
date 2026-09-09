@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Http\Requests\RegistroRequest;
+use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use App\Models\Estudiante;
 
@@ -17,17 +18,8 @@ class AuthController extends Controller
      * Endpoint de Inicio de Sesión (Protegido contra enumeración de usuarios / phishing)
      * POST /api/auth/login
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'correo' => 'required|email',
-            'contrasena' => 'required|string'
-        ], [
-            'correo.required' => 'El correo institucional es obligatorio.',
-            'correo.email' => 'El formato del correo institucional es inválido.',
-            'contrasena.required' => 'La contraseña es obligatoria.',
-        ]);
-
         $correo = strtolower(trim($request->correo));
         $contrasena = $request->contrasena;
 
@@ -35,10 +27,11 @@ class AuthController extends Controller
         $user = User::where('correo_institucional', $correo)->first();
 
         // Política Anti-Phishing (OWASP): No revelar si el fallo se debe al correo o a la contraseña
+        // Coincide con mensaje exacto de la interfaz gráfica: "Correo o contraseña incorrectos. Intentalo de nuevo."
         if (!$user || !Hash::check($contrasena, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'mensaje' => 'Credenciales de acceso incorrectas o cuenta no autorizada.'
+                'mensaje' => 'Correo o contraseña incorrectos. Intentalo de nuevo.'
             ], 401);
         }
 
@@ -49,6 +42,9 @@ class AuthController extends Controller
                 'mensaje' => 'La cuenta no se encuentra activa en el sistema.'
             ], 403);
         }
+
+        // Generar token de sesión para autenticación en cliente
+        $token = Str::random(64);
 
         $usuarioData = [
             'id' => $user->id,
@@ -75,6 +71,7 @@ class AuthController extends Controller
         return response()->json([
             'status' => 'success',
             'mensaje' => 'Inicio de sesión exitoso.',
+            'token' => $token,
             'usuario' => $usuarioData,
             'redireccion' => $rutas[$user->rol] ?? '/dashboard'
         ], 200);
