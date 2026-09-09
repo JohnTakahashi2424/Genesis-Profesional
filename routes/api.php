@@ -17,6 +17,9 @@ Route::prefix('auth')->group(function () {
     // Registro de usuarios comprobando padrón de estudiantes
     Route::post('/registro', [AuthController::class, 'registro'])->name('api.auth.registro');
 
+    // Verificación preliminar de correo institucional
+    Route::post('/verificar-correo', [AuthController::class, 'verificarCorreo'])->name('api.auth.verificar_correo');
+
     // Inicio de sesión con protección contra enumeración de usuarios
     Route::post('/login', [AuthController::class, 'login'])->name('api.auth.login');
 });

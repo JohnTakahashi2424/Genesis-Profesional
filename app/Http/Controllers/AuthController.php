@@ -172,6 +172,37 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Endpoint para comprobación rápida de disponibilidad del correo institucional
+     * POST /api/auth/verificar-correo
+     */
+    public function verificarCorreo(Request $request)
+    {
+        $request->validate([
+            'correo' => 'required|email|max:100'
+        ], [
+            'correo.required' => 'El correo institucional es obligatorio.',
+            'correo.email' => 'El formato del correo institucional es inválido.'
+        ]);
+
+        $correo = strtolower(trim($request->correo));
+
+        $existe = User::where('correo_institucional', $correo)->exists();
+        if ($existe) {
+            return response()->json([
+                'status' => 'error',
+                'disponible' => false,
+                'mensaje' => 'Correo institucional ya registrado'
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'disponible' => true,
+            'mensaje' => 'Correo institucional disponible'
+        ], 200);
+    }
 }
 
 
