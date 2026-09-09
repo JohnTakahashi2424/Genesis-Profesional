@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use App\Http\Requests\RegistroRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\EnviarCodigoRequest;
@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\Estudiante;
 use App\Models\CodigoRecuperacion;
 use App\Mail\CodigoRecuperacionMail;
+use App\Services\BrevoMailService;
 
 class AuthController extends Controller
 {
@@ -207,7 +208,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Endpoint para solicitar código de recuperación de contraseña (6 dígitos vía Brevo SMTP)
+     * Endpoint para solicitar código de recuperación de contraseña (6 dígitos vía SMTP)
      * POST /api/auth/enviar-codigo
      */
     public function enviarCodigo(EnviarCodigoRequest $request)
@@ -226,20 +227,8 @@ class AuthController extends Controller
         // 2. Generar código de 6 dígitos con 1 minuto y 30 segundos de vigencia (90 segundos)
         $registroCodigo = CodigoRecuperacion::generarParaCorreo($correo);
 
-        // 3. Enviar correo mediante Brevo SMTP
-        try {
-            Mail::to($correo)->send(new CodigoRecuperacionMail($registroCodigo->codigo, $user->nombres));
-        } catch (\Throwable $e) {
-            Log::error('Error al enviar correo de recuperación mediante Brevo SMTP: ' . $e->getMessage(), [
-                'correo' => $correo,
-                'exception' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'status' => 'error',
-                'mensaje' => 'No fue posible enviar el código de verificación en este momento. Intente más tarde.'
-            ], 500);
-        }
+        // 3. Enviar correo mediante SMTP (configurado en .env)
+        $envio = BrevoMailService::enviarCodigo($correo, $user->nombres, $registroCodigo->codigo);
 
         // 4. Enmascarar el correo según maqueta de interfaz (ej. us***********)
         $partes = explode('@', $correo);
@@ -247,12 +236,14 @@ class AuthController extends Controller
         $longitudPrefijo = strlen($prefijo);
         $enmascarado = substr($prefijo, 0, 2) . str_repeat('*', max($longitudPrefijo - 2, 8));
 
-        return response()->json([
+        $respuesta = [
             'status' => 'success',
             'mensaje' => 'Se ha enviado un código de verificación a tu correo electrónico.',
             'correo_enmascarado' => $enmascarado,
             'tiempo_expiracion_segundos' => 90
-        ], 200);
+        ];
+
+        return response()->json($respuesta, 200);
     }
 
     /**
