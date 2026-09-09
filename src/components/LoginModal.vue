@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import authService from '../services/authService'
+import { BaseInput, BaseButton } from './common'
 
 const emit = defineEmits(['close', 'abrir-registro', 'login-exitoso'])
 
@@ -9,7 +10,6 @@ const form = ref({
   contrasena: ''
 })
 
-const mostrarContrasena = ref(false)
 const loading = ref(false)
 const errorMensaje = ref('')
 const exitoMensaje = ref('')
@@ -101,58 +101,40 @@ const handleLogin = async () => {
         <span>{{ exitoMensaje }}</span>
       </div>
 
-      <!-- Formulario -->
+      <!-- Formulario utilizando componentes reutilizables -->
       <form @submit.prevent="handleLogin" class="text-left" novalidate>
         <!-- Correo Institucional -->
-        <div class="mb-4">
-          <label class="block text-sm font-semibold text-gray-900 mb-1.5">
-            Correo institucional<span class="text-red-500">*</span>
-          </label>
-          <input 
-            type="email"
-            v-model="form.correo"
-            placeholder="usss@000ugb.edu.sv"
-            id="input-login-correo"
-            class="w-full px-4 py-2.5 rounded-xl bg-[#eaecee] border border-[#ced4da] text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none focus:ring-1 focus:ring-[#0a1854] transition-all"
-            required
-          />
-        </div>
+        <BaseInput 
+          id="input-login-correo"
+          v-model="form.correo"
+          type="email"
+          label="Correo institucional"
+          required
+          placeholder="usss@000ugb.edu.sv"
+        />
 
         <!-- Contraseña -->
-        <div class="mb-6">
-          <label class="block text-sm font-semibold text-gray-900 mb-1.5">
-            Contraseña<span class="text-red-500">*</span>
-          </label>
-          <div class="relative">
-            <input 
-              :type="mostrarContrasena ? 'text' : 'password'"
-              v-model="form.contrasena"
-              placeholder="••••••"
-              id="input-login-contrasena"
-              class="w-full pl-4 pr-11 py-2.5 rounded-xl bg-[#eaecee] border border-[#ced4da] text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none focus:ring-1 focus:ring-[#0a1854] transition-all"
-              required
-            />
-            <button 
-              type="button" 
-              @click="mostrarContrasena = !mostrarContrasena"
-              class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 p-1 cursor-pointer"
-            >
-              <i :class="mostrarContrasena ? 'bi bi-eye' : 'bi bi-eye-slash'" class="text-base"></i>
-            </button>
-          </div>
+        <div class="mb-3">
+          <BaseInput 
+            id="input-login-contrasena"
+            v-model="form.contrasena"
+            type="password"
+            label="Contraseña"
+            required
+            placeholder="••••••"
+          />
         </div>
 
         <!-- Botón Iniciar Sesión -->
         <div class="text-center pt-1">
-          <button 
+          <BaseButton 
             type="submit"
-            :disabled="loading"
             id="btn-submit-login"
-            class="w-44 mx-auto py-2.5 px-6 rounded-full bg-[#0a1854] hover:bg-[#07113d] text-white font-medium text-sm transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-75 disabled:cursor-wait flex items-center justify-center gap-2"
+            :loading="loading"
+            loading-text="Ingresando..."
           >
-            <span v-if="loading" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>{{ loading ? 'Ingresando...' : 'Iniciar sesión' }}</span>
-          </button>
+            Iniciar sesión
+          </BaseButton>
         </div>
 
         <!-- Enlace a Registro -->
