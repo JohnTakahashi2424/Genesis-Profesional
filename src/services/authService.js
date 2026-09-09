@@ -67,6 +67,17 @@ export const authService = {
   },
 
   /**
+   * Comprobar existencia del correo para recuperación de contraseña
+   * @param {string} correo
+   */
+  async verificarCorreoRecuperacion(correo) {
+    const response = await apiClient.post('/auth/verificar-correo-recuperacion', {
+      correo
+    })
+    return response.data
+  },
+
+  /**
    * Enviar código de recuperación de contraseña
    * @param {string} correo
    */

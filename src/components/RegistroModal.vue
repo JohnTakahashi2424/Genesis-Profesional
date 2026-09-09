@@ -76,6 +76,42 @@ watch(() => form.value.confirmarContrasena, (val) => {
   }
 })
 
+// Validar correo en tiempo real contra la base de datos (debounced 400ms)
+let debounceTimerCorreo = null
+watch(() => form.value.correo, (nuevoCorreo) => {
+  if (debounceTimerCorreo) clearTimeout(debounceTimerCorreo)
+
+  const correoLimpio = (nuevoCorreo || '').trim().toLowerCase()
+  if (!correoLimpio) {
+    if (tocados.value.correo) errores.value.correo = 'Este campo es requerido'
+    return
+  }
+
+  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!regexEmail.test(correoLimpio)) {
+    if (tocados.value.correo) errores.value.correo = 'Ingrese un correo electrónico válido'
+    return
+  }
+
+  errores.value.correo = ''
+
+  debounceTimerCorreo = setTimeout(async () => {
+    try {
+      const res = await authService.verificarCorreo(correoLimpio)
+      if (res && res.disponible) {
+        errores.value.correo = ''
+      } else {
+        errores.value.correo = res?.mensaje || 'No fue posible procesar el correo institucional'
+      }
+    } catch (err) {
+      if (err.response && err.response.data) {
+        const datos = err.response.data
+        errores.value.correo = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional no válido o no disponible'
+      }
+    }
+  }, 400)
+})
+
 // --- VALIDACIONES PASO 1 ---
 const validarPaso1 = () => {
   let valido = true

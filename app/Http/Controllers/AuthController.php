@@ -242,6 +242,34 @@ class AuthController extends Controller
     }
 
     /**
+     * Endpoint para comprobación en tiempo real de existencia de cuenta para recuperación
+     * POST /api/auth/verificar-correo-recuperacion
+     */
+    public function verificarCorreoRecuperacion(Request $request)
+    {
+        $request->validate([
+            'correo' => 'required|email|max:100'
+        ]);
+
+        $correo = strtolower(trim($request->correo));
+        $user = User::where('correo_institucional', $correo)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'existe' => false,
+                'mensaje' => 'No se encontró ninguna cuenta asociada a este correo institucional.'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'existe' => true,
+            'mensaje' => 'Cuenta encontrada.'
+        ], 200);
+    }
+
+    /**
      * Endpoint para solicitar código de recuperación de contraseña (6 dígitos vía SMTP)
      * POST /api/auth/enviar-codigo
      */

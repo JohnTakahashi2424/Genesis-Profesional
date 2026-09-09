@@ -23,6 +23,9 @@ Route::prefix('auth')->group(function () {
     // Inicio de sesión con protección contra enumeración de usuarios
     Route::post('/login', [AuthController::class, 'login'])->name('api.auth.login');
 
+    // Verificación preliminar de correo para recuperación
+    Route::post('/verificar-correo-recuperacion', [AuthController::class, 'verificarCorreoRecuperacion'])->name('api.auth.verificar_correo_recuperacion');
+
     // Recuperación de contraseña: envío de código vía Brevo SMTP
     Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigo'])->name('api.auth.enviar_codigo');
 

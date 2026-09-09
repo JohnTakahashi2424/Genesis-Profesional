@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import authService from '../services/authService'
 import { PasswordStrengthMeter } from './common'
 
@@ -17,6 +17,39 @@ const errorPaso3 = ref('')
 // Paso 1: Correo
 const correo = ref('')
 const correoEnmascarado = ref('')
+
+// Validar correo en tiempo real contra la base de datos (debounced 400ms)
+let debounceTimerRecuperar = null
+watch(correo, (nuevoCorreo) => {
+  if (debounceTimerRecuperar) clearTimeout(debounceTimerRecuperar)
+
+  const correoLimpio = (nuevoCorreo || '').trim().toLowerCase()
+  if (!correoLimpio) {
+    errorPaso1.value = ''
+    return
+  }
+
+  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!regexEmail.test(correoLimpio)) {
+    errorPaso1.value = 'El formato del correo institucional es inválido.'
+    return
+  }
+
+  errorPaso1.value = ''
+
+  debounceTimerRecuperar = setTimeout(async () => {
+    try {
+      const res = await authService.verificarCorreoRecuperacion(correoLimpio)
+      if (res && res.existe) {
+        errorPaso1.value = ''
+      }
+    } catch (err) {
+      if (err.response && err.response.data) {
+        errorPaso1.value = err.response.data.mensaje || 'No se encontró ninguna cuenta asociada a este correo.'
+      }
+    }
+  }, 400)
+})
 
 // Paso 2: 6 dígitos y temporizador
 const digitos = ref(['', '', '', '', '', ''])
