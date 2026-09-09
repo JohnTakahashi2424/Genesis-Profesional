@@ -273,53 +273,41 @@ onUnmounted(() => {
     <!-- Capa de oscurecimiento suave -->
     <div class="fixed inset-0 bg-[#071329]/45 backdrop-blur-[2px] pointer-events-none"></div>
 
-    <!-- TARJETA PRINCIPAL — mismo ancho que LoginModal -->
-    <div class="relative w-full max-w-[400px] sm:max-w-[420px] bg-white rounded-[26px] shadow-2xl px-7 py-8 sm:px-9 sm:py-9 my-auto z-10 text-center">
+    <!-- TARJETA PRINCIPAL — Calcada exactamente a la captura de pantalla -->
+    <div class="relative w-full max-w-[420px] bg-white rounded-[24px] shadow-2xl px-8 py-9 my-auto z-10 text-center">
 
-      <!-- Botón de regreso — flecha izquierda arriba a la izquierda (igual que Login) -->
+      <!-- Botón de cerrar ✕ arriba a la derecha -->
       <button
         type="button"
-        @click="paso > 1 ? (paso === 2 ? (paso = 1) : (paso === 3 ? (paso = 2) : emit('close'))) : emit('close')"
-        class="absolute top-6 left-6 text-gray-800 hover:text-black p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-        title="Regresar"
-        id="btn-back-recuperar"
+        @click="emit('close')"
+        class="absolute top-5 right-6 text-gray-700 hover:text-black p-1 rounded-full transition-colors cursor-pointer text-lg leading-none"
+        title="Cerrar"
+        id="btn-close-recuperar"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="18" viewBox="0 0 25 18" fill="none">
-          <path d="M1 9H24M7.57143 1L1 9L7.57143 17" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-
-      <!-- Logo UGB — presente en todos los pasos (igual que Login) -->
-      <div class="flex justify-center mb-2">
-        <img
-          src="/images/logo_ugb.png"
-          alt="Universidad Gerardo Barrios"
-          class="h-16 w-auto object-contain"
-        />
-      </div>
 
       <!-- ========================================== -->
       <!-- PASO 1: INGRESAR CORREO                    -->
       <!-- ========================================== -->
       <div v-if="paso === 1">
-        <!-- Título + subtítulo — mismo patrón que Login -->
-        <div class="text-center mb-5">
-          <h2 class="text-[26px] font-bold text-gray-950 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+        <!-- Título + subtítulo — idéntico a la captura -->
+        <div class="text-center mb-6 mt-1">
+          <h2 class="text-[26px] font-bold text-gray-950 tracking-tight mb-3" style="font-family: 'Lora', Georgia, serif;">
             Restablecer contraseña
           </h2>
-          <p class="text-[13px] font-medium text-gray-800 mt-1 font-sans">
-            ¿Olvidaste tu contraseña?
-          </p>
-          <p class="text-[12px] text-gray-600 font-sans">
-            Ingresa tu correo y te enviaremos un código de verificación
+          <p class="text-[13px] text-gray-700 leading-snug px-2 font-sans">
+            Ingresa el correo y te enviaremos un código de verificación para cambiar tú contraseña
           </p>
         </div>
 
         <form @submit.prevent="handleEnviarCodigo" class="text-left" novalidate>
-          <!-- Campo Correo* — misma estructura que Login -->
-          <div class="mb-4">
-            <label for="input-recuperar-correo" class="block text-sm font-semibold text-gray-900 mb-1">
-              Correo<span class="text-red-500">*</span>
+          <!-- Campo Correo: -->
+          <div class="mb-6">
+            <label for="input-recuperar-correo" class="block text-base font-bold text-gray-900 mb-2">
+              Correo:
             </label>
             <input
               id="input-recuperar-correo"
@@ -329,8 +317,8 @@ onUnmounted(() => {
               maxlength="100"
               :disabled="loading"
               @input="errorPaso1 = ''"
-              class="w-full px-3.5 py-2.5 rounded-[12px] bg-[#ebebeb] border text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
-              :class="errorPaso1 ? 'border-red-500' : 'border-gray-500'"
+              class="w-full px-4 py-3 rounded-[14px] bg-[#e6e6e6] border border-gray-400 text-gray-900 placeholder-gray-500 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
+              :class="{ 'border-red-500 bg-red-50': errorPaso1 }"
             />
             <p v-if="errorPaso1" class="flex items-center gap-1 text-red-600 text-[11px] mt-1.5 font-medium">
               <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
@@ -338,35 +326,18 @@ onUnmounted(() => {
             </p>
           </div>
 
-          <!-- Botón Enviar código — mismo estilo y comportamiento que Login -->
-          <div class="text-center mt-3 mb-5">
+          <!-- Botón Enviar código — botón píldora azul marino idéntico a la captura -->
+          <div class="text-center mt-6 mb-2">
             <button
               type="submit"
               id="btn-enviar-codigo"
               :disabled="loading"
-              class="w-[171px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] mx-auto cursor-pointer select-none disabled:cursor-not-allowed"
-              :class="correoEsValido
-                ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] shadow-md'
-                : 'bg-[#888eb8] shadow-sm'"
+              class="w-[170px] py-3 rounded-full bg-[#000854] hover:bg-[#00063d] active:scale-[0.98] text-white text-sm font-medium transition-all inline-flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
               style="font-family: 'Lora', Georgia, serif;"
             >
               <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
               <span>{{ loading ? 'Enviando...' : 'Enviar código' }}</span>
             </button>
-          </div>
-
-          <!-- Footer — volver al login -->
-          <div class="text-center mt-2">
-            <p class="text-xs text-gray-900">
-              ¿Ya recuerdas tu contraseña?
-              <button
-                type="button"
-                @click="emit('volver-login')"
-                class="text-[#2563eb] underline font-medium hover:text-[#1d4ed8] cursor-pointer ml-1"
-              >
-                Iniciar sesión
-              </button>
-            </p>
           </div>
         </form>
       </div>
