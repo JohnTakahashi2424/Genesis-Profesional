@@ -12,12 +12,17 @@ class Pasante extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'usuario_id',
+        'user_id',
+        'estudiante_id',
+        'supervisor_id',
         'area',
         'tipo_pasantia',
         'estado',
         'fase_actual',
-        'supervisor_id',
+        'fase1_curriculum',
+        'fase2_aceptado',
+        'fase3_practicas',
+        'fase4_informe_final',
         'horas_aprobadas',
     ];
 
@@ -26,19 +31,26 @@ class Pasante extends Model
     ];
 
     /**
-     * Un pasante pertenece a un registro de usuario.
+     * Relación con la cuenta de usuario principal (User).
      */
-    public function usuario(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Usuario::class, 'usuario_id', 'id');
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     /**
-     * Un pasante es supervisado por un miembro del personal administrativo.
+     * Relación con los datos académicos del estudiante (Estudiante).
+     */
+    public function estudiante(): BelongsTo
+    {
+        return $this->belongsTo(Estudiante::class, 'estudiante_id', 'id');
+    }
+
+    /**
+     * Relación con el supervisor asignado (User).
      */
     public function supervisor(): BelongsTo
     {
-        return $this->belongsTo(PersonalAdministrativo::class, 'supervisor_id', 'id');
+        return $this->belongsTo(User::class, 'supervisor_id', 'id');
     }
 }
-

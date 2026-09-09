@@ -56,4 +56,12 @@ class User extends Authenticatable
     {
         return $this->hasOne(Estudiante::class, 'correo_secundario', 'correo_institucional');
     }
+
+    /**
+     * Relación con el proceso de pasantía del usuario.
+     */
+    public function pasante()
+    {
+        return $this->hasOne(Pasante::class, 'user_id', 'id');
+    }
 }

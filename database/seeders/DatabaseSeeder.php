@@ -217,23 +217,33 @@ class DatabaseSeeder extends Seeder
 
         // 4. Perfiles de Pasantes
         DB::table('pasantes')->insert([
-            'usuario_id' => $pasante1Id,
+            'user_id' => $pasante1Id,
             'area' => 'Ingeniería en Sistemas',
             'tipo_pasantia' => 'interna',
             'estado' => 'en_proceso',
-            'fase_actual' => 'Fase 1',
+            'fase_actual' => 'Fase 2',
+            'fase1_curriculum' => 'completado',
+            'fase2_aceptado' => 'completado',
+            'fase3_practicas' => 'pendiente',
+            'fase4_informe_final' => 'pendiente',
             'supervisor_id' => $supervisorId,
+            'horas_aprobadas' => 0.00,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
         DB::table('pasantes')->insert([
-            'usuario_id' => $pasante2Id,
+            'user_id' => $pasante2Id,
             'area' => 'Ingeniería en Sistemas',
             'tipo_pasantia' => 'externa',
             'estado' => 'en_proceso',
             'fase_actual' => 'Fase 2',
+            'fase1_curriculum' => 'completado',
+            'fase2_aceptado' => 'completado',
+            'fase3_practicas' => 'pendiente',
+            'fase4_informe_final' => 'pendiente',
             'supervisor_id' => $supervisorId,
+            'horas_aprobadas' => 0.00,
             'created_at' => now(),
             'updated_at' => now()
         ]);

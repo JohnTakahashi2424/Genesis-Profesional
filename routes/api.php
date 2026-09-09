@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 
+use App\Http\Controllers\PasantiaController;
+
 /*
 |--------------------------------------------------------------------------
 | Rutas de la API (Genesis Profesional)
@@ -35,3 +37,6 @@ Route::prefix('auth')->group(function () {
     // Recuperación de contraseña: cambio seguro de contraseña
     Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
+
+// Rutas de Pasantías
+Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
