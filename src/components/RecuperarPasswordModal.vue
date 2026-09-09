@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onUnmounted, nextTick } from 'vue'
 import authService from '../services/authService'
 import { PasswordStrengthMeter } from './common'
 
@@ -18,10 +18,8 @@ const errorPaso3 = ref('')
 const correo = ref('')
 const correoEnmascarado = ref('')
 
-
 // Paso 2: 6 dígitos y temporizador
 const digitos = ref(['', '', '', '', '', ''])
-const digitoRefs = ref([])
 const segundosRestantes = ref(90)
 let timerInterval = null
 
@@ -63,6 +61,9 @@ const codigoTexto = computed(() => {
   return digitos.value.join('')
 })
 
+// Validación del paso 1: correo no vacío
+const correoEsValido = computed(() => correo.value.trim().length > 0)
+
 // Validación del paso 3: coincidencia y robustez
 const contrasenasCoinciden = computed(() => {
   return nuevaContrasena.value && nuevaContrasena.value === confirmarContrasena.value
@@ -103,7 +104,7 @@ const handleEnviarCodigo = async () => {
     correoEnmascarado.value = res.correo_enmascarado || enmascarar(correoLimpio)
     paso.value = 2
     iniciarTemporizador(res.tiempo_expiracion_segundos || 90)
-    
+
     // Enfocar automáticamente primera casilla en paso 2
     nextTick(() => {
       const primerInput = document.getElementById('digito-0')
@@ -140,7 +141,6 @@ const handleInputDigito = (index, evento) => {
 
 const handleKeydownDigito = (index, evento) => {
   if (evento.key === 'Backspace' && !digitos.value[index] && index > 0) {
-    // Si la casilla actual está vacía y se pulsa backspace, retroceder
     nextTick(() => {
       const anterior = document.getElementById(`digito-${index - 1}`)
       if (anterior) {
@@ -160,7 +160,6 @@ const handlePasteCodigo = (evento) => {
     digitos.value[i] = numeros[i] || ''
   }
 
-  // Enfocar última casilla llena
   const ultimoIndex = Math.min(numeros.length, 5)
   nextTick(() => {
     const inputFocus = document.getElementById(`digito-${ultimoIndex}`)
@@ -216,7 +215,7 @@ const handleVerificarCodigo = async () => {
   }
 }
 
-// Cancelar y volver
+// Cancelar y volver al login
 const handleCancelar = () => {
   emit('volver-login')
 }
@@ -267,44 +266,62 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div 
+  <div
     class="recuperar-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-cover bg-center overflow-y-auto"
     style="background-image: url('/images/Fondo_login.png');"
   >
     <!-- Capa de oscurecimiento suave -->
     <div class="fixed inset-0 bg-[#071329]/45 backdrop-blur-[2px] pointer-events-none"></div>
 
-    <!-- TARJETA PRINCIPAL -->
-    <div class="relative w-full max-w-[390px] sm:max-w-[430px] bg-white rounded-[26px] shadow-2xl px-7 py-8 sm:px-9 sm:py-9 my-auto z-10 text-center">
-      
-      <!-- Botón cerrar (X) en esquina superior derecha -->
-      <button 
-        type="button" 
-        @click="emit('close')"
-        class="absolute top-5 right-5 text-gray-500 hover:text-black p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer text-lg font-bold"
-        title="Cerrar"
-        id="btn-close-recuperar"
+    <!-- TARJETA PRINCIPAL — mismo ancho que LoginModal -->
+    <div class="relative w-full max-w-[400px] sm:max-w-[420px] bg-white rounded-[26px] shadow-2xl px-7 py-8 sm:px-9 sm:py-9 my-auto z-10 text-center">
+
+      <!-- Botón de regreso — flecha izquierda arriba a la izquierda (igual que Login) -->
+      <button
+        type="button"
+        @click="paso > 1 ? (paso === 2 ? (paso = 1) : (paso === 3 ? (paso = 2) : emit('close'))) : emit('close')"
+        class="absolute top-6 left-6 text-gray-800 hover:text-black p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+        title="Regresar"
+        id="btn-back-recuperar"
       >
-        ✕
+        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="18" viewBox="0 0 25 18" fill="none">
+          <path d="M1 9H24M7.57143 1L1 9L7.57143 17" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </button>
 
+      <!-- Logo UGB — presente en todos los pasos (igual que Login) -->
+      <div class="flex justify-center mb-2">
+        <img
+          src="/images/logo_ugb.png"
+          alt="Universidad Gerardo Barrios"
+          class="h-16 w-auto object-contain"
+        />
+      </div>
+
       <!-- ========================================== -->
-      <!-- PASO 1: INGRESAR CORREO (Imagen 1)        -->
+      <!-- PASO 1: INGRESAR CORREO                    -->
       <!-- ========================================== -->
       <div v-if="paso === 1">
-        <h2 class="text-[24px] sm:text-[26px] font-bold text-gray-950 font-serif tracking-tight mb-2" style="font-family: 'Lora', Georgia, serif;">
-          Restablecer contraseña
-        </h2>
-        <p class="text-xs sm:text-[13px] text-gray-600 font-sans leading-relaxed mb-6">
-          Ingresa el correo y te enviaremos un código de verificación para cambiar tú contraseña
-        </p>
+        <!-- Título + subtítulo — mismo patrón que Login -->
+        <div class="text-center mb-5">
+          <h2 class="text-[26px] font-bold text-gray-950 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+            Restablecer contraseña
+          </h2>
+          <p class="text-[13px] font-medium text-gray-800 mt-1 font-sans">
+            ¿Olvidaste tu contraseña?
+          </p>
+          <p class="text-[12px] text-gray-600 font-sans">
+            Ingresa tu correo y te enviaremos un código de verificación
+          </p>
+        </div>
 
         <form @submit.prevent="handleEnviarCodigo" class="text-left" novalidate>
-          <div class="mb-5">
-            <label for="input-recuperar-correo" class="block text-sm font-semibold text-gray-900 mb-1.5">
-              Correo:
+          <!-- Campo Correo* — misma estructura que Login -->
+          <div class="mb-4">
+            <label for="input-recuperar-correo" class="block text-sm font-semibold text-gray-900 mb-1">
+              Correo<span class="text-red-500">*</span>
             </label>
-            <input 
+            <input
               id="input-recuperar-correo"
               v-model="correo"
               type="email"
@@ -312,52 +329,67 @@ onUnmounted(() => {
               maxlength="100"
               :disabled="loading"
               @input="errorPaso1 = ''"
-              class="w-full px-4 py-2.5 rounded-[14px] bg-[#ebebeb] border border-gray-400 text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#010c67] focus:outline-none transition-colors disabled:opacity-60"
-              :class="errorPaso1 ? 'border-red-500' : 'border-gray-400'"
+              class="w-full px-3.5 py-2.5 rounded-[12px] bg-[#ebebeb] border text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
+              :class="errorPaso1 ? 'border-red-500' : 'border-gray-500'"
             />
-            <p v-if="errorPaso1" class="flex items-center gap-1.5 text-red-600 text-xs mt-1.5 font-medium">
-              <i class="bi bi-exclamation-circle text-xs shrink-0"></i>
+            <p v-if="errorPaso1" class="flex items-center gap-1 text-red-600 text-[11px] mt-1.5 font-medium">
+              <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
               <span>{{ errorPaso1 }}</span>
             </p>
           </div>
 
-          <!-- Botón Enviar código en azul marino #010c67 -->
-          <div class="text-center mt-6">
-            <button 
+          <!-- Botón Enviar código — mismo estilo y comportamiento que Login -->
+          <div class="text-center mt-3 mb-5">
+            <button
               type="submit"
               id="btn-enviar-codigo"
               :disabled="loading"
-              class="w-44 py-2.5 px-6 rounded-[14px] bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] text-white text-[15px] font-serif transition-all duration-200 shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+              class="w-[171px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] mx-auto cursor-pointer select-none disabled:cursor-not-allowed"
+              :class="correoEsValido
+                ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] shadow-md'
+                : 'bg-[#888eb8] shadow-sm'"
               style="font-family: 'Lora', Georgia, serif;"
             >
               <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
               <span>{{ loading ? 'Enviando...' : 'Enviar código' }}</span>
             </button>
           </div>
+
+          <!-- Footer — volver al login -->
+          <div class="text-center mt-2">
+            <p class="text-xs text-gray-900">
+              ¿Ya recuerdas tu contraseña?
+              <button
+                type="button"
+                @click="emit('volver-login')"
+                class="text-[#2563eb] underline font-medium hover:text-[#1d4ed8] cursor-pointer ml-1"
+              >
+                Iniciar sesión
+              </button>
+            </p>
+          </div>
         </form>
       </div>
 
       <!-- ========================================== -->
-      <!-- PASO 2: INGRESAR 6 DÍGITOS (Imágenes 2 y 3) -->
+      <!-- PASO 2: INGRESAR 6 DÍGITOS                 -->
       <!-- ========================================== -->
       <div v-else-if="paso === 2">
-        <h2 class="text-[24px] sm:text-[26px] font-bold text-gray-950 font-serif tracking-tight mb-2" style="font-family: 'Lora', Georgia, serif;">
-          Restablecer contraseña
-        </h2>
-        <p class="text-xs sm:text-[13px] text-gray-700 font-sans leading-relaxed mb-0.5">
-          Introduce el código de verificación
-        </p>
-        <p class="text-xs sm:text-[13px] text-gray-700 font-sans leading-relaxed mb-1">
-          enviado al correo electrónico de
-        </p>
-        <p class="text-sm font-bold text-gray-900 mb-3 tracking-wide">
-          {{ correoEnmascarado }}
-        </p>
-
+        <div class="text-center mb-5">
+          <h2 class="text-[26px] font-bold text-gray-950 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+            Verifica tu correo
+          </h2>
+          <p class="text-[13px] font-medium text-gray-800 mt-1 font-sans">
+            Introduce el código de verificación
+          </p>
+          <p class="text-[12px] text-gray-600 font-sans">
+            enviado al correo <strong class="text-gray-900">{{ correoEnmascarado }}</strong>
+          </p>
+        </div>
 
         <!-- 6 Casillas individuales para el código -->
         <div class="flex justify-center items-center gap-2 sm:gap-2.5 my-5">
-          <input 
+          <input
             v-for="(digito, index) in digitos"
             :key="index"
             :id="'digito-' + index"
@@ -369,53 +401,55 @@ onUnmounted(() => {
             @input="handleInputDigito(index, $event)"
             @keydown="handleKeydownDigito(index, $event)"
             @paste="handlePasteCodigo"
-            class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#ebebeb] border border-gray-400 rounded-[8px] sm:rounded-[10px] text-gray-900 focus:bg-white focus:border-[#010c67] focus:outline-none transition-all shadow-sm disabled:opacity-60"
-            :class="errorPaso2 ? 'border-red-500 bg-red-50/20' : ''"
+            class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#ebebeb] border rounded-[10px] text-gray-900 focus:bg-white focus:border-[#010c67] focus:outline-none transition-all shadow-sm disabled:opacity-60"
+            :class="errorPaso2 ? 'border-red-500 bg-red-50/20' : 'border-gray-500'"
           />
         </div>
 
         <!-- Mensaje de error paso 2 -->
-        <p v-if="errorPaso2" class="flex items-center justify-center gap-1.5 text-red-600 text-xs mb-3 font-medium">
-          <i class="bi bi-exclamation-circle text-xs shrink-0"></i>
+        <p v-if="errorPaso2" class="flex items-center justify-center gap-1 text-red-600 text-[11px] mb-3 font-medium">
+          <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
           <span>{{ errorPaso2 }}</span>
         </p>
 
-        <!-- Temporizador y reenvío (1:30 seg.) -->
-        <div class="my-4 text-xs text-gray-700">
-          ¿Aún no recibes el código? 
-          <button 
-            v-if="segundosRestantes === 0" 
-            type="button" 
+        <!-- Temporizador y reenvío -->
+        <div class="my-3 text-xs text-gray-600 text-center">
+          ¿Aún no recibes el código?
+          <button
+            v-if="segundosRestantes === 0"
+            type="button"
             @click="handleReenviarCodigo"
-            class="text-blue-600 underline font-medium hover:text-blue-800 cursor-pointer ml-1"
+            class="text-[#2563eb] underline font-medium hover:text-[#1d4ed8] cursor-pointer ml-1"
           >
             Reenviar código
           </button>
-          <span v-else class="text-blue-600 font-medium ml-1">
-            Reenviar código 
-            <span class="text-gray-700 font-medium ml-1">{{ formatearTiempo(segundosRestantes) }} seg.</span>
+          <span v-else class="ml-1">
+            Reenviar código en
+            <span class="font-semibold text-gray-800">{{ formatearTiempo(segundosRestantes) }} seg.</span>
           </span>
         </div>
 
-        <!-- Botones Cancelar (vino) y Verificar (lavanda cuando vacío, azul cuando lleno) -->
-        <div class="flex items-center justify-center gap-3 sm:gap-4 mt-5">
-          <button 
+        <!-- Botones Cancelar (vino) y Verificar (lavanda→azul marino) -->
+        <div class="flex items-center justify-center gap-3 sm:gap-4 mt-5 mb-2">
+          <button
             type="button"
             @click="handleCancelar"
-            class="w-32 sm:w-36 py-2.5 px-4 rounded-[14px] bg-[#5b0612] hover:bg-[#48040d] active:scale-[0.98] text-white text-sm font-medium transition-all cursor-pointer shadow-sm"
+            class="w-[130px] h-[51px] rounded-[18px] bg-[#5b0612] hover:bg-[#48040d] active:scale-[0.98] text-white text-sm font-medium transition-all cursor-pointer"
+            style="font-family: 'Lora', Georgia, serif;"
           >
             Cancelar
           </button>
 
-          <button 
+          <button
             type="button"
             id="btn-verificar-codigo"
             :disabled="!codigoCompleto || loading"
             @click="handleVerificarCodigo"
-            class="w-32 sm:w-36 py-2.5 px-4 rounded-[14px] text-white text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 select-none disabled:cursor-not-allowed"
-            :class="codigoCompleto 
-              ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] cursor-pointer' 
+            class="w-[130px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] select-none disabled:cursor-not-allowed"
+            :class="codigoCompleto
+              ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] cursor-pointer'
               : 'bg-[#888eb8] opacity-90'"
+            style="font-family: 'Lora', Georgia, serif;"
           >
             <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
             <span>{{ loading ? 'Verificando...' : 'Verificar' }}</span>
@@ -424,33 +458,38 @@ onUnmounted(() => {
       </div>
 
       <!-- ========================================== -->
-      <!-- PASO 3: NUEVA CONTRASEÑA (Imágenes 4 y 5)  -->
+      <!-- PASO 3: NUEVA CONTRASEÑA                   -->
       <!-- ========================================== -->
       <div v-else-if="paso === 3">
-        <h2 class="text-[22px] sm:text-[24px] font-bold text-gray-950 font-serif tracking-tight mb-4 text-center leading-snug" style="font-family: 'Lora', Georgia, serif;">
-          Escribe una nueva<br>contraseña:
-        </h2>
+        <div class="text-center mb-5">
+          <h2 class="text-[26px] font-bold text-gray-950 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+            Nueva contraseña
+          </h2>
+          <p class="text-[13px] font-medium text-gray-800 mt-1 font-sans">
+            Protege tu cuenta con una contraseña segura
+          </p>
+        </div>
 
         <form @submit.prevent="handleCambiarContrasena" class="text-left" novalidate>
-          
-          <!-- Contraseña -->
+
+          <!-- Contraseña* -->
           <div class="mb-2">
             <label for="input-nueva-pass" class="block text-sm font-semibold text-gray-900 mb-1">
               Contraseña<span class="text-red-500">*</span>
             </label>
             <div class="relative">
-              <input 
+              <input
                 id="input-nueva-pass"
                 v-model="nuevaContrasena"
                 :type="mostrarPassword1 ? 'text' : 'password'"
-                placeholder="••••••"
+                placeholder="••••••••"
                 maxlength="100"
                 :disabled="loading"
                 @input="errorPaso3 = ''"
-                class="w-full px-3.5 py-2.5 pr-11 rounded-[12px] bg-[#ebebeb] border border-gray-400 text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#010c67] focus:outline-none transition-colors disabled:opacity-60"
+                class="w-full px-3.5 py-2.5 pr-11 rounded-[12px] bg-[#ebebeb] border border-gray-500 text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 @click="mostrarPassword1 = !mostrarPassword1"
                 class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 p-1 cursor-pointer"
                 tabindex="-1"
@@ -460,31 +499,31 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Medidor de fortaleza reutilizable (3 barras y checklist de 4 puntos) -->
-          <PasswordStrengthMeter 
+          <!-- Medidor de fortaleza (3 barras y checklist de 4 puntos) -->
+          <PasswordStrengthMeter
             :password="nuevaContrasena"
             @update:isValid="val => passwordEsValida = val"
           />
 
-          <!-- Confirmar Contraseña -->
+          <!-- Confirmar Contraseña* -->
           <div class="mb-4">
             <label for="input-confirmar-nueva-pass" class="block text-sm font-semibold text-gray-900 mb-1">
               Confirmar contraseña<span class="text-red-500">*</span>
             </label>
             <div class="relative">
-              <input 
+              <input
                 id="input-confirmar-nueva-pass"
                 v-model="confirmarContrasena"
                 :type="mostrarPassword2 ? 'text' : 'password'"
-                placeholder="••••••"
+                placeholder="••••••••"
                 maxlength="100"
                 :disabled="loading"
                 @input="errorPaso3 = ''"
-                class="w-full px-3.5 py-2.5 pr-11 rounded-[12px] bg-[#ebebeb] border border-gray-400 text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#010c67] focus:outline-none transition-colors disabled:opacity-60"
-                :class="confirmarContrasena && !contrasenasCoinciden ? 'border-red-500' : 'border-gray-400'"
+                class="w-full px-3.5 py-2.5 pr-11 rounded-[12px] bg-[#ebebeb] border text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
+                :class="confirmarContrasena && !contrasenasCoinciden ? 'border-red-500' : 'border-gray-500'"
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 @click="mostrarPassword2 = !mostrarPassword2"
                 class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 p-1 cursor-pointer"
                 tabindex="-1"
@@ -499,21 +538,21 @@ onUnmounted(() => {
           </div>
 
           <!-- Error general paso 3 -->
-          <p v-if="errorPaso3" class="flex items-center gap-1.5 text-red-600 text-xs mb-3 font-medium">
-            <i class="bi bi-exclamation-circle text-xs shrink-0"></i>
+          <p v-if="errorPaso3" class="flex items-center gap-1.5 text-red-600 text-[11px] mb-3 font-medium">
+            <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
             <span>{{ errorPaso3 }}</span>
           </p>
 
-          <!-- Botón Cambiar (lavanda cuando incompleto, azul marino cuando válido) -->
-          <div class="text-center mt-4">
-            <button 
+          <!-- Botón Cambiar — lavanda cuando incompleto, azul marino cuando válido -->
+          <div class="text-center mt-3 mb-5">
+            <button
               type="submit"
               id="btn-cambiar-pass"
               :disabled="!puedeCambiarContrasena || loading"
-              class="w-40 py-2.5 px-6 rounded-[14px] text-white text-[15px] font-serif transition-all duration-200 flex items-center justify-center gap-2 mx-auto select-none disabled:cursor-not-allowed"
-              :class="puedeCambiarContrasena 
-                ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] shadow-md cursor-pointer' 
-                : 'bg-[#888eb8] opacity-80 shadow-sm'"
+              class="w-[171px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] mx-auto select-none disabled:cursor-not-allowed"
+              :class="puedeCambiarContrasena
+                ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] shadow-md cursor-pointer'
+                : 'bg-[#888eb8] shadow-sm'"
               style="font-family: 'Lora', Georgia, serif;"
             >
               <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
@@ -525,22 +564,22 @@ onUnmounted(() => {
       </div>
 
       <!-- ========================================== -->
-      <!-- PASO 4: ÉXITO CONFIRMADO                  -->
+      <!-- PASO 4: ÉXITO CONFIRMADO                   -->
       <!-- ========================================== -->
       <div v-else-if="paso === 4" class="py-4">
         <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
           <i class="bi bi-check-lg text-3xl"></i>
         </div>
-        <h3 class="text-xl font-bold text-gray-950 font-serif mb-2" style="font-family: 'Lora', Georgia, serif;">
+        <h2 class="text-[26px] font-bold text-gray-950 tracking-tight mb-2" style="font-family: 'Lora', Georgia, serif;">
           ¡Contraseña restablecida!
-        </h3>
-        <p class="text-xs text-gray-600 font-sans mb-6">
-          Tu contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión con tus nuevas credenciales.
+        </h2>
+        <p class="text-[12px] text-gray-600 font-sans mb-6">
+          Tu contraseña ha sido actualizada exitosamente.<br>Ahora puedes iniciar sesión con tus nuevas credenciales.
         </p>
-        <button 
-          type="button" 
+        <button
+          type="button"
           @click="emit('volver-login')"
-          class="w-44 py-2.5 px-6 rounded-[14px] bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] text-white text-sm font-serif transition-all shadow-md mx-auto cursor-pointer"
+          class="w-[171px] h-[51px] rounded-[18px] border border-white bg-[#010C67] hover:bg-[#01094f] active:scale-[0.98] text-white text-sm font-medium transition-all shadow-md mx-auto flex items-center justify-center cursor-pointer"
           style="font-family: 'Lora', Georgia, serif;"
         >
           Iniciar sesión

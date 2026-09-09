@@ -113,7 +113,9 @@ const handleOlvideContrasena = () => {
         title="Regresar"
         id="btn-close-login"
       >
-        <i class="bi bi-arrow-left text-xl font-bold"></i>
+        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="18" viewBox="0 0 25 18" fill="none">
+          <path d="M1 9H24M7.57143 1L1 9L7.57143 17" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </button>
 
       <!-- Logo UGB Centrado -->
@@ -225,7 +227,7 @@ const handleOlvideContrasena = () => {
             type="submit"
             id="btn-submit-login"
             :disabled="loading"
-            class="w-44 py-2.5 px-6 rounded-[14px] text-white text-[15px] font-serif transition-all duration-200 flex items-center justify-center gap-2 mx-auto cursor-pointer select-none disabled:opacity-75 disabled:cursor-not-allowed"
+            class="w-[171px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] mx-auto cursor-pointer select-none disabled:cursor-not-allowed"
             :class="formCompleto 
               ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] shadow-md' 
               : 'bg-[#888eb8] shadow-sm'"

@@ -266,7 +266,9 @@ const cerrarYIrALogin = () => {
         title="Volver"
         id="btn-back-registro"
       >
-        <i class="bi bi-arrow-left text-xl font-bold"></i>
+        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="18" viewBox="0 0 25 18" fill="none">
+          <path d="M1 9H24M7.57143 1L1 9L7.57143 17" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </button>
 
       <!-- Logo UGB Centrado -->

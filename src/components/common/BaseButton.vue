@@ -34,13 +34,13 @@ const emit = defineEmits(['click'])
     :type="type"
     :disabled="disabled || loading"
     @click="emit('click', $event)"
-    class="font-medium text-sm transition-all rounded-full py-2.5 px-6 flex items-center justify-center gap-2 select-none shadow-md"
+    class="font-medium text-sm transition-all flex items-center justify-center gap-[10px] select-none"
     :class="[
-      block ? 'w-full' : 'w-44 mx-auto',
-      variant === 'primary' 
-        ? (!disabled && !loading 
-            ? 'bg-[#0a1854] hover:bg-[#07113d] text-white cursor-pointer active:scale-95' 
-            : 'bg-[#888eb8] text-white/90 cursor-not-allowed shadow-none')
+      block ? 'w-full rounded-[18px] h-[51px] px-[10px]' : 'w-[171px] h-[51px] rounded-[18px] px-[10px] mx-auto',
+      variant === 'primary'
+        ? (!disabled && !loading
+            ? 'bg-[#010C67] border border-white text-white cursor-pointer hover:bg-[#01094f] active:scale-95 shadow-md'
+            : 'bg-[#888eb8] border border-white/40 text-white/90 cursor-not-allowed shadow-none')
         : '',
       variant === 'outline-white'
         ? 'border border-white text-white hover:bg-white/15 cursor-pointer active:scale-95'
