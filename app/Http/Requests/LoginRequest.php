@@ -27,6 +27,7 @@ class LoginRequest extends FormRequest
                 'string',
                 'email',
                 'max:100',
+                'regex:/^[a-zA-Z0-9._%+-]+@ugb\.edu\.sv$/i',
             ],
             'contrasena' => [
                 'required',
