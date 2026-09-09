@@ -13,9 +13,11 @@ const mostrarRecuperar = ref(false)
 
 onMounted(() => {
   const path = window.location.pathname
-  const usuario = localStorage.getItem('genesis_usuario')
-  if (path.includes('/dashboard') || path.includes('/panel') || path.includes('/panel-pasante') || usuario) {
+  // Por defecto siempre mostrar la Landing Page. Solo cambiar a dashboard si la URL lo especifica explícitamente.
+  if (path.includes('/dashboard') || path.includes('/panel-pasante')) {
     vistaActual.value = 'dashboard'
+  } else {
+    vistaActual.value = 'landing'
   }
 })
 
@@ -54,7 +56,12 @@ const handleLoginExitoso = (respuesta) => {
 }
 
 const handleLogout = () => {
+  localStorage.removeItem('genesis_token')
+  localStorage.removeItem('genesis_usuario')
   vistaActual.value = 'landing'
+  if (window.location.pathname !== '/') {
+    window.history.pushState({}, '', '/')
+  }
 }
 </script>
 
