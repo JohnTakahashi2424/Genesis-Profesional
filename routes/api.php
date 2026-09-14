@@ -40,3 +40,12 @@ Route::prefix('auth')->group(function () {
 
 // Rutas de Pasantías
 Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+
+// Rutas del Módulo de Curriculum Vitae (CV)
+use App\Http\Controllers\CvController;
+
+Route::prefix('cv')->group(function () {
+    Route::post('/guardar', [CvController::class, 'guardar'])->name('api.cv.guardar');
+    Route::get('/obtener/{usuarioId}', [CvController::class, 'obtener'])->name('api.cv.obtener');
+    Route::delete('/eliminar/{cvId}', [CvController::class, 'eliminar'])->name('api.cv.eliminar');
+});
