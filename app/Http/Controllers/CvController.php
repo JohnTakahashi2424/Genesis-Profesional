@@ -54,27 +54,44 @@ class CvController extends Controller
 
         $urlPublica = "/storage/{$ruta}";
 
+        // Buscar si el usuario ya tiene un CV registrado por cvId o por su usuario_id
+        $cv = null;
+        if ($cvId) {
+            $cv = CurriculumVitae::find($cvId);
+        }
+        if (!$cv) {
+            $cv = CurriculumVitae::where('usuario_id', $usuarioId)->orderByDesc('id')->first();
+        }
+
         // Procesar foto de perfil
+        $fotoInput = $request->perfil['fotoUrl'] ?? $request->perfil['foto_url'] ?? null;
         $fotoUrl = null;
-        if (isset($request->perfil['fotoUrl']) && !empty($request->perfil['fotoUrl'])) {
-            $fotoData = $request->perfil['fotoUrl'];
-            // Si es una imagen codificada en base64
-            if (preg_match('#^data:image/(\w+);base64,#i', $fotoData, $matches)) {
+
+        if ($fotoInput && !empty($fotoInput)) {
+            if (preg_match('#^data:image/(\w+);base64,#i', $fotoInput, $matches)) {
                 $ext = strtolower($matches[1]);
                 if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                     $ext = 'png';
                 }
-                $fotoDecoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $fotoData));
+                $fotoDecoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $fotoInput));
                 $nombreFoto = 'foto_' . time() . '.' . $ext;
                 $carpetaFoto = "cv_fotos/{$usuarioId}";
                 $rutaFoto = "{$carpetaFoto}/{$nombreFoto}";
                 
                 Storage::disk('public')->put($rutaFoto, $fotoDecoded);
+
+                $publicPath = public_path("storage/{$rutaFoto}");
+                if (!file_exists(dirname($publicPath))) {
+                    @mkdir(dirname($publicPath), 0777, true);
+                }
+                @file_put_contents($publicPath, $fotoDecoded);
+
                 $fotoUrl = "/storage/{$rutaFoto}";
             } else {
-                // Si ya es una URL existente en el servidor o externa
-                $fotoUrl = $fotoData;
+                $fotoUrl = $fotoInput;
             }
+        } else if ($cv && $cv->foto_url) {
+            $fotoUrl = $cv->foto_url;
         }
 
         $data = [
@@ -104,28 +121,30 @@ class CvController extends Controller
             'estado'           => 'activo',
         ];
 
-        if ($cvId) {
-            $cv = CurriculumVitae::find($cvId);
-            if ($cv) {
-                // Eliminar foto física anterior si cambió y existía en public storage
-                if ($cv->foto_url && $cv->foto_url !== $fotoUrl) {
-                    $oldFotoPath = str_replace('/storage/', '', $cv->foto_url);
-                    if (Storage::disk('public')->exists($oldFotoPath)) {
-                        Storage::disk('public')->delete($oldFotoPath);
-                    }
+        if ($cv) {
+            // Eliminar foto física anterior si cambió y existía en public storage
+            if ($cv->foto_url && $cv->foto_url !== $fotoUrl && str_contains($cv->foto_url, '/storage/')) {
+                $oldFotoPath = str_replace('/storage/', '', $cv->foto_url);
+                if (Storage::disk('public')->exists($oldFotoPath)) {
+                    Storage::disk('public')->delete($oldFotoPath);
                 }
-
-                // Eliminar archivo físico anterior si existe
-                if ($cv->ruta_archivo) {
-                    Storage::disk('public')->delete($cv->ruta_archivo);
-                }
-                $cv->update($data);
-            } else {
-                $cv = CurriculumVitae::create($data);
             }
+
+            // Eliminar archivo PDF anterior si existe
+            if ($cv->ruta_archivo && Storage::disk('public')->exists($cv->ruta_archivo)) {
+                Storage::disk('public')->delete($cv->ruta_archivo);
+            }
+
+            $cv->update($data);
         } else {
+            // Crear el registro único de CV para este usuario
             $cv = CurriculumVitae::create($data);
         }
+
+        // Mantener únicamente este registro para el usuario en la base de datos (elimina posibles duplicados antiguos)
+        CurriculumVitae::where('usuario_id', $usuarioId)
+            ->where('id', '!=', $cv->id)
+            ->delete();
 
         return response()->json([
             'mensaje'        => 'CV guardado correctamente.',
@@ -144,6 +163,19 @@ class CvController extends Controller
         $cvs = CurriculumVitae::where('usuario_id', $usuarioId)
             ->orderByDesc('created_at')
             ->get();
+
+        if ($cvs->isEmpty() && $request->has('correo')) {
+            $correo = $request->query('correo');
+            $user = DB::table('usuarios')->where('correo', $correo)->first();
+            if (!$user && Schema::hasTable('users')) {
+                $user = DB::table('users')->where('email', $correo)->first();
+            }
+            if ($user) {
+                $cvs = CurriculumVitae::where('usuario_id', $user->id)
+                    ->orderByDesc('created_at')
+                    ->get();
+            }
+        }
 
         if ($cvs->isEmpty()) {
             return response()->json(['mensaje' => 'Este usuario aún no tiene CV.', 'tiene_cv' => false, 'cvs' => []], 200);
