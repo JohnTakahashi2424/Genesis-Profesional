@@ -12,16 +12,42 @@ import ConfiguracionModulo from './ConfiguracionModulo.vue'
 const emit = defineEmits(['logout'])
 
 // Obtener datos del usuario desde localStorage o fallback
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{"nombres":"Dallana","apellidos":""}'))
+const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 const itemActivo = ref('inicio')
 
 // Extraer el primer nombre para el saludo del banner
 const primerNombre = computed(() => {
-  const nombres = usuario.value?.nombres || usuario.value?.nombre
+  const nombres = usuario.value?.nombres || usuario.value?.nombre || usuario.value?.nombre_completo
   if (nombres && typeof nombres === 'string' && nombres.trim().length > 0) {
     return nombres.trim().split(' ')[0]
   }
-  return 'Dallana'
+  return 'Usuario'
+})
+
+const nombreCompleto = computed(() => {
+  if (usuario.value?.nombre_completo) return usuario.value.nombre_completo
+  const n = usuario.value?.nombres || usuario.value?.nombre || ''
+  const a = usuario.value?.apellidos || usuario.value?.apellido || ''
+  const full = `${n} ${a}`.trim()
+  return full || 'Usuario'
+})
+
+const normalizarUrlFoto = (url) => {
+  if (!url) return ''
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/api/storage/')) return url
+  if (url.startsWith('api/storage/')) return '/' + url
+  if (url.startsWith('/storage/')) return '/api' + url
+  if (url.startsWith('storage/')) return '/api/' + url
+  if (url.startsWith('/')) return url
+  return '/api/storage/' + url
+}
+
+const imgErrorPasante = ref(false)
+
+const fotoUsuario = computed(() => {
+  const raw = usuario.value?.foto || usuario.value?.avatar || usuario.value?.foto_url || null
+  return raw ? normalizarUrlFoto(raw) : null
 })
 
 const pasantidaInfo = ref({
@@ -37,10 +63,13 @@ const pasantidaInfo = ref({
 // Cargar estado de la pasantía y datos frescos del usuario desde la API
 const cargarEstadoPasantia = async () => {
   try {
+    const userId = usuario.value?.id || usuario.value?.user_id || 0
+    const correo = usuario.value?.correo || usuario.value?.email || ''
+
     const res = await axios.get('/api/pasante/estado', {
       params: { 
-        user_id: usuario.value?.id,
-        correo: usuario.value?.correo
+        user_id: userId,
+        correo
       }
     })
     if (res.data) {
@@ -51,6 +80,23 @@ const cargarEstadoPasantia = async () => {
         usuario.value = { ...usuario.value, ...res.data.usuario }
         localStorage.setItem('genesis_usuario', JSON.stringify(usuario.value))
       }
+    }
+
+    try {
+      const cvRes = await axios.get(`/api/cv/obtener/${userId}`, { params: { correo } })
+      if (cvRes.data && cvRes.data.cvs && cvRes.data.cvs.length > 0) {
+        const cv = cvRes.data.cvs[0]
+        const fotoBD = cv.foto_url || cv.foto || cv.avatar
+        if (fotoBD) {
+          const fotoNorm = normalizarUrlFoto(fotoBD)
+          usuario.value.foto = fotoNorm
+          usuario.value.foto_url = fotoNorm
+          imgErrorPasante.value = false
+          localStorage.setItem('genesis_usuario', JSON.stringify(usuario.value))
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar foto CV en panel:', e)
     }
   } catch (err) {
     console.warn('Usando estado inicial de pasantía:', err)
@@ -199,42 +245,72 @@ const handleLogout = () => {
 
       <!-- VISTA PRINCIPAL (INICIO / DASHBOARD) -->
       <template v-else>
-        <!-- 1. BANNER DE BIENVENIDA -->
-        <div class="relative bg-[#000B58] rounded-[20px] p-8 text-white shadow-xl overflow-hidden mb-8 flex items-center justify-between">
-          <div class="max-w-2xl z-10">
-            <h1 class="text-3xl font-bold mb-2.5 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
-              Hola de nuevo, {{ primerNombre }}
-            </h1>
-            <p class="text-sm text-white/90 leading-relaxed font-normal">
-              Bienvenida de nuevo al portal de Génesis Profesional, aquí puedes gestionar tu curriculum, subir informes y monitorear tu proceso de pasantías
-            </p>
+        <!-- 1. HEADER CON BANNER Y PERFIL -->
+        <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6">
+          <!-- BANNER DE BIENVENIDA AZUL -->
+          <div class="flex-1 min-w-0 bg-[#000B58] rounded-[16px] px-6 py-5 text-white shadow-xs flex items-center justify-between overflow-hidden">
+            <div class="z-10 pr-4">
+              <h1 class="text-2xl font-bold mb-1.5 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+                Hola de nuevo, {{ primerNombre }}
+              </h1>
+              <p class="text-xs md:text-sm text-white/90 leading-relaxed font-normal">
+                Bienvenido/a de nuevo al portal de Génesis Profesional, aquí puedes gestionar tu curriculum, subir informes y monitorear tu proceso de pasantías
+              </p>
+            </div>
+
+            <!-- Gorro de Graduación SVG en Marca de agua -->
+            <div class="shrink-0 ml-2 opacity-75">
+              <svg xmlns="http://www.w3.org/2000/svg" width="55" height="55" viewBox="0 0 73 73" fill="none">
+                <g clip-path="url(#clip0_4248_287_banner)">
+                  <path d="M36.0358 6.00604L-0.00012207 27.027L36.0358 48.0479L66.0657 30.5315V52.5524H72.0717V27.027L36.0358 6.00604ZM12.0088 40.5104V54.0539C14.8044 57.7852 18.4312 60.8136 22.6014 62.8987C26.7716 64.9838 31.3704 66.0682 36.0328 66.0659C40.6957 66.0687 45.2951 64.9845 49.4658 62.8994C53.6366 60.8143 57.2638 57.7856 60.0597 54.0539V40.5134L36.0358 54.5284L12.0088 40.5104Z" fill="white" fill-opacity="0.6"/>
+                </g>
+                <defs>
+                  <clipPath id="clip0_4248_287_banner">
+                    <rect width="72.0718" height="72.0718" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+            </div>
           </div>
 
-          <!-- Gorro de Graduación SVG en Marca de agua a la derecha -->
-          <div class="shrink-0 opacity-70 transform translate-x-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="75" height="75" viewBox="0 0 73 73" fill="none">
-              <g clip-path="url(#clip0_4248_287_banner)">
-                <path d="M36.0358 6.00604L-0.00012207 27.027L36.0358 48.0479L66.0657 30.5315V52.5524H72.0717V27.027L36.0358 6.00604ZM12.0088 40.5104V54.0539C14.8044 57.7852 18.4312 60.8136 22.6014 62.8987C26.7716 64.9838 31.3704 66.0682 36.0328 66.0659C40.6957 66.0687 45.2951 64.9845 49.4658 62.8994C53.6366 60.8143 57.2638 57.7856 60.0597 54.0539V40.5134L36.0358 54.5284L12.0088 40.5104Z" fill="white" fill-opacity="0.5"/>
-              </g>
-              <defs>
-                <clipPath id="clip0_4248_287_banner">
-                  <rect width="72.0718" height="72.0718" fill="white"/>
-                </clipPath>
-              </defs>
-            </svg>
+          <!-- BLOQUE DE PERFIL SUPERIOR DERECHO -->
+          <div class="shrink-0 flex items-center justify-end gap-3 px-2 py-1">
+            <div class="text-right">
+              <div class="text-sm font-bold text-gray-900 leading-tight whitespace-nowrap">
+                {{ nombreCompleto }}
+              </div>
+              <button 
+                @click="itemActivo = 'perfil'" 
+                class="text-xs font-medium text-[#000B58] hover:underline cursor-pointer bg-transparent border-none p-0"
+              >
+                ver mi perfil
+              </button>
+            </div>
+            <div class="w-11 h-11 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+              <img 
+                v-if="fotoUsuario && !imgErrorPasante" 
+                :src="fotoUsuario" 
+                :alt="nombreCompleto" 
+                class="w-full h-full object-cover"
+                @error="imgErrorPasante = true"
+              />
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12 c 2.21 0 4 -1.79 4 -4 s -1.79 -4 -4 -4 -4 1.79 -4 4 4 4 z m 0 2 c -2.67 0 -8 1.34 -8 4 v 2 h 16 v -2 c 0 -2.66 -5.33 -4 -8 -4 z"/>
+              </svg>
+            </div>
           </div>
         </div>
 
         <!-- 2. TARJETA "ESTADO DE MI PASANTÍA" -->
-        <div class="bg-white rounded-[18px] p-6 shadow-sm border border-gray-100 mb-8">
+        <div class="bg-white rounded-[16px] p-6 shadow-xs border border-gray-200/80 mb-8">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-base font-bold text-gray-900 tracking-tight">
+            <h2 class="text-sm font-bold text-gray-900 tracking-tight">
               Estado de mi pasantía
             </h2>
           </div>
 
           <!-- 4 Fases Horizontales -->
-          <div class="grid grid-cols-4 gap-4 text-center">
+          <div class="grid grid-cols-4 gap-4 text-center items-start">
             
             <!-- Fase 1: Currículum -->
             <div @click="itemActivo = 'cv'" class="flex flex-col items-center cursor-pointer group">
@@ -279,7 +355,7 @@ const handleLogout = () => {
             <div @click="itemActivo = 'reportes'" class="flex flex-col items-center cursor-pointer group">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
-                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
+                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 18.8269 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 4: Informe final</span>
@@ -291,62 +367,68 @@ const handleLogout = () => {
           </div>
         </div>
 
-        <!-- 3. TARJETAS DE ACCESOS RÁPIDOS (DISPOSICIÓN 2 COLUMNAS) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          <!-- Perfil profesional -->
-          <div @click="itemActivo = 'perfil'" class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
-            <div class="shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" fill="none">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M29.3967 16.5355C29.3967 18.4846 28.6225 20.3539 27.2442 21.7322C25.866 23.1104 23.9967 23.8847 22.0476 23.8847C20.0985 23.8847 18.2292 23.1104 16.851 21.7322C15.4728 20.3539 14.6985 18.4846 14.6985 16.5355C14.6985 14.5864 15.4728 12.7171 16.851 11.3389C18.2292 9.96068 20.0985 9.1864 22.0476 9.1864C23.9967 9.1864 25.866 9.96068 27.2442 11.3389C28.6225 12.7171 29.3967 14.5864 29.3967 16.5355ZM25.7222 16.5355C25.7222 17.5101 25.335 18.4447 24.6459 19.1338C23.9568 19.823 23.0222 20.2101 22.0476 20.2101C21.0731 20.2101 20.1384 19.823 19.4493 19.1338C18.7602 18.4447 18.3731 17.5101 18.3731 16.5355C18.3731 15.561 18.7602 14.6263 19.4493 13.9372C20.1384 13.2481 21.0731 12.861 22.0476 12.861C23.0222 12.861 23.9568 13.2481 24.6459 13.9372C25.335 14.6263 25.7222 15.561 25.7222 16.5355Z" fill="#00589B"/>
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M22.0475 1.83728C10.886 1.83728 1.8374 10.8859 1.8374 22.0474C1.8374 33.2089 10.886 42.2575 22.0475 42.2575C33.209 42.2575 42.2576 33.2089 42.2576 22.0474C42.2576 10.8859 33.209 1.83728 22.0475 1.83728ZM5.51197 22.0474C5.51197 25.8873 6.82195 29.4222 9.0175 32.2296C10.5598 30.2052 12.549 28.5645 14.83 27.4356C17.111 26.3068 19.6219 25.7203 22.1669 25.7219C24.6792 25.719 27.159 26.2898 29.4171 27.3909C31.6752 28.4919 33.6521 30.0941 35.1969 32.0753C36.7888 29.9874 37.8607 27.5504 38.3238 24.9661C38.7869 22.3817 38.6279 19.7242 37.8601 17.2135C37.0922 14.7027 35.7375 12.4109 33.9081 10.5277C32.0786 8.64446 29.827 7.22393 27.3396 6.38365C24.8521 5.54337 22.2004 5.30749 19.6037 5.69552C17.007 6.08356 14.54 7.08436 12.4069 8.61511C10.2737 10.1459 8.53579 12.1626 7.33681 14.4984C6.13783 16.8341 5.5123 19.4219 5.51197 22.0474ZM22.0475 38.5829C18.2515 38.5891 14.57 37.2832 11.6264 34.8863C12.8111 33.1898 14.3882 31.8046 16.2235 30.8488C18.0587 29.893 20.0977 29.3947 22.1669 29.3965C24.2103 29.3947 26.2246 29.8806 28.0425 30.8136C29.8604 31.7467 31.4294 33.1001 32.6192 34.7614C29.6529 37.2362 25.9107 38.589 22.0475 38.5829Z" fill="#00589B"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-sm font-bold text-gray-900 leading-tight">Perfil profesional</h3>
-              <p class="text-xs text-gray-600 mt-0.5">Mira y edita tus datos institucionales</p>
-            </div>
-          </div>
+        <!-- 3. TARJETA CONTENEDORA "SECCIONES DE ACCESO RÁPIDO" -->
+        <div class="bg-white rounded-[16px] p-6 shadow-xs border border-gray-200/80">
+          <h2 class="text-base font-normal text-gray-900 mb-6">
+            Secciones de acceso rápido:
+          </h2>
 
-          <!-- Crear nuevo CV -->
-          <div @click="itemActivo = 'cv'" class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
-            <div class="shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="43" height="43" viewBox="0 0 43 43" fill="none">
-                <g clip-path="url(#clip0_6048_420_cv)">
-                  <path d="M36.1687 0H4.01874C1.80843 0 0 1.80843 0 4.01874V38.8478C0 41.0581 1.80843 42.8666 4.01874 42.8666H36.1687C38.379 42.8666 40.1874 41.0581 40.1874 38.8478V4.01874C40.1874 1.80843 38.379 0 36.1687 0ZM34.8291 37.5082H5.35832V5.35832H34.8291V37.5082ZM10.7166 24.1124H29.4708V26.7916H10.7166V24.1124ZM10.7166 29.4708H29.4708V32.1499H10.7166V29.4708ZM13.3958 12.0562C13.396 11.5283 13.5001 11.0056 13.7023 10.5179C13.9045 10.0302 14.2008 9.58716 14.5742 9.21399C14.9476 8.84081 15.3909 8.54484 15.8787 8.34298C16.3665 8.14111 16.8893 8.0373 17.4172 8.03748C17.9451 8.03766 18.4679 8.14181 18.9555 8.344C19.4432 8.54619 19.8863 8.84246 20.2595 9.21588C20.6326 9.5893 20.9286 10.0326 21.1305 10.5204C21.3323 11.0082 21.4361 11.531 21.436 12.0589C21.4356 13.1251 21.0117 14.1475 20.2576 14.9011C19.5034 15.6548 18.4807 16.078 17.4145 16.0776C16.3483 16.0773 15.326 15.6534 14.5723 14.8992C13.8186 14.1451 13.3954 13.1224 13.3958 12.0562ZM20.0937 16.075H14.7354C12.5251 16.075 10.7166 17.2806 10.7166 18.7541V21.4333H24.1124V18.7541C24.1124 17.2806 22.304 16.075 20.0937 16.075Z" fill="#00589B"/>
-                </g>
-                <defs>
-                  <clipPath id="clip0_6048_420_cv">
-                    <rect width="42.8666" height="42.8666" fill="white"/>
-                  </clipPath>
-                </defs>
-              </svg>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Perfil profesional -->
+            <div @click="itemActivo = 'perfil'" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" fill="none">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M29.3967 16.5355C29.3967 18.4846 28.6225 20.3539 27.2442 21.7322C25.866 23.1104 23.9967 23.8847 22.0476 23.8847C20.0985 23.8847 18.2292 23.1104 16.851 21.7322C15.4728 20.3539 14.6985 18.4846 14.6985 16.5355C14.6985 14.5864 15.4728 12.7171 16.851 11.3389C18.2292 9.96068 20.0985 9.1864 22.0476 9.1864C23.9967 9.1864 25.866 9.96068 27.2442 11.3389C28.6225 12.7171 29.3967 14.5864 29.3967 16.5355ZM25.7222 16.5355C25.7222 17.5101 25.335 18.4447 24.6459 19.1338C23.9568 19.823 23.0222 20.2101 22.0476 20.2101C21.0731 20.2101 20.1384 19.823 19.4493 19.1338C18.7602 18.4447 18.3731 17.5101 18.3731 16.5355C18.3731 15.561 18.7602 14.6263 19.4493 13.9372C20.1384 13.2481 21.0731 12.861 22.0476 12.861C23.0222 12.861 23.9568 13.2481 24.6459 13.9372C25.335 14.6263 25.7222 15.561 25.7222 16.5355Z" fill="#00589B"/>
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M22.0475 1.83728C10.886 1.83728 1.8374 10.8859 1.8374 22.0474C1.8374 33.2089 10.886 42.2575 22.0475 42.2575C33.209 42.2575 42.2576 33.2089 42.2576 22.0474C42.2576 10.8859 33.209 1.83728 22.0475 1.83728ZM5.51197 22.0474C5.51197 25.8873 6.82195 29.4222 9.0175 32.2296C10.5598 30.2052 12.549 28.5645 14.83 27.4356C17.111 26.3068 19.6219 25.7203 22.1669 25.7219C24.6792 25.719 27.159 26.2898 29.4171 27.3909C31.6752 28.4919 33.6521 30.0941 35.1969 32.0753C36.7888 29.9874 37.8607 27.5504 38.3238 24.9661C38.7869 22.3817 38.6279 19.7242 37.8601 17.2135C37.0922 14.7027 35.7375 12.4109 33.9081 10.5277C32.0786 8.64446 29.827 7.22393 27.3396 6.38365C24.8521 5.54337 22.2004 5.30749 19.6037 5.69552C17.007 6.08356 14.54 7.08436 12.4069 8.61511C10.2737 10.1459 8.53579 12.1626 7.33681 14.4984C6.13783 16.8341 5.5123 19.4219 5.51197 22.0474ZM22.0475 38.5829C18.2515 38.5891 14.57 37.2832 11.6264 34.8863C12.8111 33.1898 14.3882 31.8046 16.2235 30.8488C18.0587 29.893 20.0977 29.3947 22.1669 29.3965C24.2103 29.3947 26.2246 29.8806 28.0425 30.8136C29.8604 31.7467 31.4294 33.1001 32.6192 34.7614C29.6529 37.2362 25.9107 38.589 22.0475 38.5829Z" fill="#00589B"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900 leading-tight">Perfil profesional</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Mira y edita tus datos institucionales</p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-sm font-bold text-gray-900 leading-tight">Crear nuevo CV</h3>
-              <p class="text-xs text-gray-600 mt-0.5">Genera un cv PDF estructurado usando nuestra plantilla</p>
-            </div>
-          </div>
 
-          <!-- Subir reporte -->
-          <div @click="itemActivo = 'reportes'" class="bg-white rounded-[16px] p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
-            <div class="shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 59 59" fill="none">
-                <mask id="mask0_6048_433_rep" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="4" y="11" width="51" height="37">
-                  <path d="M17.148 46.5445H44.0948C49.5086 46.5445 53.8936 42.1595 53.8936 36.7456C53.8936 31.3318 49.5086 26.9468 44.0948 26.9468H41.6451V24.4971C41.6451 17.7359 36.1577 12.2485 29.3965 12.2485C23.4682 12.2485 18.5198 16.462 17.3929 22.0474H17.148C10.3868 22.0474 4.89941 27.5347 4.89941 34.2959C4.89941 41.0571 10.3868 46.5445 17.148 46.5445Z" fill="white" stroke="white" stroke-width="1.72921" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M24.4971 41.645H34.2959V31.8462H41.645L29.3965 19.5977L17.1479 31.8462H24.4971V41.645Z" fill="black"/>
-                </mask>
-                <g mask="url(#mask0_6048_433_rep)">
-                  <path d="M0 0H58.793V58.793H0V0Z" fill="#00589B"/>
-                </g>
-              </svg>
+            <!-- Crear nuevo CV -->
+            <div @click="itemActivo = 'cv'" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="43" height="43" viewBox="0 0 43 43" fill="none">
+                  <g clip-path="url(#clip0_6048_420_cv)">
+                    <path d="M36.1687 0H4.01874C1.80843 0 0 1.80843 0 4.01874V38.8478C0 41.0581 1.80843 42.8666 4.01874 42.8666H36.1687C38.379 42.8666 40.1874 41.0581 40.1874 38.8478V4.01874C40.1874 1.80843 38.379 0 36.1687 0ZM34.8291 37.5082H5.35832V5.35832H34.8291V37.5082ZM10.7166 24.1124H29.4708V26.7916H10.7166V24.1124ZM10.7166 29.4708H29.4708V32.1499H10.7166V29.4708ZM13.3958 12.0562C13.396 11.5283 13.5001 11.0056 13.7023 10.5179C13.9045 10.0302 14.2008 9.58716 14.5742 9.21399C14.9476 8.84081 15.3909 8.54484 15.8787 8.34298C16.3665 8.14111 16.8893 8.0373 17.4172 8.03748C17.9451 8.03766 18.4679 8.14181 18.9555 8.344C19.4432 8.54619 19.8863 8.84246 20.2595 9.21588C20.6326 9.5893 20.9286 10.0326 21.1305 10.5204C21.3323 11.0082 21.4361 11.531 21.436 12.0589C21.4356 13.1251 21.0117 14.1475 20.2576 14.9011C19.5034 15.6548 18.4807 16.078 17.4145 16.0776C16.3483 16.0773 15.326 15.6534 14.5723 14.8992C13.8186 14.1451 13.3954 13.1224 13.3958 12.0562ZM20.0937 16.075H14.7354C12.5251 16.075 10.7166 17.2806 10.7166 18.7541V21.4333H24.1124V18.7541C24.1124 17.2806 22.304 16.075 20.0937 16.075Z" fill="#00589B"/>
+                  </g>
+                  <defs>
+                    <clipPath id="clip0_6048_420_cv">
+                      <rect width="42.8666" height="42.8666" fill="white"/>
+                    </clipPath>
+                  </defs>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900 leading-tight">Crear nuevo CV</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Genera un cv PDF estructurado usando nuestra plantilla</p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-sm font-bold text-gray-900 leading-tight">Subir reporte</h3>
-              <p class="text-xs text-gray-600 mt-0.5">Entrega tus reportes de progreso mensuales o tu informe final.</p>
-            </div>
-          </div>
 
+            <!-- Subir reporte -->
+            <div @click="itemActivo = 'reportes'" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 59 59" fill="none">
+                  <mask id="mask0_6048_433_rep" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="4" y="11" width="51" height="37">
+                    <path d="M17.148 46.5445H44.0948C49.5086 46.5445 53.8936 42.1595 53.8936 36.7456C53.8936 31.3318 49.5086 26.9468 44.0948 26.9468H41.6451V24.4971C41.6451 17.7359 36.1577 12.2485 29.3965 12.2485C23.4682 12.2485 18.5198 16.462 17.3929 22.0474H17.148C10.3868 22.0474 4.89941 27.5347 4.89941 34.2959C4.89941 41.0571 10.3868 46.5445 17.148 46.5445Z" fill="white" stroke="white" stroke-width="1.72921" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M24.4971 41.645H34.2959V31.8462H41.645L29.3965 19.5977L17.1479 31.8462H24.4971V41.645Z" fill="black"/>
+                  </mask>
+                  <g mask="url(#mask0_6048_433_rep)">
+                    <path d="M0 0H58.793V58.793H0V0Z" fill="#00589B"/>
+                  </g>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900 leading-tight">Subir reporte</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Entrega tus reportes de progreso mensuales o tu informe final.</p>
+              </div>
+            </div>
+
+          </div>
         </div>
       </template>
 

@@ -34,9 +34,9 @@ const emit = defineEmits(['click'])
     :type="type"
     :disabled="disabled || loading"
     @click="emit('click', $event)"
-    class="font-medium text-sm transition-all flex items-center justify-center gap-[10px] select-none"
+    class="font-medium text-base transition-all flex items-center justify-center gap-[10px] select-none"
     :class="[
-      block ? 'w-full rounded-[18px] h-[51px] px-[10px]' : 'w-[171px] h-[51px] rounded-[18px] px-[10px] mx-auto',
+      block ? 'w-full' : 'w-[171px] mx-auto',
       variant === 'primary'
         ? (!disabled && !loading
             ? 'bg-[#010C67] border border-white text-white cursor-pointer hover:bg-[#01094f] active:scale-95 shadow-md'
@@ -46,6 +46,18 @@ const emit = defineEmits(['click'])
         ? 'border border-white text-white hover:bg-white/15 cursor-pointer active:scale-95'
         : ''
     ]"
+    :style="{
+      display: 'flex',
+      width: block ? '100%' : '171px',
+      height: '51.286px',
+      padding: '10px',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '10px',
+      borderRadius: '18px',
+      fontFamily: `'Lora', Georgia, serif`,
+      ...(variant === 'primary' && !disabled && !loading ? { background: '#010C67' } : {})
+    }"
   >
     <!-- Spinner de carga -->
     <span 

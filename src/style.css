@@ -1,3 +1,61 @@
 @import "tailwindcss";
 
-/* Aquí puedes agregar variables de CSS personalizadas o capas si es necesario */
+@theme {
+  --font-lora: 'Lora', Georgia, serif;
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Paleta de Colores */
+  --color-brand-primary: #67000F;
+  --color-brand-primary-variant: #8A0F21;
+  --color-brand-secondary: #010C67;
+  --color-brand-blue: #00589B;
+  --color-brand-accent: #FFB75B;
+  --color-brand-blue-20: rgba(0, 88, 155, 0.2);
+
+  /* Escala de Grises */
+  --color-gray-dark: #B1ABAB;
+  --color-gray-medium: #A8A8A8;
+  --color-gray-light: #DEDCDC;
+
+  /* Colores Semánticos */
+  --color-semantic-success: #00C62E;
+  --color-semantic-error: #FF0000;
+  --color-semantic-warning: #FF7B00;
+}
+
+/* Clases de utilidad para Tipografía del Design System */
+.font-title {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.font-subtitle-1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+}
+
+.font-subtitle-2 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.font-indicator {
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.font-body-main {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.font-caption-extralight {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 200;
+}

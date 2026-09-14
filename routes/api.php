@@ -40,3 +40,38 @@ Route::prefix('auth')->group(function () {
 
 // Rutas de Pasantías
 Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+
+// Rutas del Módulo de Curriculum Vitae (CV)
+use App\Http\Controllers\CvController;
+
+Route::prefix('cv')->group(function () {
+    Route::post('/guardar', [CvController::class, 'guardar'])->name('api.cv.guardar');
+    Route::get('/obtener/{usuarioId}', [CvController::class, 'obtener'])->name('api.cv.obtener');
+    Route::delete('/eliminar/{cvId}', [CvController::class, 'eliminar'])->name('api.cv.eliminar');
+});
+
+// Serving storage files cleanly via API to avoid Windows symlink 403 errors
+Route::get('/storage/{path}', function ($path) {
+    $filePath = storage_path("app/public/{$path}");
+    if (!file_exists($filePath)) {
+        $filePath = public_path("storage/{$path}");
+    }
+    if (file_exists($filePath) && !is_dir($filePath)) {
+        $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+        $mime = match (strtolower($ext)) {
+            'pdf'  => 'application/pdf',
+            'webp' => 'image/webp',
+            'png'  => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            default => 'application/octet-stream',
+        };
+        return response()->file($filePath, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
+    return response()->json(['mensaje' => 'Archivo no encontrado'], 404);
+})->where('path', '.*');

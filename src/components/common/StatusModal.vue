@@ -41,10 +41,10 @@ const emit = defineEmits(['close', 'confirm'])
     </div>
   </div>
 
-  <!-- ESTADO: ACCIÓN EXITOSA (Verde Esmeralda con botón Aceptar) -->
+  <!-- ESTADO: ACCIÓN EXITOSA (Verde #00C62E según Design System) -->
   <div 
     v-else-if="tipo === 'exitoso'"
-    class="relative w-full max-w-[490px] bg-[#10a34b] text-white rounded-[20px] shadow-2xl p-7 sm:p-8 my-auto z-10 text-left"
+    class="relative w-full max-w-[490px] bg-[#00C62E] text-white rounded-[20px] shadow-2xl p-7 sm:p-8 my-auto z-10 text-left"
   >
     <!-- Botón cerrar (X) en esquina superior derecha -->
     <button 

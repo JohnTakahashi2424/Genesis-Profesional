@@ -81,6 +81,12 @@ let debounceTimerCorreo = null
 watch(() => form.value.correo, (nuevoCorreo) => {
   if (debounceTimerCorreo) clearTimeout(debounceTimerCorreo)
 
+  // Si los campos previos no están válidos, no mostrar errores en correo
+  if (!validarNombre(false) || !validarApellido(false)) {
+    errores.value.correo = ''
+    return
+  }
+
   const correoLimpio = (nuevoCorreo || '').trim().toLowerCase()
   if (!correoLimpio) {
     if (tocados.value.correo) errores.value.correo = 'Este campo es requerido'
@@ -117,52 +123,154 @@ watch(() => form.value.correo, (nuevoCorreo) => {
   }, 400)
 })
 
-// --- VALIDACIONES PASO 1 ---
-const validarPaso1 = () => {
-  let valido = true
+// --- VALIDACIONES PASO 1 INDIVIDUALES Y SECUENCIALES ---
+const validarNombre = (mostrarError = true) => {
+  const val = form.value.nombres.trim()
+  if (!val) {
+    if (mostrarError) {
+      tocados.value.nombres = true
+      errores.value.nombres = 'Este campo es requerido'
+    }
+    return false
+  }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,50}$/u.test(val)) {
+    if (mostrarError) {
+      tocados.value.nombres = true
+      errores.value.nombres = 'Ingrese un nombre válido (solo letras, mín. 2 caracteres)'
+    }
+    return false
+  }
   errores.value.nombres = ''
-  errores.value.apellidos = ''
-  errores.value.correo = ''
+  return true
+}
 
-  if (!form.value.nombres.trim()) {
-    errores.value.nombres = 'Este campo es requerido'
-    valido = false
-  } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,50}$/u.test(form.value.nombres.trim())) {
-    errores.value.nombres = 'Ingrese un nombre válido (solo letras, mín. 2 caracteres)'
-    valido = false
+const validarApellido = (mostrarError = true) => {
+  // Si Nombres no es válido, Apellidos no debe mostrar error jamás
+  if (!validarNombre(false)) {
+    errores.value.apellidos = ''
+    return false
   }
 
-  if (!form.value.apellidos.trim()) {
-    errores.value.apellidos = 'Este campo es requerido'
-    valido = false
-  } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,50}$/u.test(form.value.apellidos.trim())) {
-    errores.value.apellidos = 'Ingrese un apellido válido (solo letras, mín. 2 caracteres)'
-    valido = false
+  const val = form.value.apellidos.trim()
+  if (!val) {
+    if (mostrarError) {
+      tocados.value.apellidos = true
+      errores.value.apellidos = 'Este campo es requerido'
+    }
+    return false
+  }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,50}$/u.test(val)) {
+    if (mostrarError) {
+      tocados.value.apellidos = true
+      errores.value.apellidos = 'Ingrese un apellido válido (solo letras, mín. 2 caracteres)'
+    }
+    return false
+  }
+  errores.value.apellidos = ''
+  return true
+}
+
+const validarCorreoSintaxis = (mostrarError = true) => {
+  // Si Nombres o Apellidos no son válidos, Correo no debe mostrar error jamás
+  if (!validarNombre(false) || !validarApellido(false)) {
+    errores.value.correo = ''
+    return false
   }
 
   const correoNormalizado = form.value.correo.trim().toLowerCase()
   if (!correoNormalizado) {
-    errores.value.correo = 'Este campo es requerido'
-    valido = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoNormalizado)) {
-    errores.value.correo = 'Ingrese un correo electrónico válido'
-    valido = false
-  } else if (!correoNormalizado.endsWith('@ugb.edu.sv')) {
-    errores.value.correo = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
-    valido = false
+    if (mostrarError) {
+      tocados.value.correo = true
+      errores.value.correo = 'Este campo es requerido'
+    }
+    return false
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoNormalizado)) {
+    if (mostrarError) {
+      tocados.value.correo = true
+      errores.value.correo = 'Ingrese un correo electrónico válido'
+    }
+    return false
+  }
+  if (!correoNormalizado.endsWith('@ugb.edu.sv')) {
+    if (mostrarError) {
+      tocados.value.correo = true
+      errores.value.correo = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
+    }
+    return false
+  }
+  errores.value.correo = ''
+  return true
+}
 
-  return valido
+// Navegación con tecla Enter por campo (Muestra error ÚNICAMENTE en el primer campo inválido)
+const manejarEnterNombres = () => {
+  errores.value.apellidos = ''
+  errores.value.correo = ''
+  if (!validarNombre(true)) {
+    document.getElementById('input-nombres')?.focus()
+    return
+  }
+  document.getElementById('input-apellidos')?.focus()
+}
+
+const manejarEnterApellidos = () => {
+  errores.value.correo = ''
+  if (!validarNombre(true)) {
+    document.getElementById('input-nombres')?.focus()
+    return
+  }
+  if (!validarApellido(true)) {
+    document.getElementById('input-apellidos')?.focus()
+    return
+  }
+  document.getElementById('input-correo')?.focus()
+}
+
+const manejarEnterCorreo = () => {
+  if (!validarNombre(true)) {
+    document.getElementById('input-nombres')?.focus()
+    return
+  }
+  if (!validarApellido(true)) {
+    document.getElementById('input-apellidos')?.focus()
+    return
+  }
+  if (!validarCorreoSintaxis(true)) {
+    document.getElementById('input-correo')?.focus()
+    return
+  }
+  continuarAPaso2()
+}
+
+// Validación Secuencial del Paso 1 (Solo muestra error en el primer campo incompleto)
+const validarPaso1Secuencial = () => {
+  if (!validarNombre(true)) {
+    errores.value.apellidos = ''
+    errores.value.correo = ''
+    document.getElementById('input-nombres')?.focus()
+    return false
+  }
+  if (!validarApellido(true)) {
+    errores.value.nombres = ''
+    errores.value.correo = ''
+    document.getElementById('input-apellidos')?.focus()
+    return false
+  }
+  if (!validarCorreoSintaxis(true)) {
+    errores.value.nombres = ''
+    errores.value.apellidos = ''
+    document.getElementById('input-correo')?.focus()
+    return false
+  }
+  return true
 }
 
 // Avanzar al Paso 2 con verificación de correo institucional
 const continuarAPaso2 = async () => {
-  tocados.value.nombres = true
-  tocados.value.apellidos = true
-  tocados.value.correo = true
   errorGeneral.value = ''
 
-  if (!validarPaso1()) return
+  if (!validarPaso1Secuencial()) return
 
   loading.value = true
   try {
@@ -172,6 +280,7 @@ const continuarAPaso2 = async () => {
       estadoFlujo.value = 2
     } else {
       errores.value.correo = res?.mensaje || 'No fue posible procesar el correo institucional'
+      document.getElementById('input-correo')?.focus()
     }
   } catch (err) {
     if (err.response && err.response.data) {
@@ -180,6 +289,7 @@ const continuarAPaso2 = async () => {
     } else {
       errores.value.correo = 'No se pudo conectar con el servidor para verificar el correo'
     }
+    document.getElementById('input-correo')?.focus()
   } finally {
     loading.value = false
   }
@@ -300,7 +410,8 @@ const cerrarYIrALogin = () => {
     <!-- ═════════════════════════════════════════════════════════════ -->
     <div 
       v-else
-      class="relative w-full max-w-[460px] bg-white rounded-[26px] shadow-2xl p-7 sm:p-9 my-auto z-10 transition-all"
+      class="relative w-full max-w-[502px] min-h-[586px] bg-white rounded-[18px] shadow-2xl p-7 sm:p-9 my-auto z-10 transition-all flex flex-col justify-between"
+      style="width: 502px; min-height: 586px; border-radius: 18px; background: #FFFFFF;"
     >
       <!-- Botón de regreso (flecha izquierda) -->
       <button 
@@ -320,7 +431,8 @@ const cerrarYIrALogin = () => {
         <img 
           src="/images/logo_ugb.png" 
           alt="Universidad Gerardo Barrios" 
-          class="h-16 w-auto object-contain"
+          class="w-[181px] h-[103px] object-contain mx-auto"
+          style="width: 181px; height: 103px; aspect-ratio: 181/103;"
         />
       </div>
 
@@ -362,7 +474,8 @@ const cerrarYIrALogin = () => {
           maxlength="50"
           only-letters
           :error="errores.nombres"
-          @blur="tocados.nombres = true; validarPaso1()"
+          @blur="validarNombre(true)"
+          @enter="manejarEnterNombres"
         />
 
         <!-- Campo: Apellidos (Solo Letras) -->
@@ -375,7 +488,8 @@ const cerrarYIrALogin = () => {
           maxlength="50"
           only-letters
           :error="errores.apellidos"
-          @blur="tocados.apellidos = true; validarPaso1()"
+          @blur="validarApellido(true)"
+          @enter="manejarEnterApellidos"
         />
 
         <!-- Campo: Correo Institucional -->
@@ -389,7 +503,8 @@ const cerrarYIrALogin = () => {
             placeholder="usss@000ugb.edu.sv"
             maxlength="100"
             :error="errores.correo"
-            @blur="tocados.correo = true; validarPaso1()"
+            @blur="validarCorreoSintaxis(true)"
+            @enter="manejarEnterCorreo"
           />
         </div>
 
@@ -436,6 +551,7 @@ const cerrarYIrALogin = () => {
             maxlength="100"
             :error="errores.contrasena"
             @blur="tocados.contrasena = true"
+            @enter="document.getElementById('input-confirmar-contrasena')?.focus()"
           />
         </div>
 
@@ -456,6 +572,7 @@ const cerrarYIrALogin = () => {
           maxlength="100"
           :error="errores.confirmarContrasena"
           @blur="tocados.confirmarContrasena = true"
+          @enter="enviarRegistro"
         />
 
         <!-- Checkbox Términos y Condiciones -->
