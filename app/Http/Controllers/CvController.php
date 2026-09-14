@@ -52,7 +52,7 @@ class CvController extends Controller
         // Guardar en disco
         Storage::disk('public')->put($ruta, $pdfData);
 
-        $urlPublica = "/storage/{$ruta}";
+        $urlPublica = "/api/storage/{$ruta}";
 
         // Buscar si el usuario ya tiene un CV registrado por cvId o por su usuario_id
         $cv = null;
@@ -86,12 +86,12 @@ class CvController extends Controller
                 }
                 @file_put_contents($publicPath, $fotoDecoded);
 
-                $fotoUrl = "/storage/{$rutaFoto}";
+                $fotoUrl = "/api/storage/{$rutaFoto}";
             } else {
-                $fotoUrl = $fotoInput;
+                $fotoUrl = str_starts_with($fotoInput, '/storage/') ? ('/api' . $fotoInput) : $fotoInput;
             }
         } else if ($cv && $cv->foto_url) {
-            $fotoUrl = $cv->foto_url;
+            $fotoUrl = str_starts_with($cv->foto_url, '/storage/') ? ('/api' . $cv->foto_url) : $cv->foto_url;
         }
 
         $data = [
@@ -180,6 +180,24 @@ class CvController extends Controller
         if ($cvs->isEmpty()) {
             return response()->json(['mensaje' => 'Este usuario aún no tiene CV.', 'tiene_cv' => false, 'cvs' => []], 200);
         }
+
+        $cvs->transform(function ($item) {
+            if ($item->url_publica) {
+                if (str_starts_with($item->url_publica, '/storage/')) {
+                    $item->url_publica = '/api' . $item->url_publica;
+                } elseif (str_starts_with($item->url_publica, 'storage/')) {
+                    $item->url_publica = '/api/' . $item->url_publica;
+                }
+            }
+            if ($item->foto_url) {
+                if (str_starts_with($item->foto_url, '/storage/')) {
+                    $item->foto_url = '/api' . $item->foto_url;
+                } elseif (str_starts_with($item->foto_url, 'storage/')) {
+                    $item->foto_url = '/api/' . $item->foto_url;
+                }
+            }
+            return $item;
+        });
 
         return response()->json([
             'tiene_cv' => true,

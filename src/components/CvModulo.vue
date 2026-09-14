@@ -13,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['volver'])
 
 // Obtener datos del usuario en sesión
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{"id":1,"nombres":"Dallana Lucia","apellidos":"Campoz Garcia","correo":"usss002419@ugb.edu.sv"}'))
+const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 
 // Estado del módulo
 const cvs = ref([])
@@ -42,6 +42,17 @@ const formatTexto = (val) => {
   return String(val)
 }
 
+const normalizarUrlFoto = (url) => {
+  if (!url) return ''
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/api/storage/')) return url
+  if (url.startsWith('api/storage/')) return '/' + url
+  if (url.startsWith('/storage/')) return '/api' + url
+  if (url.startsWith('storage/')) return '/api/' + url
+  if (url.startsWith('/')) return url
+  return '/api/storage/' + url
+}
+
 // Formulario del CV (inicia limpio para usar placeholders)
 const formCv = ref({
   id: null,
@@ -51,14 +62,14 @@ const formCv = ref({
     fuente: 'Montserrat'
   },
   perfil: {
-    fotoUrl: '',
-    nombre: (usuario.value.nombres || '') + (usuario.value.apellidos ? ' ' + usuario.value.apellidos : ''),
+    fotoUrl: normalizarUrlFoto(usuario.value?.foto || usuario.value?.foto_url || usuario.value?.avatar || ''),
+    nombre: usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || '',
     profesion: '',
-    direccion: '',
-    email: usuario.value.correo || usuario.value.email || '',
+    direccion: 'Usulután',
+    email: usuario.value?.correo || usuario.value?.email || '',
     telefono: '',
     sobreMi: '',
-    educacion: ''
+    educacion: 'Universidad Gerardo Barrios (Egresado)'
   },
   objetivos: {
     objetivo: '',
@@ -78,7 +89,10 @@ const formCv = ref({
 const cargarCvs = async () => {
   cargando.value = true
   try {
-    const res = await axios.get(`/api/cv/obtener/${usuario.value.id || 1}`, {
+    const userId = usuario.value.id || usuario.value.user_id
+    if (!userId) return
+
+    const res = await axios.get(`/api/cv/obtener/${userId}`, {
       params: { correo: usuario.value.correo || usuario.value.email }
     })
     if (res.data && res.data.cvs) {
@@ -103,14 +117,14 @@ onMounted(async () => {
         fuente: cv.fuente || 'Montserrat'
       },
       perfil: {
-        fotoUrl: cv.foto_url || '',
-        nombre: cv.nombre_completo || (usuario.value.nombres || '') + ' ' + (usuario.value.apellidos || ''),
+        fotoUrl: normalizarUrlFoto(cv.foto_url || cv.foto || cv.avatar || usuario.value?.foto || usuario.value?.foto_url || ''),
+        nombre: cv.nombre_completo || usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || '',
         profesion: cv.profesion || '',
-        direccion: cv.direccion || '',
-        email: cv.email || usuario.value.correo || usuario.value.email || '',
+        direccion: cv.direccion || 'Usulután',
+        email: cv.email || usuario.value?.correo || usuario.value?.email || '',
         telefono: cv.telefono || '',
         sobreMi: formatTexto(cv.sobre_mi),
-        educacion: formatTexto(cv.educacion)
+        educacion: cv.educacion ? formatTexto(cv.educacion) : 'Universidad Gerardo Barrios (Egresado)'
       },
       objetivos: {
         objetivo: formatTexto(cv.objetivo),
@@ -138,32 +152,32 @@ const abrirCrearCv = () => {
   const cvExistente = cvs.value && cvs.value.length > 0 ? cvs.value[0] : null
   formCv.value = {
     id: cvExistente ? cvExistente.id : null,
-    tituloCv: cvExistente ? (cvExistente.titulo_cv || '') : '',
+    tituloCv: cvExistente ? (cvExistente.titulo_cv || 'Mi CV') : 'Mi CV',
     diseno: {
       color: cvExistente?.color_plantilla || '#010C67',
       fuente: cvExistente?.fuente || 'Montserrat'
     },
     perfil: {
-      fotoUrl: cvExistente?.foto_url || '',
-      nombre: cvExistente?.nombre_completo || (usuario.value.nombres || '') + (usuario.value.apellidos ? ' ' + usuario.value.apellidos : ''),
-      profesion: '',
-      direccion: '',
-      email: cvExistente?.email || usuario.value.correo || usuario.value.email || '',
-      telefono: '',
-      sobreMi: '',
-      educacion: ''
+      fotoUrl: normalizarUrlFoto(cvExistente?.foto_url || cvExistente?.foto || cvExistente?.avatar || usuario.value?.foto || usuario.value?.foto_url || ''),
+      nombre: cvExistente?.nombre_completo || usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || '',
+      profesion: cvExistente?.profesion || '',
+      direccion: cvExistente?.direccion || 'Usulután',
+      email: cvExistente?.email || usuario.value?.correo || usuario.value?.email || '',
+      telefono: cvExistente?.telefono || '',
+      sobreMi: cvExistente?.sobre_mi ? formatTexto(cvExistente.sobre_mi) : '',
+      educacion: cvExistente?.educacion ? formatTexto(cvExistente.educacion) : 'Universidad Gerardo Barrios (Egresado)'
     },
     objetivos: {
-      objetivo: '',
-      valores: '',
-      conocimientos: '',
-      idiomas: ''
+      objetivo: cvExistente?.objetivo ? formatTexto(cvExistente.objetivo) : '',
+      valores: cvExistente?.valores ? formatTexto(cvExistente.valores) : '',
+      conocimientos: cvExistente?.conocimientos ? formatTexto(cvExistente.conocimientos) : '',
+      idiomas: cvExistente?.idiomas ? formatTexto(cvExistente.idiomas) : ''
     },
     logros: {
-      certificados: '',
-      habilidades: '',
-      logros: '',
-      proyectos: ''
+      certificados: cvExistente?.certificados ? formatTexto(cvExistente.certificados) : '',
+      habilidades: cvExistente?.habilidades ? formatTexto(cvExistente.habilidades) : '',
+      logros: cvExistente?.logros ? formatTexto(cvExistente.logros) : '',
+      proyectos: cvExistente?.proyectos_sociales ? formatTexto(cvExistente.proyectos_sociales) : ''
     }
   }
   pasoActual.value = 0
@@ -435,7 +449,7 @@ const eliminarCv = async (cvId) => {
         <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
           <a
             v-if="cv.url_publica"
-            :href="cv.url_publica"
+            :href="normalizarUrlFoto(cv.url_publica)"
             target="_blank"
             class="text-[#00589B] text-xs font-semibold hover:underline flex items-center gap-1 cursor-pointer"
           >
@@ -668,9 +682,12 @@ const eliminarCv = async (cvId) => {
               <!-- Editar -->
               <button
                 @click="pasoActual = 2"
-                class="w-full py-2.5 px-6 rounded-full border border-black bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                class="w-full py-2.5 px-6 rounded-full border border-black bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 style="font-family: 'Lora', Georgia, serif;"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 27 27" fill="none" class="shrink-0">
+                  <path d="M25.875 5.625V7.875H24.75V9H23.625V10.125H22.5V11.25H21.375V10.125H20.25V9H19.125V7.875H18V6.75H16.875V5.625H15.75V4.5H16.875V3.375H18V2.25H19.125V1.125H21.375V2.25H22.5V3.375H23.625V4.5H24.75V5.625H25.875ZM19.125 11.25V10.125H18V9H16.875V7.875H15.75V6.75H13.5V7.875H12.375V9H11.25V10.125H10.125V11.25H9V12.375H7.875V13.5H6.75V14.625H5.625V15.75H4.5V16.875H3.375V18H2.25V19.125H1.125V25.875H7.875V24.75H9V23.625H10.125V22.5H11.25V21.375H12.375V20.25H13.5V19.125H14.625V18H15.75V16.875H16.875V15.75H18V14.625H19.125V13.5H20.25V11.25H19.125ZM16.875 13.5V14.625H15.75V15.75H14.625V16.875H13.5V18H12.375V19.125H11.25V20.25H10.125V21.375H9V22.5H7.875V23.625H3.375V19.125H4.5V18H5.625V16.875H6.75V15.75H7.875V14.625H9V13.5H10.125V12.375H11.25V11.25H12.375V10.125H13.5V9H15.75V10.125H16.875V11.25H18V13.5H16.875Z" fill="currentColor"/>
+                </svg>
                 <span>Editar</span>
               </button>
 
@@ -697,10 +714,13 @@ const eliminarCv = async (cvId) => {
               <!-- Descargar CV -->
               <button
                 @click="descargarPdfDirecto"
-                class="w-full py-2.5 px-6 rounded-full border border-black bg-white hover:bg-gray-50 text-[#00589B] text-sm font-medium transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                class="w-full py-2.5 px-6 rounded-full border border-black bg-white hover:bg-gray-50 text-[#00589B] text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 style="font-family: 'Lora', Georgia, serif;"
               >
-                Descargar CV
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 17 17" fill="none" class="shrink-0">
+                  <path d="M7.5 8.5L6.75 7.75C6.59722 7.59722 6.40278 7.52083 6.16667 7.52083C5.93056 7.52083 5.73611 7.59722 5.58334 7.75C5.43056 7.90278 5.35417 8.09722 5.35417 8.33333C5.35417 8.56944 5.43056 8.76389 5.58334 8.91667L7.75 11.0833C7.91667 11.25 8.11111 11.3333 8.33334 11.3333C8.55556 11.3333 8.75 11.25 8.91667 11.0833L11.0833 8.91667C11.2361 8.76389 11.3125 8.56944 11.3125 8.33333C11.3125 8.09722 11.2361 7.90278 11.0833 7.75C10.9306 7.59722 10.7361 7.52083 10.5 7.52083C10.2639 7.52083 10.0694 7.59722 9.91667 7.75L9.16667 8.5V5.83333C9.16667 5.59722 9.08667 5.39944 8.92667 5.24C8.76667 5.08056 8.56889 5.00056 8.33334 5C8.09778 4.99944 7.9 5.07944 7.74 5.24C7.58 5.40056 7.5 5.59833 7.5 5.83333V8.5ZM8.33334 16.6667C7.18056 16.6667 6.09722 16.4478 5.08334 16.01C4.06945 15.5722 3.1875 14.9786 2.4375 14.2292C1.6875 13.4797 1.09389 12.5978 0.656668 11.5833C0.219446 10.5689 0.00055661 9.48556 1.05485e-06 8.33333C-0.000554501 7.18111 0.218334 6.09778 0.656668 5.08333C1.095 4.06889 1.68861 3.18694 2.4375 2.4375C3.18639 1.68806 4.06834 1.09444 5.08334 0.656667C6.09834 0.218889 7.18167 0 8.33334 0C9.485 0 10.5683 0.218889 11.5833 0.656667C12.5983 1.09444 13.4803 1.68806 14.2292 2.4375C14.9781 3.18694 15.5719 4.06889 16.0108 5.08333C16.4497 6.09778 16.6683 7.18111 16.6667 8.33333C16.665 9.48556 16.4461 10.5689 16.01 11.5833C15.5739 12.5978 14.9803 13.4797 14.2292 14.2292C13.4781 14.9786 12.5961 15.5725 11.5833 16.0108C10.5706 16.4492 9.48722 16.6678 8.33334 16.6667ZM8.33334 15C10.1944 15 11.7708 14.3542 13.0625 13.0625C14.3542 11.7708 15 10.1944 15 8.33333C15 6.47222 14.3542 4.89583 13.0625 3.60417C11.7708 2.3125 10.1944 1.66667 8.33334 1.66667C6.47222 1.66667 4.89583 2.3125 3.60417 3.60417C2.3125 4.89583 1.66667 6.47222 1.66667 8.33333C1.66667 10.1944 2.3125 11.7708 3.60417 13.0625C4.89583 14.3542 6.47222 15 8.33334 15Z" fill="currentColor"/>
+                </svg>
+                <span>Descargar CV</span>
               </button>
             </div>
           </div>
@@ -848,67 +868,115 @@ const eliminarCv = async (cvId) => {
           </div>
 
           <!-- PASO 2: INFORMACIÓN DE PERFIL -->
-          <div v-else-if="pasoActual === 2" class="space-y-5">
-            <div class="flex flex-col items-start mb-4">
-              <label class="relative cursor-pointer group flex flex-col items-start gap-1">
+          <div v-else-if="pasoActual === 2" class="space-y-6 px-2">
+            <!-- Subir Foto Avatar (Izquierda) -->
+            <div class="flex flex-col items-start mb-2 ml-1">
+              <label class="relative cursor-pointer group flex flex-col items-center gap-1">
                 <input type="file" accept="image/*" class="hidden" @change="handleSubirFoto" />
-                <div class="relative w-20 h-20 rounded-full bg-gray-200 border-2 border-black flex items-center justify-center overflow-hidden shrink-0">
+                <div class="relative w-28 h-28 rounded-full bg-white border border-black flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
                   <img v-if="formCv.perfil.fotoUrl && !imgErrorWizard" :src="formCv.perfil.fotoUrl" @error="imgErrorWizard = true" class="w-full h-full object-cover" />
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 95 97" fill="none" class="w-12 h-12 text-gray-700"><path d="M47.2461 0C53.5114 0 59.52 2.35451 63.9502 6.54555C68.3804 10.7366 70.8692 16.4209 70.8692 22.3479C70.8692 28.275 68.3804 33.9592 63.9502 38.1503C59.52 42.3413 53.5114 44.6958 47.2461 44.6958C40.9809 44.6958 34.9723 42.3413 30.5421 38.1503C26.1119 33.9592 23.6231 28.275 23.6231 22.3479C23.6231 16.4209 26.1119 10.7366 30.5421 6.54555C34.9723 2.35451 40.9809 0 47.2461 0ZM47.2461 55.8698C73.3496 55.8698 94.4923 65.8705 94.4923 78.2177L83.4054 88.2347L65.6386 94.5426L44.4171 96.3449L20.2345 91.8392L0 82.8278V78.2177C0 65.8705 21.1426 55.8698 47.2461 55.8698Z" fill="currentColor"/></svg>
-                  <div class="absolute bottom-0 right-0 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center border border-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none" class="w-3.5 h-3.5 text-white shrink-0"><path d="M40.7409 15.0099V10.7214H36.4524V6.43283H40.7409V2.14429H45.0294V6.43283H49.318V10.7214H45.0294V15.0099H40.7409ZM23.5867 37.5247C26.2671 37.5247 28.5457 36.587 30.4227 34.7115C32.2996 32.8359 33.2374 30.5573 33.236 27.8755C33.2345 25.1938 32.2968 22.9158 30.4227 21.0417C28.5486 19.1676 26.2699 18.2292 23.5867 18.2263C20.9035 18.2235 18.6256 19.1619 16.753 21.0417C14.8803 22.9216 13.9418 25.1995 13.9375 27.8755C13.9332 30.5516 14.8717 32.8302 16.753 34.7115C18.6342 36.5927 20.9121 37.5305 23.5867 37.5247ZM23.5867 33.2362C22.0858 33.2362 20.8171 32.718 19.7807 31.6816C18.7443 30.6452 18.2261 29.3765 18.2261 27.8755C18.2261 26.3745 18.7443 25.1058 19.7807 24.0695C20.8171 23.0331 22.0858 22.5149 23.5867 22.5149C25.0877 22.5149 26.3564 23.0331 27.3928 24.0695C28.4292 25.1058 28.9474 26.3745 28.9474 27.8755C28.9474 29.3765 28.4292 30.6452 27.3928 31.6816C26.3564 32.718 25.0877 33.2362 23.5867 33.2362ZM6.43258 45.0297C5.25324 45.0297 4.244 44.6101 3.40487 43.771C2.56575 42.9319 2.14547 41.9219 2.14404 40.7411V15.0099C2.14404 13.8306 2.56432 12.8213 3.40487 11.9822C4.24543 11.1431 5.25466 10.7228 6.43258 10.7214H13.187L17.1539 6.43283H32.1638V15.0099H36.4524V19.2984H45.0294V40.7411C45.0294 41.9205 44.6099 42.9305 43.7708 43.771C42.9316 44.6116 41.9217 45.0311 40.7409 45.0297H6.43258Z" fill="currentColor"/></svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 95 97" fill="none" class="w-16 h-16 text-black">
+                    <path d="M47.2461 0C53.5114 0 59.52 2.35451 63.9502 6.54555C68.3804 10.7366 70.8692 16.4209 70.8692 22.3479C70.8692 28.275 68.3804 33.9592 63.9502 38.1503C59.52 42.3413 53.5114 44.6958 47.2461 44.6958C40.9809 44.6958 34.9723 42.3413 30.5421 38.1503C26.1119 33.9592 23.6231 28.275 23.6231 22.3479C23.6231 16.4209 26.1119 10.7366 30.5421 6.54555C34.9723 2.35451 40.9809 0 47.2461 0ZM47.2461 55.8698C73.3496 55.8698 94.4923 65.8705 94.4923 78.2177L83.4054 88.2347L65.6386 94.5426L44.4171 96.3449L20.2345 91.8392L0 82.8278V78.2177C0 65.8705 21.1426 55.8698 47.2461 55.8698Z" fill="currentColor"/>
+                  </svg>
+                  <div class="absolute bottom-1 right-1 w-7 h-7 bg-black text-white rounded-full flex items-center justify-center border border-white shadow-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none" class="w-4 h-4 text-white shrink-0">
+                      <path d="M40.7409 15.0099V10.7214H36.4524V6.43283H40.7409V2.14429H45.0294V6.43283H49.318V10.7214H45.0294V15.0099H40.7409ZM23.5867 37.5247C26.2671 37.5247 28.5457 36.587 30.4227 34.7115C32.2996 32.8359 33.2374 30.5573 33.236 27.8755C33.2345 25.1938 32.2968 22.9158 30.4227 21.0417C28.5486 19.1676 26.2699 18.2292 23.5867 18.2263C20.9035 18.2235 18.6256 19.1619 16.753 21.0417C14.8803 22.9216 13.9418 25.1995 13.9375 27.8755C13.9332 30.5516 14.8717 32.8302 16.753 34.7115C18.6342 36.5927 20.9121 37.5305 23.5867 37.5247ZM23.5867 33.2362C22.0858 33.2362 20.8171 32.718 19.7807 31.6816C18.7443 30.6452 18.2261 29.3765 18.2261 27.8755C18.2261 26.3745 18.7443 25.1058 19.7807 24.0695C20.8171 23.0331 22.0858 22.5149 23.5867 22.5149C25.0877 22.5149 26.3564 23.0331 27.3928 24.0695C28.4292 25.1058 28.9474 26.3745 28.9474 27.8755C28.9474 29.3765 28.4292 30.6452 27.3928 31.6816C26.3564 32.718 25.0877 33.2362 23.5867 33.2362ZM6.43258 45.0297C5.25324 45.0297 4.244 44.6101 3.40487 43.771C2.56575 42.9319 2.14547 41.9219 2.14404 40.7411V15.0099C2.14404 13.8306 2.56432 12.8213 3.40487 11.9822C4.24543 11.1431 5.25466 10.7228 6.43258 10.7214H13.187L17.1539 6.43283H32.1638V15.0099H36.4524V19.2984H45.0294V40.7411C45.0294 41.9205 44.6099 42.9305 43.7708 43.771C42.9316 44.6116 41.9217 45.0311 40.7409 45.0297H6.43258Z" fill="currentColor"/>
+                    </svg>
                   </div>
                 </div>
-                <span class="text-xs font-bold text-gray-900 group-hover:underline">Subir foto</span>
+                <span class="text-base font-serif text-black group-hover:underline mt-1" style="font-family: 'Lora', Georgia, serif;">Subir foto</span>
               </label>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div class="space-y-3">
+            <!-- Formulario en 2 Columnas Calcado -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <!-- Columna Izquierda: Contacto -->
+              <div class="space-y-4">
                 <div>
-                  <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 41" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M17 0C19.2543 0 21.4163 1.00197 23.0104 2.78549C24.6045 4.56901 25.5 6.98798 25.5 9.51026C25.5 12.0325 24.6045 14.4515 23.0104 16.235C21.4163 18.0185 19.2543 19.0205 17 19.0205C14.7457 19.0205 12.5837 18.0185 10.9896 16.235C9.39553 14.4515 8.5 12.0325 8.5 9.51026C8.5 6.98798 9.39553 4.56901 10.9896 2.78549C12.5837 1.00197 14.7457 0 17 0ZM17 23.7756C26.3925 23.7756 34 28.0315 34 33.2859L30.0108 37.5486L23.6179 40.233L15.9821 41L7.28072 39.0826L0 35.2477V33.2859C0 28.0315 7.6075 23.7756 17 23.7756Z" fill="currentColor"/></svg>
                     <span>Nombre completo:</span>
                   </label>
-                  <input v-model="formCv.perfil.nombre" type="text" placeholder="Ej. Dallana Lucía Campoz García" class="w-full px-3 py-2 rounded-xl bg-[#ebebeb] border border-black text-sm" />
+                  <input 
+                    v-model="formCv.perfil.nombre" 
+                    type="text" 
+                    placeholder="Dallana Lucia Campoz Garcia" 
+                    class="w-full px-4 py-2.5 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none shadow-xs" 
+                    style="font-family: 'Lora', Georgia, serif;"
+                  />
                 </div>
+
                 <div>
-                  <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 41 41" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M15.5003 19.6459C14.3676 19.6459 13.2813 19.196 12.4804 18.395C11.6795 17.5941 11.2295 16.5078 11.2295 15.3751C11.2295 14.2424 11.6795 13.1561 12.4804 12.3551C13.2813 11.5542 14.3676 11.1042 15.5003 11.1042C16.633 11.1042 17.7193 11.5542 18.5203 12.3551C19.3212 13.1561 19.7712 14.2424 19.7712 15.3751C19.7712 15.9359 19.6607 16.4913 19.4461 17.0095C19.2314 17.5276 18.9168 17.9984 18.5203 18.395C18.1237 18.7916 17.6529 19.1062 17.1347 19.3208C16.6165 19.5354 16.0612 19.6459 15.5003 19.6459ZM15.5003 3.41675C12.3288 3.41675 9.28713 4.67664 7.04451 6.91926C4.80188 9.16189 3.54199 12.2035 3.54199 15.3751C3.54199 24.3438 15.5003 37.5834 15.5003 37.5834C15.5003 37.5834 27.4587 24.3438 27.4587 15.3751C27.4587 12.2035 26.1988 9.16189 23.9561 6.91926C21.7135 4.67664 18.6719 3.41675 15.5003 3.41675Z" fill="currentColor"/></svg>
                     <span>Dirección:</span>
                   </label>
-                  <input v-model="formCv.perfil.direccion" type="text" placeholder="Ej. Usulután" class="w-full px-3 py-2 rounded-xl bg-[#ebebeb] border border-black text-sm" />
+                  <input 
+                    v-model="formCv.perfil.direccion" 
+                    type="text" 
+                    placeholder="Usulután" 
+                    class="w-full px-4 py-2.5 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none shadow-xs" 
+                    style="font-family: 'Lora', Georgia, serif;"
+                  />
                 </div>
+
                 <div>
-                  <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 39 39" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M32.5 29.25H29.25V15.0312L19.5 21.125L9.75 15.0312V29.25H6.5V9.75H8.45L19.5 16.6562L30.55 9.75H32.5M32.5 6.5H6.5C4.69625 6.5 3.25 7.94625 3.25 9.75V29.25C3.25 30.112 3.59241 30.9386 4.2019 31.5481C4.8114 32.1576 5.63805 32.5 6.5 32.5H32.5C33.362 32.5 34.1886 32.1576 34.7981 31.5481C35.4076 30.9386 35.75 30.112 35.75 29.25V9.75C35.75 8.88805 35.4076 8.0614 34.7981 7.4519C34.1886 6.84241 33.362 6.5 32.5 6.5Z" fill="currentColor"/></svg>
-                    <span>Email:</span>
+                    <span>Email</span>
                   </label>
-                  <input v-model="formCv.perfil.email" type="email" placeholder="Ej. usuario@ugb.edu.sv" class="w-full px-3 py-2 rounded-xl bg-[#ebebeb] border border-black text-sm" />
+                  <input 
+                    v-model="formCv.perfil.email" 
+                    type="email" 
+                    placeholder="usss002419@ugb.edu.sv" 
+                    class="w-full px-4 py-2.5 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none shadow-xs" 
+                    style="font-family: 'Lora', Georgia, serif;"
+                  />
                 </div>
+
                 <div>
-                  <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M26.0809 31.1668H26.6051C27.0442 31.1526 27.4551 30.926 27.7101 30.5576L30.9259 25.9251C31.1384 25.6135 31.2234 25.231 31.1526 24.8485C31.1178 24.662 31.046 24.4844 30.9414 24.3263C30.8367 24.1681 30.7014 24.0325 30.5434 23.9276L23.5876 19.2951C23.0067 18.9126 22.2276 18.9976 21.7601 19.5076L19.0967 22.3835C18.0201 21.746 16.2209 20.5985 14.8042 19.1818C13.3876 17.7651 12.2401 15.966 11.6026 14.9035L14.4784 12.2401C14.9884 11.7726 15.0876 10.9935 14.6909 10.4126L10.0584 3.4568C9.8459 3.14513 9.52007 2.91847 9.15173 2.84763C8.76923 2.7768 8.38673 2.84763 8.07507 3.0743L3.44257 6.27597C3.07423 6.53097 2.84757 6.9418 2.8334 7.38097C2.7909 8.3868 2.60673 17.3543 9.61923 24.3526C15.9376 30.671 23.8426 31.1526 26.0809 31.1526V31.1668Z" fill="currentColor"/></svg>
                     <span>Teléfono:</span>
                   </label>
-                  <input v-model="formCv.perfil.telefono" type="text" placeholder="Ej. 7200 - 6452" class="w-full px-3 py-2 rounded-xl bg-[#ebebeb] border border-black text-sm" />
+                  <input 
+                    v-model="formCv.perfil.telefono" 
+                    type="text" 
+                    placeholder="7200 - 6452" 
+                    class="w-full px-4 py-2.5 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none shadow-xs" 
+                    style="font-family: 'Lora', Georgia, serif;"
+                  />
                 </div>
               </div>
 
-              <div class="space-y-3">
+              <!-- Columna Derecha: Sobre mí y Educación -->
+              <div class="space-y-4">
                 <div>
-                  <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 35 35" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M29.5312 0H3.28125C1.47656 0 0 1.47656 0 3.28125V31.7188C0 33.5234 1.47656 35 3.28125 35H29.5312C31.3359 35 32.8125 33.5234 32.8125 31.7188V3.28125C32.8125 1.47656 31.3359 0 29.5312 0ZM28.4375 30.625H4.375V4.375H28.4375V30.625ZM8.75 19.6875H24.0625V21.875H8.75V19.6875ZM8.75 24.0625H24.0625V26.25H8.75V24.0625ZM10.9375 9.84375C10.9376 9.41271 11.0227 8.98591 11.1878 8.58773C11.3529 8.18956 11.5948 7.8278 11.8996 7.5231C12.2045 7.21841 12.5665 6.97676 12.9648 6.81193C13.363 6.64711 13.7899 6.56236 14.2209 6.5625C14.652 6.56264 15.0788 6.64769 15.477 6.81277C15.8751 6.97786 16.2369 7.21975 16.5416 7.52465C16.8463 7.82955 17.0879 8.19147 17.2528 8.58976C17.4176 8.98804 17.5023 9.41489 17.5022 9.84594C17.5019 10.7165 17.1558 11.5512 16.54 12.1666C15.9243 12.7819 15.0893 13.1275 14.2188 13.1272C13.3482 13.1269 12.5135 12.7808 11.8981 12.165C11.2827 11.5493 10.9372 10.7143 10.9375 9.84375ZM16.4062 13.125H12.0312C10.2266 13.125 8.75 14.1094 8.75 15.3125V17.5H19.6875V15.3125C19.6875 14.1094 18.2109 13.125 16.4062 13.125Z" fill="currentColor"/></svg>
                     <span>Sobre mi:</span>
                   </label>
-                  <textarea v-model="formCv.perfil.sobreMi" rows="4" placeholder="Ej. Soy una persona apasionada por la tecnología, con un profundo interés en el campo de la ciberseguridad." class="w-full px-3 py-2 rounded-xl bg-[#ebebeb] border border-black text-sm resize-none"></textarea>
+                  <textarea 
+                    v-model="formCv.perfil.sobreMi" 
+                    rows="5" 
+                    placeholder="ej.Soy una persona apasionada por la tecnología, con un profundo interés en el campo de la ciberseguridad." 
+                    class="w-full px-4 py-3 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none resize-none shadow-xs"
+                    style="font-family: 'Lora', Georgia, serif;"
+                  ></textarea>
                 </div>
+
                 <div>
-                  <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 43 43" fill="none" class="w-4 h-4 text-black shrink-0"><g clip-path="url(#clip0_2001_411_c)"><path d="M21.5 3.5835L0 16.1252L21.5 28.6668L39.4167 18.216V31.3543H43V16.1252L21.5 3.5835ZM7.16488 24.1697V32.2502C8.83279 34.4764 10.9966 36.2832 13.4847 37.5272C15.9727 38.7712 18.7165 39.4182 21.4982 39.4168C24.2802 39.4185 27.0243 38.7716 29.5127 37.5276C32.0011 36.2836 34.1652 34.4766 35.8333 32.2502V24.1715L21.5 32.5332L7.16488 24.1697Z" fill="currentColor"/></g><defs><clipPath id="clip0_2001_411_c"><rect width="43" height="43" fill="white"/></clipPath></defs></svg>
                     <span>Educación:</span>
                   </label>
-                  <textarea v-model="formCv.perfil.educacion" rows="3" placeholder="Ej. Universidad Gerardo Barrios (egresado)" class="w-full px-3 py-2 rounded-xl bg-[#ebebeb] border border-black text-sm resize-none"></textarea>
+                  <textarea 
+                    v-model="formCv.perfil.educacion" 
+                    rows="3" 
+                    placeholder="Egresada de Ingeniería en sistemas y redes informáticas" 
+                    class="w-full px-4 py-3 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none resize-none shadow-xs"
+                    style="font-family: 'Lora', Georgia, serif;"
+                  ></textarea>
                 </div>
               </div>
             </div>

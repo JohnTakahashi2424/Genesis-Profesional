@@ -6,30 +6,45 @@ import CvModulo from './CvModulo.vue'
 const emit = defineEmits(['volver'])
 
 // Usuario actual
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{"id":1,"nombres":"Dallana Lucia","apellidos":"Campoz Garcia","correo":"usss002419@ugb.edu.sv"}'))
+const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 
 // Estado
 const editandoCv = ref(false)
 const cargando = ref(false)
 const cvRaw = ref(null)
 
+const normalizarUrlFoto = (url) => {
+  if (!url) return ''
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/api/storage/')) return url
+  if (url.startsWith('api/storage/')) return '/' + url
+  if (url.startsWith('/storage/')) return '/api' + url
+  if (url.startsWith('storage/')) return '/api/' + url
+  if (url.startsWith('/')) return url
+  return '/api/storage/' + url
+}
+
+const fotoInicial = normalizarUrlFoto(usuario.value?.foto || usuario.value?.foto_url || usuario.value?.avatar || '')
+const nombreInicial = usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || 'Estudiante'
+const emailInicial = usuario.value?.correo || usuario.value?.email || ''
+
 const perfilData = ref({
-  fotoUrl: '',
-  nombre: (usuario.value.nombres || 'Dallana Lucia') + ' ' + (usuario.value.apellidos || 'Campoz Garcia'),
-  profesion: 'Egresada de Ingeniería en sistemas y redes informáticas',
+  fotoUrl: fotoInicial,
+  nombre: nombreInicial,
+  profesion: 'Egresado de Universidad Gerardo Barrios',
   direccion: 'Usulután',
-  email: usuario.value.correo || usuario.value.email || 'usss002419@ugb.edu.sv',
-  telefono: '7200 - 6452',
-  educacion: 'Universidad Gerardo Barrios (egresado)',
-  idiomas: '- Español nativo\n- Ingles básico',
-  sobreMi: 'Soy una persona apasionada por la tecnología, con un profundo interés en el campo de la ciberseguridad.',
-  conocimientos: '-Conocimientos en redes Protocolos,\nenrutamientos, IPv4 y IPv6, NAT\n-Conocimientos en seguridad Análisis\nde casos de estudio, Phishing Emails',
-  valores: '- Liderazgo.\n- Compromiso.\n- Trabajo en equipo.\n- Responsabilidad.\n- Sinceridad.',
-  objetivo: 'Incorporarme y consolidarme en un equipo de trabajo donde pueda aplicar los conocimientos y habilidades adquiridos a lo largo de mi formación académica y profesional',
-  habilidades: '- Facilidad para expresarme de forma verbal,\ny que esta a su vez sea fluida, entendible y\ncoherente frente a las personas.\n- Facilidad para trabajar en equipo.',
-  certificados: '- CCNAv7: Introduction to Networks.\n- CCNAv7: Enterprise Networking, Security, and\nAutomation.\n- Ciberseguridad y privacidad empresarial.',
-  logros: 'Primer lugar a nivel de sede en la categoría\ninnovación - Rally Latinoamericano de\ninnovación 2023. - Tercer lugar en\ninvestigación de cátedra - Universidad\nGerardo Barrios Usulután 2023.',
-  proyectos: 'Asociación Juvenil del Bajo Lempa (AJUBAL).\n• Miembro activo desde el año 2021 hasta la\nactualidad.'
+  email: emailInicial,
+  telefono: '',
+  educacion: 'Universidad Gerardo Barrios (Egresado)',
+  idiomas: '',
+  sobreMi: '',
+  conocimientos: '',
+  valores: '',
+  objetivo: '',
+  habilidades: '',
+  certificados: '',
+  logros: '',
+  proyectos: ''
 })
 
 const formatTexto = (val) => {
@@ -55,15 +70,28 @@ const cargarCvPerfil = async () => {
   cargando.value = true
   imgError.value = false
   try {
-    const res = await axios.get(`/api/cv/obtener/${usuario.value.id || 1}`, {
-      params: { correo: usuario.value.correo || usuario.value.email }
+    const userId = usuario.value.id || usuario.value.user_id || 0
+    const correo = usuario.value.correo || usuario.value.email || ''
+
+    const res = await axios.get(`/api/cv/obtener/${userId}`, {
+      params: { correo }
     })
     if (res.data && res.data.cvs && res.data.cvs.length > 0) {
       const cvReciente = res.data.cvs[0]
       cvRaw.value = cvReciente
+      
       if (cvReciente.nombre_completo) perfilData.value.nombre = cvReciente.nombre_completo
       if (cvReciente.profesion) perfilData.value.profesion = cvReciente.profesion
-      if (cvReciente.foto_url) perfilData.value.fotoUrl = cvReciente.foto_url
+      
+      const fotoBD = cvReciente.foto_url || cvReciente.foto || cvReciente.avatar || usuario.value?.foto || usuario.value?.foto_url || usuario.value?.avatar
+      if (fotoBD) {
+        perfilData.value.fotoUrl = normalizarUrlFoto(fotoBD)
+        imgError.value = false
+        usuario.value.foto = perfilData.value.fotoUrl
+        usuario.value.foto_url = perfilData.value.fotoUrl
+        localStorage.setItem('genesis_usuario', JSON.stringify(usuario.value))
+      }
+
       if (cvReciente.direccion) perfilData.value.direccion = cvReciente.direccion
       if (cvReciente.email) perfilData.value.email = cvReciente.email
       if (cvReciente.telefono) perfilData.value.telefono = cvReciente.telefono
@@ -109,21 +137,27 @@ const handleGuardadoExitoso = async () => {
       <div class="absolute top-8 right-8 flex items-center gap-3">
         <button
           @click="editandoCv = true"
-          class="px-6 py-2 rounded-full border border-black bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-xs flex items-center justify-center cursor-pointer"
+          class="px-6 py-2 rounded-full border border-black bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
           style="font-family: 'Lora', Georgia, serif;"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 27 27" fill="none" class="shrink-0">
+            <path d="M25.875 5.625V7.875H24.75V9H23.625V10.125H22.5V11.25H21.375V10.125H20.25V9H19.125V7.875H18V6.75H16.875V5.625H15.75V4.5H16.875V3.375H18V2.25H19.125V1.125H21.375V2.25H22.5V3.375H23.625V4.5H24.75V5.625H25.875ZM19.125 11.25V10.125H18V9H16.875V7.875H15.75V6.75H13.5V7.875H12.375V9H11.25V10.125H10.125V11.25H9V12.375H7.875V13.5H6.75V14.625H5.625V15.75H4.5V16.875H3.375V18H2.25V19.125H1.125V25.875H7.875V24.75H9V23.625H10.125V22.5H11.25V21.375H12.375V20.25H13.5V19.125H14.625V18H15.75V16.875H16.875V15.75H18V14.625H19.125V13.5H20.25V11.25H19.125ZM16.875 13.5V14.625H15.75V15.75H14.625V16.875H13.5V18H12.375V19.125H11.25V20.25H10.125V21.375H9V22.5H7.875V23.625H3.375V19.125H4.5V18H5.625V16.875H6.75V15.75H7.875V14.625H9V13.5H10.125V12.375H11.25V11.25H12.375V10.125H13.5V9H15.75V10.125H16.875V11.25H18V13.5H16.875Z" fill="currentColor"/>
+          </svg>
           <span>Editar</span>
         </button>
 
         <a
           v-if="cvRaw?.url_publica"
-          :href="cvRaw.url_publica"
+          :href="normalizarUrlFoto(cvRaw.url_publica)"
           target="_blank"
           download
-          class="px-6 py-2 rounded-full bg-[#000B58] hover:bg-[#000840] text-white text-sm font-medium transition-all shadow-xs flex items-center justify-center cursor-pointer"
+          class="px-6 py-2 rounded-full bg-[#000B58] hover:bg-[#000840] text-white text-sm font-medium transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
           style="font-family: 'Lora', Georgia, serif;"
         >
-          Descargar
+          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 17 17" fill="none" class="shrink-0">
+            <path d="M7.5 8.5L6.75 7.75C6.59722 7.59722 6.40278 7.52083 6.16667 7.52083C5.93056 7.52083 5.73611 7.59722 5.58334 7.75C5.43056 7.90278 5.35417 8.09722 5.35417 8.33333C5.35417 8.56944 5.43056 8.76389 5.58334 8.91667L7.75 11.0833C7.91667 11.25 8.11111 11.3333 8.33334 11.3333C8.55556 11.3333 8.75 11.25 8.91667 11.0833L11.0833 8.91667C11.2361 8.76389 11.3125 8.56944 11.3125 8.33333C11.3125 8.09722 11.2361 7.90278 11.0833 7.75C10.9306 7.59722 10.7361 7.52083 10.5 7.52083C10.2639 7.52083 10.0694 7.59722 9.91667 7.75L9.16667 8.5V5.83333C9.16667 5.59722 9.08667 5.39944 8.92667 5.24C8.76667 5.08056 8.56889 5.00056 8.33334 5C8.09778 4.99944 7.9 5.07944 7.74 5.24C7.58 5.40056 7.5 5.59833 7.5 5.83333V8.5ZM8.33334 16.6667C7.18056 16.6667 6.09722 16.4478 5.08334 16.01C4.06945 15.5722 3.1875 14.9786 2.4375 14.2292C1.6875 13.4797 1.09389 12.5978 0.656668 11.5833C0.219446 10.5689 0.00055661 9.48556 1.05485e-06 8.33333C-0.000554501 7.18111 0.218334 6.09778 0.656668 5.08333C1.095 4.06889 1.68861 3.18694 2.4375 2.4375C3.18639 1.68806 4.06834 1.09444 5.08334 0.656667C6.09834 0.218889 7.18167 0 8.33334 0C9.485 0 10.5683 0.218889 11.5833 0.656667C12.5983 1.09444 13.4803 1.68806 14.2292 2.4375C14.9781 3.18694 15.5719 4.06889 16.0108 5.08333C16.4497 6.09778 16.6683 7.18111 16.6667 8.33333C16.665 9.48556 16.4461 10.5689 16.01 11.5833C15.5739 12.5978 14.9803 13.4797 14.2292 14.2292C13.4781 14.9786 12.5961 15.5725 11.5833 16.0108C10.5706 16.4492 9.48722 16.6678 8.33334 16.6667ZM8.33334 15C10.1944 15 11.7708 14.3542 13.0625 13.0625C14.3542 11.7708 15 10.1944 15 8.33333C15 6.47222 14.3542 4.89583 13.0625 3.60417C11.7708 2.3125 10.1944 1.66667 8.33334 1.66667C6.47222 1.66667 4.89583 2.3125 3.60417 3.60417C2.3125 4.89583 1.66667 6.47222 1.66667 8.33333C1.66667 10.1944 2.3125 11.7708 3.60417 13.0625C4.89583 14.3542 6.47222 15 8.33334 15Z" fill="currentColor"/>
+          </svg>
+          <span>Descargar</span>
         </a>
       </div>
 
@@ -172,6 +206,17 @@ const handleGuardadoExitoso = async () => {
         </div>
 
         <div class="space-y-3">
+          <div v-if="perfilData.educacion">
+            <p class="font-bold text-[#010C67] flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-4 h-4 text-[#010C67] shrink-0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+              </svg>
+              <span>Educación:</span>
+            </p>
+            <p class="text-gray-900 whitespace-pre-line mt-0.5">{{ perfilData.educacion }}</p>
+          </div>
+
           <div>
             <p class="font-bold text-[#010C67] flex items-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" fill="none" class="w-4 h-4 text-[#010C67] shrink-0"><g clip-path="url(#clip0_2016_494_p)"><path d="M30.5226 0.175559C30.6635 0.269819 30.7791 0.397321 30.859 0.546808C30.939 0.696295 30.9809 0.863171 30.9811 1.0327V16.5232C30.9811 16.7295 30.9193 16.931 30.8037 17.1018C30.6881 17.2726 30.524 17.4049 30.3326 17.4816L30.3264 17.4837L30.314 17.4899L30.2665 17.5084C29.995 17.6165 29.7217 17.7198 29.4465 17.8183C28.9013 18.0145 28.1433 18.2788 27.2841 18.5411C25.5987 19.0616 23.4032 19.6213 21.6868 19.6213C19.9374 19.6213 18.4896 19.043 17.2297 18.537L17.1718 18.5164C15.8624 17.9897 14.747 17.5559 13.4252 17.5559C11.9794 17.5559 10.042 18.031 8.39179 18.5411C7.65303 18.7718 6.9209 19.0232 6.19626 19.295V32.0138C6.19626 32.2877 6.08746 32.5503 5.89379 32.744C5.70012 32.9377 5.43745 33.0465 5.16356 33.0465C4.88967 33.0465 4.627 32.9377 4.43333 32.744C4.23966 32.5503 4.13086 32.2877 4.13086 32.0138V1.0327C4.13086 0.758813 4.23966 0.496141 4.43333 0.302472C4.627 0.108802 4.88967 0 5.16356 0C5.43745 0 5.70012 0.108802 5.89379 0.302472C6.08746 0.496141 6.19626 0.758813 6.19626 1.0327V1.61515C6.66305 1.45198 7.22071 1.26403 7.82793 1.07814C9.51331 0.56179 11.7109 0 13.4252 0C15.1601 0 16.5729 0.572117 17.8059 1.07195L17.8947 1.10912C19.1794 1.62754 20.2989 2.06541 21.6868 2.06541C23.1326 2.06541 25.0699 1.59036 26.7202 1.08021C27.6604 0.785826 28.5897 0.457905 29.5064 0.097074L29.5457 0.0826162L29.5539 0.0784854H29.556" fill="currentColor"/></g><defs><clipPath id="clip0_2016_494_p"><rect width="33.0465" height="33.0465" fill="white"/></clipPath></defs></svg>
