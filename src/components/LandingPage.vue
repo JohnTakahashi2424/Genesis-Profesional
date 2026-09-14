@@ -420,12 +420,15 @@ const prevAlcanceSlide = () => { alcanceSlideIndex.value = 0 }
 
 /* Header / Navbar */
 .navbar-ugb {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   background-color: var(--color-ugb-blue);
   padding: 18px 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 .navbar-brand-ugb {
