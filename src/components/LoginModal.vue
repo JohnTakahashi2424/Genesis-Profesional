@@ -178,8 +178,8 @@ const handleOlvideContrasena = () => {
         
         <!-- Campo: Correo* -->
         <div class="mb-4">
-          <label for="input-login-correo" class="block text-sm font-semibold text-gray-900 mb-1">
-            Correo<span class="text-red-500">*</span>
+          <label for="input-login-correo" class="block text-sm font-bold text-gray-900 mb-1" style="font-family: 'Lora', Georgia, serif;">
+            Correo<span class="text-[#FF0000]">*</span>
           </label>
           <input 
             id="input-login-correo"
@@ -189,11 +189,12 @@ const handleOlvideContrasena = () => {
             maxlength="100"
             :disabled="loading"
             @input="errorCorreo = ''; errorGeneral = ''"
-            class="w-full px-3.5 py-2.5 rounded-[12px] bg-[#ebebeb] border text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
-            :class="errorCorreo ? 'border-red-500' : 'border-gray-500'"
+            class="w-full h-[61px] px-[10px] py-[10px] rounded-[18px] bg-[#ebebeb] text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:outline-none transition-all disabled:opacity-60 shrink-0 self-stretch flex items-center gap-[10px]"
+            style="height: 61px; padding: 10px; flex-shrink: 0; align-self: stretch;"
+            :class="errorCorreo ? 'border border-[#FF0000]' : 'border border-black'"
           />
           <!-- Mensaje de error (Imagen 1) -->
-          <p v-if="errorCorreo" class="flex items-center gap-1 text-red-600 text-[11px] mt-1.5 font-medium">
+          <p v-if="errorCorreo" class="flex items-center gap-1 text-[#FF0000] text-[11px] mt-1.5 font-medium">
             <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
             <span>{{ errorCorreo }}</span>
           </p>
@@ -201,8 +202,8 @@ const handleOlvideContrasena = () => {
 
         <!-- Campo: Contraseña* -->
         <div class="mb-2">
-          <label for="input-login-contrasena" class="block text-sm font-semibold text-gray-900 mb-1">
-            Contraseña<span class="text-red-500">*</span>
+          <label for="input-login-contrasena" class="block text-sm font-bold text-gray-900 mb-1" style="font-family: 'Lora', Georgia, serif;">
+            Contraseña<span class="text-[#FF0000]">*</span>
           </label>
           <div class="relative">
             <input 
@@ -213,8 +214,9 @@ const handleOlvideContrasena = () => {
               maxlength="100"
               :disabled="loading"
               @input="errorContrasena = ''; errorGeneral = ''"
-              class="w-full px-3.5 py-2.5 pr-11 rounded-[12px] bg-[#ebebeb] border text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none transition-colors disabled:opacity-60"
-              :class="errorContrasena ? 'border-red-500' : 'border-gray-500'"
+              class="w-full h-[61px] px-[10px] py-[10px] pr-11 rounded-[18px] bg-[#ebebeb] text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:outline-none transition-all disabled:opacity-60 shrink-0 self-stretch flex items-center gap-[10px]"
+              style="height: 61px; padding: 10px; flex-shrink: 0; align-self: stretch;"
+              :class="errorContrasena ? 'border border-[#FF0000]' : 'border border-black'"
             />
             <!-- Toggle de visibilidad de contraseña -->
             <button 
@@ -228,7 +230,7 @@ const handleOlvideContrasena = () => {
             </button>
           </div>
           <!-- Mensaje de error (Imagen 2) -->
-          <p v-if="errorContrasena" class="flex items-center gap-1 text-red-600 text-[11px] mt-1.5 font-medium">
+          <p v-if="errorContrasena" class="flex items-center gap-1 text-[#FF0000] text-[11px] mt-1.5 font-medium">
             <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
             <span>{{ errorContrasena }}</span>
           </p>
@@ -239,23 +241,23 @@ const handleOlvideContrasena = () => {
           <button 
             type="button" 
             @click="handleOlvideContrasena" 
-            class="text-[#2563eb] text-xs underline font-medium hover:text-[#1d4ed8] cursor-pointer"
+            class="text-[#00589B] text-xs underline font-medium hover:text-[#004073] cursor-pointer"
           >
             ¿Olvidaste tu contraseña?
           </button>
         </div>
 
-        <!-- Botón Iniciar Sesión Centrado con color azul marino #010c67 según diseño -->
-        <div class="text-center mt-3 mb-5">
+        <!-- Botón Iniciar Sesión Centrado con color azul marino #010C67 según diseño -->
+        <div class="text-center mt-3 mb-5 flex justify-center">
           <button 
             type="submit"
             id="btn-submit-login"
             :disabled="loading"
-            class="w-[171px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] mx-auto cursor-pointer select-none disabled:cursor-not-allowed"
+            class="border border-white text-white text-base font-medium transition-all flex items-center justify-center gap-[10px] mx-auto cursor-pointer select-none disabled:cursor-not-allowed"
             :class="formCompleto 
-              ? 'bg-[#010c67] hover:bg-[#01094f] active:scale-[0.98] shadow-md' 
+              ? 'bg-[#010C67] hover:bg-[#01094f] active:scale-[0.98] shadow-md' 
               : 'bg-[#888eb8] shadow-sm'"
-            style="font-family: 'Lora', Georgia, serif;"
+            style="display: flex; width: 171px; height: 51.286px; padding: 10px; justify-content: center; align-items: center; gap: 10px; border-radius: 18px; font-family: 'Lora', Georgia, serif;"
           >
             <!-- Spinner al cargar -->
             <span 
@@ -273,7 +275,7 @@ const handleOlvideContrasena = () => {
             <button 
               type="button" 
               @click="emit('abrir-registro')" 
-              class="text-[#2563eb] underline font-medium hover:text-[#1d4ed8] cursor-pointer ml-1"
+              class="text-[#00589B] underline font-medium hover:text-[#004073] cursor-pointer ml-1"
             >
               Crear una cuenta
             </button>

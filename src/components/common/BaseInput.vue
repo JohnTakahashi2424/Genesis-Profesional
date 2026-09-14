@@ -44,7 +44,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'blur', 'focus'])
+const emit = defineEmits(['update:modelValue', 'blur', 'focus', 'keydown', 'enter'])
 
 // Estado local para alternar visibilidad de contraseña
 const mostrarPassword = ref(false)
@@ -64,6 +64,16 @@ const bloquearNoLetras = (evento) => {
   // Bloquear cualquier carácter que no sea letra o espacio
   if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]$/.test(evento.key)) {
     evento.preventDefault()
+  }
+}
+
+// Manejar keydown y emitir enter
+const manejarKeydown = (evento) => {
+  bloquearNoLetras(evento)
+  emit('keydown', evento)
+  if (evento.key === 'Enter') {
+    evento.preventDefault()
+    emit('enter', evento)
   }
 }
 
@@ -100,8 +110,8 @@ const manejarPegado = (evento) => {
 <template>
   <div class="base-input-group mb-4 text-left">
     <!-- Etiqueta con asterisco opcional -->
-    <label v-if="label" :for="id" class="block text-sm font-semibold text-gray-900 mb-1.5">
-      {{ label }}<span v-if="required" class="text-red-500">*</span>
+    <label v-if="label" :for="id" class="block text-sm font-bold text-gray-900 mb-1.5" style="font-family: 'Lora', Georgia, serif;">
+      {{ label }}<span v-if="required" class="text-[#FF0000]">*</span>
     </label>
 
     <div class="relative">
@@ -112,16 +122,17 @@ const manejarPegado = (evento) => {
         :placeholder="placeholder"
         :maxlength="maxlength"
         :disabled="disabled"
-        @keydown="bloquearNoLetras"
+        @keydown="manejarKeydown"
         @input="manejarInput"
         @paste="manejarPegado"
         @blur="emit('blur', $event)"
         @focus="emit('focus', $event)"
-        class="w-full px-4 py-2.5 rounded-xl bg-[#eaecee] border border-[#ced4da] text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:border-[#0a1854] focus:outline-none focus:ring-1 focus:ring-[#0a1854] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-        :class="{
-          'pr-11': type === 'password',
-          'border-red-400 bg-red-50/30': error
-        }"
+        class="w-full h-[61px] px-[10px] py-[10px] rounded-[18px] bg-[#ebebeb] text-gray-900 placeholder-gray-400 text-sm focus:bg-white focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed shrink-0 self-stretch flex items-center gap-[10px]"
+        style="height: 61px; padding: 10px; flex-shrink: 0; align-self: stretch;"
+        :class="[
+          type === 'password' ? 'pr-11' : '',
+          error ? 'border border-[#FF0000] bg-red-50/30' : 'border border-black'
+        ]"
       />
 
       <!-- Botón de ojo para tipo password -->
@@ -137,7 +148,7 @@ const manejarPegado = (evento) => {
     </div>
 
     <!-- Mensaje de error reactivo -->
-    <p v-if="error" class="flex items-center gap-1.5 text-[#dc2626] text-xs mt-1.5 font-medium">
+    <p v-if="error" class="flex items-center gap-1.5 text-[#FF0000] text-xs mt-1.5 font-medium">
       <i class="bi bi-exclamation-circle text-[13px]"></i>
       <span>{{ error }}</span>
     </p>
