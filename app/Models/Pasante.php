@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pasante extends Model
 {
@@ -52,5 +53,13 @@ class Pasante extends Model
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id', 'id');
+    }
+
+    /**
+     * Relación con los reportes creados por el pasante.
+     */
+    public function reportes(): HasMany
+    {
+        return $this->hasMany(Reporte::class, 'pasante_id', 'id');
     }
 }
