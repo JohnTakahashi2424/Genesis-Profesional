@@ -98,12 +98,14 @@ class ReporteController extends Controller
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'horas_registradas' => 'required|numeric|min:0',
             'estado' => 'nullable|string|in:Enviado,En revisión,Aprobado',
-            'evidencias' => 'nullable|array',
+            'evidencias' => 'nullable|array|max:4',
             'actividades' => 'nullable|array',
             'actividades.*.fecha_actividad' => 'required|date',
             'actividades.*.objetivo' => 'required|string',
             'actividades.*.actividad_realizada' => 'required|string',
             'actividades.*.logros_obtenidos' => 'required|string',
+        ], [
+            'evidencias.max' => 'Solo se permiten como máximo 4 imágenes por reporte.'
         ]);
 
         // Determinar pasante_id
@@ -204,12 +206,14 @@ class ReporteController extends Controller
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'horas_registradas' => 'required|numeric|min:0',
             'estado' => 'nullable|string|in:Enviado,En revisión,Aprobado',
-            'evidencias' => 'nullable|array',
+            'evidencias' => 'nullable|array|max:4',
             'actividades' => 'nullable|array',
             'actividades.*.fecha_actividad' => 'required|date',
             'actividades.*.objetivo' => 'required|string',
             'actividades.*.actividad_realizada' => 'required|string',
             'actividades.*.logros_obtenidos' => 'required|string',
+        ], [
+            'evidencias.max' => 'Solo se permiten como máximo 4 imágenes por reporte.'
         ]);
 
         // Procesar imágenes
