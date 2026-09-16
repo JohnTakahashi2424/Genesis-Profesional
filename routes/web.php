@@ -45,43 +45,28 @@ Route::get('/storage/{path}', function ($path) {
     abort(404);
 })->where('path', '.*');
 
-// Rutas SPA para login / registro / dashboard
-Route::get('/login', function () {
+// Rutas SPA para landing, modales y paneles del sistema (pasante, estudiante, etc.)
+$spaHandler = function () {
     $indexPath = base_path('dist/index.html');
     if (file_exists($indexPath)) {
         return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
     }
     return redirect('/');
-})->name('login');
+};
 
-Route::get('/registro', function () {
-    $indexPath = base_path('dist/index.html');
-    if (file_exists($indexPath)) {
-        return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
-    }
-    return redirect('/');
-});
+Route::get('/login', $spaHandler)->name('login');
+Route::get('/registro', $spaHandler);
+Route::get('/recuperar', $spaHandler);
+Route::get('/recuperar-password', $spaHandler);
+Route::get('/empresas', $spaHandler);
+Route::get('/areas', $spaHandler);
+Route::get('/requisitos', $spaHandler);
+Route::get('/alcance', $spaHandler);
 
-Route::get('/dashboard/{any}', function () {
-    $indexPath = base_path('dist/index.html');
-    if (file_exists($indexPath)) {
-        return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
-    }
-    return redirect('/');
-})->where('any', '.*');
-
-Route::get('/panel-pasante/{any}', function () {
-    $indexPath = base_path('dist/index.html');
-    if (file_exists($indexPath)) {
-        return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
-    }
-    return redirect('/');
-})->where('any', '.*');
-
-Route::get('/panel/{any}', function () {
-    $indexPath = base_path('dist/index.html');
-    if (file_exists($indexPath)) {
-        return response(file_get_contents($indexPath))->header('Content-Type', 'text/html');
-    }
-    return redirect('/');
-})->where('any', '.*');
+Route::get('/pasante/{any?}', $spaHandler)->where('any', '.*');
+Route::get('/estudiante/{any?}', $spaHandler)->where('any', '.*');
+Route::get('/supervisor/{any?}', $spaHandler)->where('any', '.*');
+Route::get('/vicedecano/{any?}', $spaHandler)->where('any', '.*');
+Route::get('/panel-pasante/{any?}', $spaHandler)->where('any', '.*');
+Route::get('/panel/{any?}', $spaHandler)->where('any', '.*');
+Route::get('/dashboard/{any?}', $spaHandler)->where('any', '.*');

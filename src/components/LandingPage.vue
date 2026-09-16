@@ -1,18 +1,26 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   ocultarNavbar: {
     type: Boolean,
     default: false
+  },
+  tabActual: {
+    type: String,
+    default: 'inicio'
   }
 })
 
-const emit = defineEmits(['login', 'registro'])
+const emit = defineEmits(['login', 'registro', 'cambiar-tab'])
 
-const activeTab = ref('inicio')
+const activeTab = ref(props.tabActual || 'inicio')
 const areaSlideIndex = ref(0)
 const alcanceSlideIndex = ref(0)
+
+watch(() => props.tabActual, (newTab) => {
+  if (newTab) activeTab.value = newTab
+})
 
 const areasPasantia = [
   {
@@ -76,6 +84,7 @@ const cambiarTab = (tab) => {
   activeTab.value = tab
   areaSlideIndex.value = 0
   alcanceSlideIndex.value = 0
+  emit('cambiar-tab', tab)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 

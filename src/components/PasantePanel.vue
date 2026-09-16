@@ -103,8 +103,42 @@ const cargarEstadoPasantia = async () => {
   }
 }
 
+const mapPathToItem = (path) => {
+  if (path.includes('/perfil')) return 'perfil'
+  if (path.includes('/reportes') || path.includes('/reporte')) return 'reportes'
+  if (path.includes('/historial')) return 'historial'
+  if (path.includes('/ia')) return 'ia'
+  if (path.includes('/configuracion')) return 'configuracion'
+  if (path.includes('/cv')) return 'cv'
+  return 'inicio'
+}
+
+const navegarA = (item) => {
+  itemActivo.value = item
+  const currentPath = window.location.pathname
+  let basePath = '/pasante'
+
+  if (currentPath.includes('/estudiante')) {
+    basePath = '/estudiante'
+  } else if (currentPath.includes('/pasante')) {
+    basePath = '/pasante'
+  } else if (currentPath.includes('/panel-pasante')) {
+    basePath = '/panel-pasante'
+  }
+
+  const targetPath = item === 'inicio' ? basePath : `${basePath}/${item}`
+  if (window.location.pathname !== targetPath) {
+    window.history.pushState({ item }, '', targetPath)
+  }
+}
+
 onMounted(() => {
   cargarEstadoPasantia()
+  itemActivo.value = mapPathToItem(window.location.pathname)
+
+  window.addEventListener('popstate', () => {
+    itemActivo.value = mapPathToItem(window.location.pathname)
+  })
 })
 
 const handleLogout = () => {
@@ -128,7 +162,7 @@ const handleLogout = () => {
         <nav class="mt-2 space-y-3">
           <!-- Inicio (Activo: barra rectangular azul marino completa) -->
           <button 
-            @click="itemActivo = 'inicio'"
+            @click="navegarA('inicio')"
             class="w-full flex items-center gap-4 px-8 py-3.5 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'inicio' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -142,7 +176,7 @@ const handleLogout = () => {
 
           <!-- Perfil -->
           <button 
-            @click="itemActivo = 'perfil'"
+            @click="navegarA('perfil')"
             class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'perfil' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -154,7 +188,7 @@ const handleLogout = () => {
 
           <!-- Reportes -->
           <button 
-            @click="itemActivo = 'reportes'"
+            @click="navegarA('reportes')"
             class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'reportes' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -168,7 +202,7 @@ const handleLogout = () => {
 
           <!-- Historial de progreso -->
           <button 
-            @click="itemActivo = 'historial'"
+            @click="navegarA('historial')"
             class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'historial' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -185,7 +219,7 @@ const handleLogout = () => {
 
           <!-- Análisis IA -->
           <button 
-            @click="itemActivo = 'ia'"
+            @click="navegarA('ia')"
             class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'ia' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -203,7 +237,7 @@ const handleLogout = () => {
 
           <!-- Configuración -->
           <button 
-            @click="itemActivo = 'configuracion'"
+            @click="navegarA('configuracion')"
             class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'configuracion' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -236,12 +270,12 @@ const handleLogout = () => {
     <main class="flex-1 p-8 overflow-y-auto">
       
       <!-- COMPONENTES DE MÓDULOS EN DESARROLLO -->
-      <CvModulo v-if="itemActivo === 'cv'" @volver="itemActivo = 'inicio'" />
-      <ReportesModulo v-else-if="itemActivo === 'reportes'" @volver="itemActivo = 'inicio'" />
-      <PerfilModulo v-else-if="itemActivo === 'perfil'" @volver="itemActivo = 'inicio'" />
-      <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="itemActivo = 'inicio'" />
-      <IaModulo v-else-if="itemActivo === 'ia'" @volver="itemActivo = 'inicio'" />
-      <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="itemActivo = 'inicio'" />
+      <CvModulo v-if="itemActivo === 'cv'" @volver="navegarA('inicio')" />
+      <ReportesModulo v-else-if="itemActivo === 'reportes'" @volver="navegarA('inicio')" />
+      <PerfilModulo v-else-if="itemActivo === 'perfil'" @volver="navegarA('inicio')" />
+      <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" />
+      <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
+      <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="navegarA('inicio')" />
 
       <!-- VISTA PRINCIPAL (INICIO / DASHBOARD) -->
       <template v-else>
@@ -280,7 +314,7 @@ const handleLogout = () => {
                 {{ nombreCompleto }}
               </div>
               <button 
-                @click="itemActivo = 'perfil'" 
+                @click="navegarA('perfil')" 
                 class="text-xs font-medium text-[#000B58] hover:underline cursor-pointer bg-transparent border-none p-0"
               >
                 ver mi perfil
@@ -313,7 +347,7 @@ const handleLogout = () => {
           <div class="grid grid-cols-4 gap-4 text-center items-start">
             
             <!-- Fase 1: Currículum -->
-            <div @click="itemActivo = 'cv'" class="flex flex-col items-center cursor-pointer group">
+            <div @click="navegarA('cv')" class="flex flex-col items-center cursor-pointer group">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
                   <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
@@ -352,7 +386,7 @@ const handleLogout = () => {
             </div>
 
             <!-- Fase 4: Informe final -->
-            <div @click="itemActivo = 'reportes'" class="flex flex-col items-center cursor-pointer group">
+            <div @click="navegarA('reportes')" class="flex flex-col items-center cursor-pointer group">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
                   <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 18.8269 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
@@ -376,7 +410,7 @@ const handleLogout = () => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <!-- Perfil profesional -->
-            <div @click="itemActivo = 'perfil'" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div @click="navegarA('perfil')" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
               <div class="shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45" fill="none">
                   <path fill-rule="evenodd" clip-rule="evenodd" d="M29.3967 16.5355C29.3967 18.4846 28.6225 20.3539 27.2442 21.7322C25.866 23.1104 23.9967 23.8847 22.0476 23.8847C20.0985 23.8847 18.2292 23.1104 16.851 21.7322C15.4728 20.3539 14.6985 18.4846 14.6985 16.5355C14.6985 14.5864 15.4728 12.7171 16.851 11.3389C18.2292 9.96068 20.0985 9.1864 22.0476 9.1864C23.9967 9.1864 25.866 9.96068 27.2442 11.3389C28.6225 12.7171 29.3967 14.5864 29.3967 16.5355ZM25.7222 16.5355C25.7222 17.5101 25.335 18.4447 24.6459 19.1338C23.9568 19.823 23.0222 20.2101 22.0476 20.2101C21.0731 20.2101 20.1384 19.823 19.4493 19.1338C18.7602 18.4447 18.3731 17.5101 18.3731 16.5355C18.3731 15.561 18.7602 14.6263 19.4493 13.9372C20.1384 13.2481 21.0731 12.861 22.0476 12.861C23.0222 12.861 23.9568 13.2481 24.6459 13.9372C25.335 14.6263 25.7222 15.561 25.7222 16.5355Z" fill="#00589B"/>
@@ -390,7 +424,7 @@ const handleLogout = () => {
             </div>
 
             <!-- Crear nuevo CV -->
-            <div @click="itemActivo = 'cv'" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div @click="navegarA('cv')" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
               <div class="shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="43" height="43" viewBox="0 0 43 43" fill="none">
                   <g clip-path="url(#clip0_6048_420_cv)">
@@ -410,7 +444,7 @@ const handleLogout = () => {
             </div>
 
             <!-- Subir reporte -->
-            <div @click="itemActivo = 'reportes'" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div @click="navegarA('reportes')" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
               <div class="shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 59 59" fill="none">
                   <mask id="mask0_6048_433_rep" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="4" y="11" width="51" height="37">
