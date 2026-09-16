@@ -75,7 +75,11 @@ const handleLogout = () => {
 
     <!-- Vista Landing Page -->
     <template v-else>
-      <LandingPage @login="handleLogin" @registro="handleRegistro" />
+      <LandingPage 
+        :ocultar-navbar="mostrarLogin || mostrarRegistro || mostrarRecuperar"
+        @login="handleLogin" 
+        @registro="handleRegistro" 
+      />
 
       <!-- Modal de Registro -->
       <RegistroModal 

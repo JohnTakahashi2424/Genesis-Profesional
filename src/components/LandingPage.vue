@@ -1,6 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 
+const props = defineProps({
+  ocultarNavbar: {
+    type: Boolean,
+    default: false
+  }
+})
+
 const emit = defineEmits(['login', 'registro'])
 
 const activeTab = ref('inicio')
@@ -81,7 +88,7 @@ const prevAlcanceSlide = () => { alcanceSlideIndex.value = 0 }
 <template>
   <div class="web-informativa">
     <!-- Header / Barra de Navegación -->
-    <header class="navbar-ugb">
+    <header v-if="!ocultarNavbar" class="navbar-ugb">
       <a href="#" @click.prevent="cambiarTab('inicio')" class="navbar-brand-ugb">
         <img 
           src="/images/LOGO_WEB_INF.png" 
