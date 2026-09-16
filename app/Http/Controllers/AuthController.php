@@ -81,10 +81,10 @@ class AuthController extends Controller
 
         // Rutas sugeridas para redirección en frontend
         $rutas = [
-            'estudiante' => '/dashboard/estudiante',
-            'pasante' => '/dashboard/pasante',
-            'supervisor' => '/dashboard/supervisor',
-            'vice_decano' => '/dashboard/vicedecano'
+            'estudiante' => '/pasante',
+            'pasante' => '/pasante',
+            'supervisor' => '/supervisor',
+            'vice_decano' => '/vicedecano'
         ];
 
         return response()->json([
@@ -92,7 +92,7 @@ class AuthController extends Controller
             'mensaje' => 'Inicio de sesión exitoso.',
             'token' => $token,
             'usuario' => $usuarioData,
-            'redireccion' => $rutas[$user->rol] ?? '/dashboard'
+            'redireccion' => $rutas[$user->rol] ?? '/pasante'
         ], 200);
     }
 

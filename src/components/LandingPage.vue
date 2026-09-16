@@ -1,11 +1,26 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
-const emit = defineEmits(['login', 'registro'])
+const props = defineProps({
+  ocultarNavbar: {
+    type: Boolean,
+    default: false
+  },
+  tabActual: {
+    type: String,
+    default: 'inicio'
+  }
+})
 
-const activeTab = ref('inicio')
+const emit = defineEmits(['login', 'registro', 'cambiar-tab'])
+
+const activeTab = ref(props.tabActual || 'inicio')
 const areaSlideIndex = ref(0)
 const alcanceSlideIndex = ref(0)
+
+watch(() => props.tabActual, (newTab) => {
+  if (newTab) activeTab.value = newTab
+})
 
 const areasPasantia = [
   {
@@ -69,6 +84,7 @@ const cambiarTab = (tab) => {
   activeTab.value = tab
   areaSlideIndex.value = 0
   alcanceSlideIndex.value = 0
+  emit('cambiar-tab', tab)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -81,7 +97,7 @@ const prevAlcanceSlide = () => { alcanceSlideIndex.value = 0 }
 <template>
   <div class="web-informativa">
     <!-- Header / Barra de Navegación -->
-    <header class="navbar-ugb">
+    <header v-if="!ocultarNavbar" class="navbar-ugb">
       <a href="#" @click.prevent="cambiarTab('inicio')" class="navbar-brand-ugb">
         <img 
           src="/images/LOGO_WEB_INF.png" 
