@@ -21,5 +21,8 @@ export default defineConfig({
         secure: false,
       }
     }
+  },
+  build: {
+    emptyOutDir: false
   }
 })

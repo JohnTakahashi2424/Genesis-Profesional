@@ -59,16 +59,9 @@ const emit = defineEmits(['click'])
       ...(variant === 'primary' && !disabled && !loading ? { background: '#010C67' } : {})
     }"
   >
-    <!-- Spinner de carga -->
-    <span 
-      v-if="loading" 
-      class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"
-    ></span>
-
     <!-- Texto o Slot -->
     <span>
-      <template v-if="loading">{{ loadingText }}</template>
-      <slot v-else></slot>
+      <slot></slot>
     </span>
   </button>
 </template>

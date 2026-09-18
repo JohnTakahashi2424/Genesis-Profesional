@@ -17,6 +17,7 @@ use App\Models\Estudiante;
 use App\Models\CodigoRecuperacion;
 use App\Mail\CodigoRecuperacionMail;
 use App\Services\BrevoMailService;
+use App\Services\JwtService;
 
 class AuthController extends Controller
 {
@@ -62,8 +63,8 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Generar token de sesión para autenticación en cliente
-        $token = Str::random(64);
+        // Generar token JWT firmado con expiración para autenticación en cliente
+        $token = JwtService::generarToken($user);
 
         $usuarioData = [
             'id' => $user->id,
@@ -235,7 +236,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'disponible' => false,
-                'mensaje' => 'Este correo institucional ya tiene una cuenta registrada. Intente iniciar sesión.'
+                'mensaje' => 'Correo institucional ya registrado'
             ], 422);
         }
 
@@ -425,6 +426,23 @@ class AuthController extends Controller
         return response()->json([
             'status' => 'success',
             'mensaje' => 'Tu contraseña ha sido restablecida exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.'
+        ], 200);
+    }
+
+    /**
+     * Endpoint para cerrar sesión e invalidar/destruir el token JWT en el servidor
+     * POST /api/auth/logout
+     */
+    public function logout(Request $request)
+    {
+        $token = $request->bearerToken();
+        if ($token) {
+            JwtService::invalidarToken($token);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'mensaje' => 'Sesión cerrada correctamente y token destruido.'
         ], 200);
     }
 }

@@ -94,6 +94,19 @@ class CvController extends Controller
             $fotoUrl = str_starts_with($cv->foto_url, '/storage/') ? ('/api' . $cv->foto_url) : $cv->foto_url;
         }
 
+        if ($usuarioId && $fotoUrl) {
+            try {
+                $userObj = \App\Models\User::find($usuarioId);
+                if ($userObj) {
+                    $userObj->foto = $fotoUrl;
+                    $userObj->foto_url = $fotoUrl;
+                    $userObj->save();
+                }
+            } catch (\Throwable $e) {
+                // Ignore if User model columns vary
+            }
+        }
+
         $data = [
             'usuario_id'       => $usuarioId,
             'titulo_cv'        => $tituloCv,

@@ -29,7 +29,19 @@ class ReporteController extends Controller
             $pasante = Pasante::where('user_id', $userId)->first();
             if ($pasante) {
                 $query->where('pasante_id', $pasante->id);
+            } else {
+                // Usuario sin pasante asignado -> no tiene reportes aún
+                return response()->json([
+                    'exito' => true,
+                    'data' => []
+                ]);
             }
+        } else {
+            // Consulta sin usuario autenticado -> lista vacía
+            return response()->json([
+                'exito' => true,
+                'data' => []
+            ]);
         }
 
         // Filtro de búsqueda por nombre del reporte
@@ -110,23 +122,26 @@ class ReporteController extends Controller
 
         // Determinar pasante_id
         $pasanteId = $validated['pasante_id'] ?? null;
-        if (!$pasanteId) {
-            $userId = $validated['user_id'] ?? $request->header('X-User-Id');
-            if ($userId) {
-                $pasante = Pasante::where('user_id', $userId)->first();
-                $pasanteId = $pasante ? $pasante->id : null;
-            }
+        $userId = $validated['user_id'] ?? $request->header('X-User-Id');
+
+        if (!$pasanteId && $userId) {
+            $pasante = Pasante::firstOrCreate(
+                ['user_id' => $userId],
+                [
+                    'area' => 'Ingeniería en Sistemas',
+                    'tipo_pasantia' => 'interna',
+                    'estado' => 'en_proceso',
+                    'fase_actual' => 'Fase 1'
+                ]
+            );
+            $pasanteId = $pasante->id;
         }
 
         if (!$pasanteId) {
-            // Si aún no se encuentra pasante, tomar el primero o retornar error
-            $pasanteId = Pasante::value('id');
-            if (!$pasanteId) {
-                return response()->json([
-                    'exito' => false,
-                    'mensaje' => 'No se encontró el registro del pasante.'
-                ], 422);
-            }
+            return response()->json([
+                'exito' => false,
+                'mensaje' => 'No se encontró ni se pudo crear el registro del pasante.'
+            ], 422);
         }
 
         // Procesar imágenes de evidencia si se envían en Base64 o archivos

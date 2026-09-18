@@ -49,7 +49,7 @@ const getFechaCreacionFormateada = () => {
 // Filtros de la tabla principal
 const busqueda = ref('')
 const estadoFiltro = ref('Todos')
-const fechaCreacionFiltro = ref(getFechaCreacionFormateada())
+const fechaCreacionFiltro = ref(getFechaActualString())
 const dropdownEstadoAbierto = ref(false)
 
 // Estado del Formulario de Reporte (Crear / Editar)
@@ -66,8 +66,10 @@ const reporteForm = ref({
 
 // Validación de formulario
 const intentoGuardar = ref(false)
+const intentoAgregarActividad = ref(false)
+
 const errorHorasMensaje = computed(() => {
-  if (!intentoGuardar.value) return ''
+  if (!intentoAgregarActividad.value && !intentoGuardar.value) return ''
   const val = Number(reporteForm.value.horas_registradas)
   if (isNaN(val) || val <= 0) {
     return 'Las horas registradas deben ser mayor a cero'
@@ -75,13 +77,36 @@ const errorHorasMensaje = computed(() => {
   return ''
 })
 
+const onCambioHoras = () => {
+  if (Number(reporteForm.value.horas_registradas) > 0) {
+    intentoAgregarActividad.value = false
+  }
+}
+
 // Estado del Subformulario de Actividad
 const actividadIndexEditando = ref(-1)
+const intentoGuardarActividad = ref(false)
 const actividadForm = ref({
   fecha_actividad: getFechaInicioMesActualString(),
   objetivo: '',
   actividad_realizada: '',
   logros_obtenidos: ''
+})
+
+const errorFechaActividad = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.fecha_actividad
+})
+
+const errorObjetivo = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.objetivo?.trim()
+})
+
+const errorActividadRealizada = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.actividad_realizada?.trim()
+})
+
+const errorLogros = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.logros_obtenidos?.trim()
 })
 
 // Estado de la Vista de Detalle
@@ -94,20 +119,28 @@ const reporteDetalle = ref(null)
 const cargarReportes = async () => {
   cargando.value = true
   try {
-    const userId = usuario.value?.id || usuario.value?.user_id || 4
+    const userId = usuario.value?.id || usuario.value?.user_id
+    if (!userId) {
+      reportes.value = []
+      cargando.value = false
+      return
+    }
     const res = await axios.get('/api/reportes', {
       headers: { 'X-User-Id': userId },
       params: {
+        user_id: userId,
         search: busqueda.value,
         estado: estadoFiltro.value
       }
     })
     if (res.data && res.data.data) {
       reportes.value = res.data.data
+    } else {
+      reportes.value = []
     }
   } catch (err) {
     console.error('Error al cargar reportes:', err)
-    mostrarFeedback('No se pudieron cargar los reportes.', 'error')
+    reportes.value = []
   } finally {
     cargando.value = false
   }
@@ -116,8 +149,7 @@ const cargarReportes = async () => {
 const guardarReporteAPI = async () => {
   intentoGuardar.value = true
 
-  if (!reporteForm.value.nombre_reporte.trim()) {
-    mostrarFeedback('El nombre del reporte es obligatorio.', 'error')
+  if (!reporteForm.value.nombre_reporte?.trim()) {
     return
   }
 
@@ -128,7 +160,7 @@ const guardarReporteAPI = async () => {
 
   cargando.value = true
   try {
-    const userId = usuario.value?.id || usuario.value?.user_id || 4
+    const userId = usuario.value?.id || usuario.value?.user_id
     const payload = {
       user_id: userId,
       nombre_reporte: reporteForm.value.nombre_reporte,
@@ -170,6 +202,7 @@ const abrirNuevoReporte = () => {
   esEdicion.value = false
   reporteIdEditando.value = null
   intentoGuardar.value = false
+  intentoAgregarActividad.value = false
   reporteForm.value = {
     nombre_reporte: 'ACTIVIDADES DE ' + getNombreMesActual(),
     fecha_inicio: getFechaInicioMesActualString(),
@@ -204,6 +237,14 @@ const verDetalle = async (item) => {
 // ----------------------------------------------------
 
 const abrirAgregarActividad = () => {
+  const val = Number(reporteForm.value.horas_registradas)
+  if (isNaN(val) || val <= 0) {
+    intentoAgregarActividad.value = true
+    return
+  }
+  intentoAgregarActividad.value = false
+  mensajeFeedback.value = ''
+  intentoGuardarActividad.value = false
   actividadIndexEditando.value = -1
   actividadForm.value = {
     fecha_actividad: getFechaInicioMesActualString(),
@@ -215,6 +256,8 @@ const abrirAgregarActividad = () => {
 }
 
 const editarActividad = (index) => {
+  mensajeFeedback.value = ''
+  intentoGuardarActividad.value = false
   actividadIndexEditando.value = index
   const act = reporteForm.value.actividades[index]
   actividadForm.value = { ...act }
@@ -226,8 +269,14 @@ const eliminarActividad = (index) => {
 }
 
 const guardarActividad = () => {
-  if (!actividadForm.value.objetivo.trim() || !actividadForm.value.actividad_realizada.trim()) {
-    mostrarFeedback('Por favor completa los campos obligatorios de la actividad.', 'error')
+  intentoGuardarActividad.value = true
+
+  if (
+    !actividadForm.value.fecha_actividad ||
+    !actividadForm.value.objetivo?.trim() ||
+    !actividadForm.value.actividad_realizada?.trim() ||
+    !actividadForm.value.logros_obtenidos?.trim()
+  ) {
     return
   }
 
@@ -237,10 +286,12 @@ const guardarActividad = () => {
     reporteForm.value.actividades.push({ ...actividadForm.value })
   }
 
+  intentoGuardarActividad.value = false
   vistaActual.value = 'formulario'
 }
 
 const cancelarActividad = () => {
+  intentoGuardarActividad.value = false
   vistaActual.value = 'formulario'
 }
 
@@ -252,14 +303,27 @@ const handleFileUpload = (event) => {
   const files = event.target.files
   if (!files || files.length === 0) return
 
-  for (let i = 0; i < files.length; i++) {
+  const fotosActuales = reporteForm.value.evidencias.length
+  if (fotosActuales >= 4) {
+    event.target.value = ''
+    return
+  }
+
+  const espacioDisponible = 4 - fotosActuales
+  const cantidadACargar = Math.min(files.length, espacioDisponible)
+
+  for (let i = 0; i < cantidadACargar; i++) {
     const file = files[i]
     const reader = new FileReader()
     reader.onload = (e) => {
-      reporteForm.value.evidencias.push(e.target.result)
+      if (reporteForm.value.evidencias.length < 4) {
+        reporteForm.value.evidencias.push(e.target.result)
+      }
     }
     reader.readAsDataURL(file)
   }
+
+  event.target.value = ''
 }
 
 const eliminarEvidencia = (index) => {
@@ -302,11 +366,78 @@ const formatearPeriodo = (inicio, fin) => {
   }
 }
 
+const normalizarTexto = (str) => {
+  if (!str && str !== 0) return ''
+  return String(str)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+}
+
 const reportesFiltrados = computed(() => {
+  const queryLimpia = normalizarTexto(busqueda.value)
+  const tokens = queryLimpia.split(/\s+/).filter(Boolean)
+
   return reportes.value.filter(item => {
-    const coincideNombre = !busqueda.value || item.nombre_reporte.toLowerCase().includes(busqueda.value.toLowerCase())
-    const coincideEstado = estadoFiltro.value === 'Todos' || item.estado === estadoFiltro.value
-    return coincideNombre && coincideEstado
+    // 1. Construir un mega-texto con todos los datos y campos del reporte
+    const nombre = item.nombre_reporte || ''
+    const mesCreacion = item.created_at ? formatearMes(item.created_at) : (item.fecha_inicio ? formatearMes(item.fecha_inicio) : '')
+    const periodo = item.periodo || formatearPeriodo(item.fecha_inicio, item.fecha_fin)
+    const horas = String(item.horas_registradas || item.horas || 0)
+    const estado = item.estado || ''
+    const fechaInicioStr = item.fecha_inicio || ''
+    const fechaFinStr = item.fecha_fin || ''
+    const createdAtStr = item.created_at || ''
+
+    // Concatenar texto de actividades si existen
+    const actividadesText = Array.isArray(item.actividades)
+      ? item.actividades.map(a => `${a.objetivo || ''} ${a.actividad_realizada || ''} ${a.logros_obtenidos || ''}`).join(' ')
+      : ''
+
+    const blobTextoCompleto = normalizarTexto(
+      `${nombre} ${mesCreacion} ${periodo} ${horas} ${horas}h ${horas} horas ${estado} ${fechaInicioStr} ${fechaFinStr} ${createdAtStr} ${actividadesText}`
+    )
+
+    // Verificar que TODOS los términos ingresados existan en cualquier orden
+    if (tokens.length > 0) {
+      const coincideTodosLosTokens = tokens.every(token => blobTextoCompleto.includes(token))
+      if (!coincideTodosLosTokens) return false
+    }
+
+    // 2. Filtro por Dropdown de Estado
+    if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
+      if (item.estado !== estadoFiltro.value) return false
+    }
+
+    // 3. Filtro por Calendario de Fecha de Creación (reportes anteriores o iguales a la fecha seleccionada)
+    if (fechaCreacionFiltro.value) {
+      const fechaReporte = item.created_at || item.fecha_inicio
+      if (fechaReporte) {
+        try {
+          let limitDate
+          if (fechaCreacionFiltro.value.includes('-')) {
+            const [y, m, d] = fechaCreacionFiltro.value.split('-').map(Number)
+            limitDate = new Date(y, m - 1, d, 23, 59, 59, 999)
+          } else if (fechaCreacionFiltro.value.includes('/')) {
+            const [d, m, y] = fechaCreacionFiltro.value.split('/').map(Number)
+            limitDate = new Date(y, m - 1, d, 23, 59, 59, 999)
+          } else {
+            limitDate = new Date(fechaCreacionFiltro.value)
+            limitDate.setHours(23, 59, 59, 999)
+          }
+
+          const repDate = new Date(fechaReporte)
+          if (!isNaN(limitDate.getTime()) && !isNaN(repDate.getTime())) {
+            if (repDate > limitDate) return false
+          }
+        } catch (e) {
+          // Ignorar error de parseo de fecha
+        }
+      }
+    }
+
+    return true
   })
 })
 
@@ -319,15 +450,7 @@ onMounted(() => {
 <template>
   <div class="max-w-6xl mx-auto font-sans antialiased text-gray-800">
     
-    <!-- NOTIFICACIÓN DE FEEDBACK -->
-    <div 
-      v-if="mensajeFeedback" 
-      class="mb-4 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-between"
-      :class="tipoFeedback === 'exito' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'"
-    >
-      <span>{{ mensajeFeedback }}</span>
-      <button @click="mensajeFeedback = ''" class="text-xs font-bold hover:underline cursor-pointer">✕</button>
-    </div>
+
 
     <!-- ========================================================================= -->
     <!-- VISTA 1: TABLA PRINCIPAL DE REPORTES (Capturas 1 y 2) -->
@@ -403,17 +526,18 @@ onMounted(() => {
             <span>Fecha de creación</span>
             <div class="relative flex items-center">
               <input 
-                type="text" 
+                type="date" 
                 v-model="fechaCreacionFiltro"
-                class="w-28 pl-7 pr-2 py-1.5 bg-white border border-cyan-500 rounded-md text-xs text-cyan-800 font-medium text-center focus:outline-none shadow-xs"
+                class="w-32 pl-7 pr-1 py-1.5 bg-white border border-cyan-500 rounded-md text-xs text-cyan-800 font-medium text-center focus:outline-none shadow-xs cursor-pointer"
               />
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 23 26" fill="none" class="absolute left-2 text-gray-700">
-                <g clip-path="url(#clip0_7350_1298_filtro)">
-                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 21 24" fill="none" class="absolute left-2 pointer-events-none">
+                <g clip-path="url(#clip0_7350_1304_filtro)">
+                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
                 </g>
+                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
                 <defs>
-                  <clipPath id="clip0_7350_1298_filtro">
-                    <rect width="22.75" height="26" fill="white"/>
+                  <clipPath id="clip0_7350_1304_filtro">
+                    <rect width="20.8138" height="23.7872" fill="white"/>
                   </clipPath>
                 </defs>
               </svg>
@@ -427,8 +551,8 @@ onMounted(() => {
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" viewBox="0 0 25 24" fill="none" class="w-[25px] h-[24px] shrink-0">
               <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="white"/>
-              <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#010C67"/>
-              <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#010C67"/>
+              <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#000B58"/>
+              <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#000B58"/>
             </svg>
             <span>Nuevo reporte</span>
           </button>
@@ -579,11 +703,10 @@ onMounted(() => {
       <div class="space-y-6 bg-white p-2 rounded-2xl">
         
         <!-- PRIMERA FILA: NOMBRE REPORTE + FECHAS -->
-        <!-- PRIMERA FILA: NOMBRE REPORTE -->
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
           <!-- Nombre del reporte* -->
-          <div class="md:col-span-12">
+          <div class="md:col-span-6">
             <label class="block text-sm font-medium text-gray-800 mb-2">
               Nombre del reporte<span class="text-rose-500">*</span>
             </label>
@@ -591,8 +714,62 @@ onMounted(() => {
               v-model="reporteForm.nombre_reporte"
               type="text" 
               placeholder="ACTIVIDADES DE AGOSTO"
-              class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 uppercase focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none"
+              class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-800 uppercase focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none"
+              :class="intentoGuardar && !reporteForm.nombre_reporte?.trim() ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             />
+            <p v-if="intentoGuardar && !reporteForm.nombre_reporte?.trim()" class="text-xs text-rose-500 mt-1.5 font-medium">
+              Campo obligatorio
+            </p>
+          </div>
+
+          <!-- Fecha Inicio* -->
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium text-gray-800 mb-2">
+              Fecha Inicio<span class="text-rose-500">*</span>
+            </label>
+            <div class="relative flex items-center">
+              <input 
+                v-model="reporteForm.fecha_inicio"
+                type="date" 
+                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#00589B] font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
+                <g clip-path="url(#clip0_7350_1304_inicio)">
+                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
+                </g>
+                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
+                <defs>
+                  <clipPath id="clip0_7350_1304_inicio">
+                    <rect width="20.8138" height="23.7872" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Fecha Finalización* -->
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium text-gray-800 mb-2">
+              Fecha Finalización<span class="text-rose-500">*</span>
+            </label>
+            <div class="relative flex items-center">
+              <input 
+                v-model="reporteForm.fecha_fin"
+                type="date" 
+                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#00589B] font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
+                <g clip-path="url(#clip0_7350_1304_fin)">
+                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
+                </g>
+                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
+                <defs>
+                  <clipPath id="clip0_7350_1304_fin">
+                    <rect width="20.8138" height="23.7872" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+            </div>
           </div>
 
         </div>
@@ -605,10 +782,12 @@ onMounted(() => {
           <div class="flex items-center gap-6">
             <input 
               v-model.number="reporteForm.horas_registradas"
+              @input="onCambioHoras"
               type="number" 
               min="0"
               placeholder="0"
-              class="w-32 px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none"
+              class="w-32 px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none"
+              :class="errorHorasMensaje ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             />
             
             <button 
@@ -617,9 +796,9 @@ onMounted(() => {
               class="flex items-center gap-2.5 px-5 py-2 bg-[#000B58] text-white rounded-full text-xs font-semibold hover:bg-[#000840] shadow-sm transition-all cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" viewBox="0 0 25 24" fill="none" class="w-[22px] h-[22px] shrink-0">
-                <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="white"/>
-                <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#010C67"/>
-                <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#010C67"/>
+                <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="#000B58"/>
+                <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="white"/>
+                <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="white"/>
               </svg>
               <span>Agregar actividad</span>
             </button>
@@ -695,7 +874,10 @@ onMounted(() => {
           <div class="flex items-center gap-4 flex-wrap">
             
             <!-- CAJA DE CARGA CON ÍCONO DE IMAGEN -->
-            <label class="w-24 h-24 border-2 border-dashed border-cyan-700/60 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-cyan-50/50 transition-colors shrink-0 bg-white">
+            <label 
+              v-if="reporteForm.evidencias.length < 4"
+              class="w-24 h-24 border-2 border-dashed border-cyan-700/60 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-cyan-50/50 transition-colors shrink-0 bg-white"
+            >
               <input type="file" accept="image/*" multiple @change="handleFileUpload" class="hidden" />
               <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 68 68" fill="none" class="w-12 h-12">
                 <path d="M33.9138 18.37C33.9138 16.3287 33.5118 14.3075 32.7306 12.4216C31.9495 10.5358 30.8045 8.82223 29.3611 7.37885C27.9178 5.93547 26.2042 4.79053 24.3184 4.00937C22.4325 3.22822 20.4112 2.82617 18.37 2.82617C16.3287 2.82617 14.3075 3.22822 12.4216 4.00937C10.5358 4.79053 8.82223 5.93547 7.37885 7.37885C5.93547 8.82223 4.79052 10.5358 4.00937 12.4216C3.22822 14.3075 2.82617 16.3287 2.82617 18.37C2.82617 22.4925 4.46382 26.4461 7.37885 29.3611C10.2939 32.2762 14.2475 33.9138 18.37 33.9138C22.4925 33.9138 26.4461 32.2762 29.3611 29.3611C32.2762 26.4461 33.9138 22.4925 33.9138 18.37ZM19.7831 19.7831L19.7859 26.8597C19.7859 27.2345 19.637 27.5939 19.372 27.8589C19.107 28.1239 18.7476 28.2728 18.3728 28.2728C17.998 28.2728 17.6386 28.1239 17.3736 27.8589C17.1086 27.5939 16.9597 27.2345 16.9597 26.8597V19.7831H9.88024C9.50547 19.7831 9.14605 19.6342 8.88105 19.3692C8.61604 19.1042 8.46717 18.7448 8.46717 18.37C8.46717 17.9952 8.61604 17.6358 8.88105 17.3708C9.14605 17.1058 9.50547 16.9569 9.88024 16.9569H16.9569V9.89154C16.9569 9.51677 17.1058 9.15735 17.3708 8.89235C17.6358 8.62735 17.9952 8.47847 18.37 8.47847C18.7448 8.47847 19.1042 8.62735 19.3692 8.89235C19.6342 9.15735 19.7831 9.51677 19.7831 9.89154V16.9569H26.84C27.2147 16.9569 27.5742 17.1058 27.8392 17.3708C28.1042 17.6358 28.253 17.9952 28.253 18.37C28.253 18.7448 28.1042 19.1042 27.8392 19.3692C27.5742 19.6342 27.2147 19.7831 26.84 19.7831H19.7831ZM50.1642 12.7177H35.8554C35.3713 11.2248 34.6979 9.80015 33.8516 8.47847H50.1642C52.6002 8.47847 54.9364 9.44617 56.6589 11.1687C58.3815 12.8912 59.3492 15.2274 59.3492 17.6635V50.1642C59.3492 52.6002 58.3815 54.9364 56.6589 56.6589C54.9364 58.3815 52.6002 59.3492 50.1642 59.3492H17.6635C15.2274 59.3492 12.8912 58.3815 11.1687 56.6589C9.44617 54.9364 8.47847 52.6002 8.47847 50.1642V33.8516C9.78698 34.691 11.2114 35.3665 12.7177 35.8554V50.1642C12.7196 50.7539 12.8166 51.3135 13.0088 51.8429L29.4655 35.731C30.5936 34.6266 32.0922 33.9814 33.6697 33.9208C35.2472 33.8602 36.7909 34.3886 38.0004 35.4032L38.3622 35.731L54.816 51.8457C55.0082 51.3182 55.1062 50.7577 55.1099 50.1642V17.6635C55.1099 16.3518 54.5889 15.0938 53.6614 14.1663C52.7338 13.2388 51.4759 12.7177 50.1642 12.7177ZM51.8033 54.8301L35.3975 38.7607C35.0396 38.4099 34.569 38.1973 34.0692 38.1605C33.5695 38.1238 33.0728 38.2653 32.6675 38.56L32.4301 38.7578L16.0186 54.8301C16.5349 55.0129 17.0832 55.1062 17.6635 55.1099H50.1642C50.7379 55.1099 51.2918 55.011 51.8033 54.8301ZM43.1073 18.37C44.7952 18.37 46.4141 19.0405 47.6076 20.2341C48.8012 21.4277 49.4718 23.0465 49.4718 24.7345C49.4718 26.4224 48.8012 28.0413 47.6076 29.2349C46.4141 30.4284 44.7952 31.099 43.1073 31.099C41.4193 31.099 39.8005 30.4284 38.6069 29.2349C37.4133 28.0413 36.7428 26.4224 36.7428 24.7345C36.7428 23.0465 37.4133 21.4277 38.6069 20.2341C39.8005 19.0405 41.4193 18.37 43.1073 18.37ZM43.1073 22.6092C42.5436 22.6092 42.0031 22.8331 41.6045 23.2317C41.2059 23.6303 40.982 24.1708 40.982 24.7345C40.982 25.2981 41.2059 25.8387 41.6045 26.2373C42.0031 26.6358 42.5436 26.8597 43.1073 26.8597C43.6709 26.8597 44.2115 26.6358 44.6101 26.2373C45.0086 25.8387 45.2325 25.2981 45.2325 24.7345C45.2325 24.1708 45.0086 23.6303 44.6101 23.2317C44.2115 22.8331 43.6709 22.6092 43.1073 22.6092Z" fill="black" fill-opacity="0.44"/>
@@ -706,12 +888,14 @@ onMounted(() => {
             <div 
               v-for="(img, idx) in reporteForm.evidencias" 
               :key="idx" 
-              class="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group shrink-0 shadow-xs"
+              class="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-xs"
             >
               <img :src="img" alt="Evidencia" class="w-full h-full object-cover" />
               <button 
                 @click="eliminarEvidencia(idx)"
-                class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                type="button"
+                class="absolute top-1.5 right-1.5 bg-gray-600/85 hover:bg-gray-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold cursor-pointer transition-colors shadow-xs"
+                title="Eliminar evidencia"
               >
                 ✕
               </button>
@@ -736,7 +920,7 @@ onMounted(() => {
             type="button" 
             class="px-8 py-2 bg-[#000B58] text-white rounded-full text-sm font-medium hover:bg-[#000840] shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            {{ cargando ? 'Guardando...' : 'Guardar' }}
+            Guardar
           </button>
         </div>
 
@@ -770,16 +954,28 @@ onMounted(() => {
           <label class="block text-sm font-medium text-gray-800 mb-2">
             Fecha de la actividad<span class="text-rose-500">*</span>
           </label>
-          <div class="relative w-48">
+          <div class="relative w-48 flex items-center">
             <input 
               v-model="actividadForm.fecha_actividad"
               type="date" 
-              class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-cyan-800 font-medium focus:ring-2 focus:ring-[#000B58] outline-none"
+              class="w-full pl-10 pr-3 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-medium focus:ring-2 focus:ring-[#000B58] outline-none cursor-pointer"
+              :class="errorFechaActividad ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             />
-            <svg class="w-5 h-5 text-gray-700 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
+              <g clip-path="url(#clip0_7350_1304_actividad)">
+                <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
+              </g>
+              <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
+              <defs>
+                <clipPath id="clip0_7350_1304_actividad">
+                  <rect width="20.8138" height="23.7872" fill="white"/>
+                </clipPath>
+              </defs>
             </svg>
           </div>
+          <p v-if="errorFechaActividad" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- Objetivo de la actividad* -->
@@ -792,12 +988,16 @@ onMounted(() => {
               v-model="actividadForm.objetivo"
               rows="2"
               placeholder="Desarrollar el diseño de de los criterios de aceptacion con el equipo de desarrollo"
-              class="w-full pr-10 p-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              :class="errorObjetivo ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             ></textarea>
             <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
+          <p v-if="errorObjetivo" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- Actividad realizada* -->
@@ -810,12 +1010,16 @@ onMounted(() => {
               v-model="actividadForm.actividad_realizada"
               rows="2"
               placeholder="Reunión de 8 horas con la célula águil"
-              class="w-full pr-10 p-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              :class="errorActividadRealizada ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             ></textarea>
             <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
+          <p v-if="errorActividadRealizada" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- Logros obtenidos* -->
@@ -828,12 +1032,16 @@ onMounted(() => {
               v-model="actividadForm.logros_obtenidos"
               rows="2"
               placeholder="Metas claras, objetivos definidos, diseño del word base"
-              class="w-full pr-10 p-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              :class="errorLogros ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             ></textarea>
             <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
+          <p v-if="errorLogros" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- BOTONES INFERIORES: CANCELAR / GUARDAR -->
@@ -991,3 +1199,21 @@ onMounted(() => {
 
   </div>
 </template>
+
+<style scoped>
+/* Ocultar el indicador nativo de calendario del navegador para que no se muestre duplicado,
+   cubriendo todo el input para que al hacer clic se abra directamente el selector nativo */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+</style>

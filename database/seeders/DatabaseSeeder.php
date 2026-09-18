@@ -13,6 +13,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Estudiante solicitado (USSS094524)
+        DB::table('estudiantes')->insert([
+            'codigo_estudiante' => 'USSS094524',
+            'nombres' => 'Steven',
+            'apellidos' => 'Campos',
+            'genero' => 'Masculino',
+            'estado_civil' => 'Soltero',
+            'dui' => '06482910-3',
+            'direccion' => 'Colonia Escalón, Calle El Mirador, San Salvador',
+            'fecha_nacimiento' => '2003-08-15',
+            'departamento_nacimiento' => 'SAN SALVADOR',
+            'municipio_nacimiento' => 'SAN SALVADOR',
+            'pais' => 'EL SALVADOR',
+            'correo_principal' => 'steven.campos@gmail.com',
+            'correo_secundario' => 'usss094524@ugb.edu.sv',
+            'telefono' => '2255-8899',
+            'celular' => '7845-1234',
+            'es_estudiante_activo' => true,
+            'carrera' => 'Ingeniería en Sistemas y Redes Informáticas',
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         // 1. Crear el Estudiante para verificación (USSS027724)
         DB::table('estudiantes')->insert([
             'codigo_estudiante' => 'USSS027724',

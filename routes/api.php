@@ -38,27 +38,33 @@ Route::prefix('auth')->group(function () {
     Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
-// Rutas de Pasantías
-Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
-
-// Rutas del Módulo de Curriculum Vitae (CV)
 use App\Http\Controllers\CvController;
 use App\Http\Controllers\ReporteController;
 
-Route::prefix('cv')->group(function () {
-    Route::post('/guardar', [CvController::class, 'guardar'])->name('api.cv.guardar');
-    Route::get('/obtener/{usuarioId}', [CvController::class, 'obtener'])->name('api.cv.obtener');
-    Route::delete('/eliminar/{cvId}', [CvController::class, 'eliminar'])->name('api.cv.eliminar');
-});
+// Rutas protegidas mediante autenticación JWT
+Route::middleware('jwt.auth')->group(function () {
+    // Cierre de sesión y destrucción de token
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
 
-// Rutas del Módulo de Reportes e Informes
-Route::prefix('reportes')->group(function () {
-    Route::get('/', [ReporteController::class, 'index'])->name('api.reportes.index');
-    Route::get('/{id}', [ReporteController::class, 'show'])->name('api.reportes.show');
-    Route::post('/', [ReporteController::class, 'store'])->name('api.reportes.store');
-    Route::put('/{id}', [ReporteController::class, 'update'])->name('api.reportes.update');
-    Route::delete('/{id}', [ReporteController::class, 'destroy'])->name('api.reportes.destroy');
-    Route::patch('/{id}/estado', [ReporteController::class, 'cambiarEstado'])->name('api.reportes.cambiar_estado');
+    // Rutas de Pasantías
+    Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+
+    // Rutas del Módulo de Curriculum Vitae (CV)
+    Route::prefix('cv')->group(function () {
+        Route::post('/guardar', [CvController::class, 'guardar'])->name('api.cv.guardar');
+        Route::get('/obtener/{usuarioId}', [CvController::class, 'obtener'])->name('api.cv.obtener');
+        Route::delete('/eliminar/{cvId}', [CvController::class, 'eliminar'])->name('api.cv.eliminar');
+    });
+
+    // Rutas del Módulo de Reportes e Informes
+    Route::prefix('reportes')->group(function () {
+        Route::get('/', [ReporteController::class, 'index'])->name('api.reportes.index');
+        Route::get('/{id}', [ReporteController::class, 'show'])->name('api.reportes.show');
+        Route::post('/', [ReporteController::class, 'store'])->name('api.reportes.store');
+        Route::put('/{id}', [ReporteController::class, 'update'])->name('api.reportes.update');
+        Route::delete('/{id}', [ReporteController::class, 'destroy'])->name('api.reportes.destroy');
+        Route::patch('/{id}/estado', [ReporteController::class, 'cambiarEstado'])->name('api.reportes.cambiar_estado');
+    });
 });
 
 // Serving storage files cleanly via API to avoid Windows symlink 403 errors

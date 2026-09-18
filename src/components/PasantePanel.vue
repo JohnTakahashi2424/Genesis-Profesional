@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 
 import CvModulo from './CvModulo.vue'
@@ -50,6 +50,20 @@ const fotoUsuario = computed(() => {
   return raw ? normalizarUrlFoto(raw) : null
 })
 
+watch(itemActivo, async (newVal) => {
+  if (newVal === 'inicio' || newVal === 'perfil') {
+    imgErrorPasante.value = false
+    usuario.value = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+    await cargarEstadoPasantia()
+  }
+})
+
+watch(fotoUsuario, (newVal) => {
+  if (newVal) {
+    imgErrorPasante.value = false
+  }
+}, { immediate: true })
+
 const pasantidaInfo = ref({
   fase_actual: 'Fase 1',
   fases: {
@@ -78,6 +92,9 @@ const cargarEstadoPasantia = async () => {
       }
       if (res.data.usuario) {
         usuario.value = { ...usuario.value, ...res.data.usuario }
+        if (usuario.value.foto || usuario.value.foto_url) {
+          imgErrorPasante.value = false
+        }
         localStorage.setItem('genesis_usuario', JSON.stringify(usuario.value))
       }
     }
@@ -354,7 +371,7 @@ const handleLogout = () => {
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 1: Currículum</span>
-              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-white shadow-xs">
+              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs">
                 ✓ Completado
               </span>
             </div>
@@ -367,7 +384,7 @@ const handleLogout = () => {
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 2: Aceptado</span>
-              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-white shadow-xs">
+              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs">
                 ✓ Completado
               </span>
             </div>
