@@ -1,0 +1,25 @@
+{
+  "name": "genesis-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('dist/assets', 'public/assets', {recursive:true});\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "axios": "^1.20.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "socket.io-client": "^4.8.3",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.41",
+    "vuedraggable": "^4.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "vite": "^8.2.2"
+  }
+}

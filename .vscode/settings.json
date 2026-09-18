@@ -1,0 +1,17 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "Vue.volar",
+  "[vue]": {
+    "editor.defaultFormatter": "Vue.volar"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    "class:\\s*?[\"'`]([^\"'`]*).*?,"
+  ],
+  "tailwindCSS.includeLanguages": {
+    "vue": "html"
+  },
+  "git.ignoredRepositories": [
+    "c:/Users/josec/OneDrive/Escritorio/Progra-IV-semi-2026",
+    "c:/Users/josec/OneDrive/Escritorio/Progra-IV-semi-2026/proyecto_final"
+  ]
+}
