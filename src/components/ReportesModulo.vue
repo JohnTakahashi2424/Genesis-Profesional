@@ -49,7 +49,7 @@ const getFechaCreacionFormateada = () => {
 // Filtros de la tabla principal
 const busqueda = ref('')
 const estadoFiltro = ref('Todos')
-const fechaCreacionFiltro = ref(getFechaCreacionFormateada())
+const fechaCreacionFiltro = ref(getFechaActualString())
 const dropdownEstadoAbierto = ref(false)
 
 // Estado del Formulario de Reporte (Crear / Editar)
@@ -303,14 +303,27 @@ const handleFileUpload = (event) => {
   const files = event.target.files
   if (!files || files.length === 0) return
 
-  for (let i = 0; i < files.length; i++) {
+  const fotosActuales = reporteForm.value.evidencias.length
+  if (fotosActuales >= 4) {
+    event.target.value = ''
+    return
+  }
+
+  const espacioDisponible = 4 - fotosActuales
+  const cantidadACargar = Math.min(files.length, espacioDisponible)
+
+  for (let i = 0; i < cantidadACargar; i++) {
     const file = files[i]
     const reader = new FileReader()
     reader.onload = (e) => {
-      reporteForm.value.evidencias.push(e.target.result)
+      if (reporteForm.value.evidencias.length < 4) {
+        reporteForm.value.evidencias.push(e.target.result)
+      }
     }
     reader.readAsDataURL(file)
   }
+
+  event.target.value = ''
 }
 
 const eliminarEvidencia = (index) => {
@@ -353,11 +366,78 @@ const formatearPeriodo = (inicio, fin) => {
   }
 }
 
+const normalizarTexto = (str) => {
+  if (!str && str !== 0) return ''
+  return String(str)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+}
+
 const reportesFiltrados = computed(() => {
+  const queryLimpia = normalizarTexto(busqueda.value)
+  const tokens = queryLimpia.split(/\s+/).filter(Boolean)
+
   return reportes.value.filter(item => {
-    const coincideNombre = !busqueda.value || item.nombre_reporte.toLowerCase().includes(busqueda.value.toLowerCase())
-    const coincideEstado = estadoFiltro.value === 'Todos' || item.estado === estadoFiltro.value
-    return coincideNombre && coincideEstado
+    // 1. Construir un mega-texto con todos los datos y campos del reporte
+    const nombre = item.nombre_reporte || ''
+    const mesCreacion = item.created_at ? formatearMes(item.created_at) : (item.fecha_inicio ? formatearMes(item.fecha_inicio) : '')
+    const periodo = item.periodo || formatearPeriodo(item.fecha_inicio, item.fecha_fin)
+    const horas = String(item.horas_registradas || item.horas || 0)
+    const estado = item.estado || ''
+    const fechaInicioStr = item.fecha_inicio || ''
+    const fechaFinStr = item.fecha_fin || ''
+    const createdAtStr = item.created_at || ''
+
+    // Concatenar texto de actividades si existen
+    const actividadesText = Array.isArray(item.actividades)
+      ? item.actividades.map(a => `${a.objetivo || ''} ${a.actividad_realizada || ''} ${a.logros_obtenidos || ''}`).join(' ')
+      : ''
+
+    const blobTextoCompleto = normalizarTexto(
+      `${nombre} ${mesCreacion} ${periodo} ${horas} ${horas}h ${horas} horas ${estado} ${fechaInicioStr} ${fechaFinStr} ${createdAtStr} ${actividadesText}`
+    )
+
+    // Verificar que TODOS los términos ingresados existan en cualquier orden
+    if (tokens.length > 0) {
+      const coincideTodosLosTokens = tokens.every(token => blobTextoCompleto.includes(token))
+      if (!coincideTodosLosTokens) return false
+    }
+
+    // 2. Filtro por Dropdown de Estado
+    if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
+      if (item.estado !== estadoFiltro.value) return false
+    }
+
+    // 3. Filtro por Calendario de Fecha de Creación (reportes anteriores o iguales a la fecha seleccionada)
+    if (fechaCreacionFiltro.value) {
+      const fechaReporte = item.created_at || item.fecha_inicio
+      if (fechaReporte) {
+        try {
+          let limitDate
+          if (fechaCreacionFiltro.value.includes('-')) {
+            const [y, m, d] = fechaCreacionFiltro.value.split('-').map(Number)
+            limitDate = new Date(y, m - 1, d, 23, 59, 59, 999)
+          } else if (fechaCreacionFiltro.value.includes('/')) {
+            const [d, m, y] = fechaCreacionFiltro.value.split('/').map(Number)
+            limitDate = new Date(y, m - 1, d, 23, 59, 59, 999)
+          } else {
+            limitDate = new Date(fechaCreacionFiltro.value)
+            limitDate.setHours(23, 59, 59, 999)
+          }
+
+          const repDate = new Date(fechaReporte)
+          if (!isNaN(limitDate.getTime()) && !isNaN(repDate.getTime())) {
+            if (repDate > limitDate) return false
+          }
+        } catch (e) {
+          // Ignorar error de parseo de fecha
+        }
+      }
+    }
+
+    return true
   })
 })
 
@@ -446,9 +526,9 @@ onMounted(() => {
             <span>Fecha de creación</span>
             <div class="relative flex items-center">
               <input 
-                type="text" 
+                type="date" 
                 v-model="fechaCreacionFiltro"
-                class="w-28 pl-7 pr-2 py-1.5 bg-white border border-cyan-500 rounded-md text-xs text-cyan-800 font-medium text-center focus:outline-none shadow-xs"
+                class="w-32 pl-7 pr-1 py-1.5 bg-white border border-cyan-500 rounded-md text-xs text-cyan-800 font-medium text-center focus:outline-none shadow-xs cursor-pointer"
               />
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 21 24" fill="none" class="absolute left-2 pointer-events-none">
                 <g clip-path="url(#clip0_7350_1304_filtro)">
@@ -794,7 +874,10 @@ onMounted(() => {
           <div class="flex items-center gap-4 flex-wrap">
             
             <!-- CAJA DE CARGA CON ÍCONO DE IMAGEN -->
-            <label class="w-24 h-24 border-2 border-dashed border-cyan-700/60 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-cyan-50/50 transition-colors shrink-0 bg-white">
+            <label 
+              v-if="reporteForm.evidencias.length < 4"
+              class="w-24 h-24 border-2 border-dashed border-cyan-700/60 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-cyan-50/50 transition-colors shrink-0 bg-white"
+            >
               <input type="file" accept="image/*" multiple @change="handleFileUpload" class="hidden" />
               <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 68 68" fill="none" class="w-12 h-12">
                 <path d="M33.9138 18.37C33.9138 16.3287 33.5118 14.3075 32.7306 12.4216C31.9495 10.5358 30.8045 8.82223 29.3611 7.37885C27.9178 5.93547 26.2042 4.79053 24.3184 4.00937C22.4325 3.22822 20.4112 2.82617 18.37 2.82617C16.3287 2.82617 14.3075 3.22822 12.4216 4.00937C10.5358 4.79053 8.82223 5.93547 7.37885 7.37885C5.93547 8.82223 4.79052 10.5358 4.00937 12.4216C3.22822 14.3075 2.82617 16.3287 2.82617 18.37C2.82617 22.4925 4.46382 26.4461 7.37885 29.3611C10.2939 32.2762 14.2475 33.9138 18.37 33.9138C22.4925 33.9138 26.4461 32.2762 29.3611 29.3611C32.2762 26.4461 33.9138 22.4925 33.9138 18.37ZM19.7831 19.7831L19.7859 26.8597C19.7859 27.2345 19.637 27.5939 19.372 27.8589C19.107 28.1239 18.7476 28.2728 18.3728 28.2728C17.998 28.2728 17.6386 28.1239 17.3736 27.8589C17.1086 27.5939 16.9597 27.2345 16.9597 26.8597V19.7831H9.88024C9.50547 19.7831 9.14605 19.6342 8.88105 19.3692C8.61604 19.1042 8.46717 18.7448 8.46717 18.37C8.46717 17.9952 8.61604 17.6358 8.88105 17.3708C9.14605 17.1058 9.50547 16.9569 9.88024 16.9569H16.9569V9.89154C16.9569 9.51677 17.1058 9.15735 17.3708 8.89235C17.6358 8.62735 17.9952 8.47847 18.37 8.47847C18.7448 8.47847 19.1042 8.62735 19.3692 8.89235C19.6342 9.15735 19.7831 9.51677 19.7831 9.89154V16.9569H26.84C27.2147 16.9569 27.5742 17.1058 27.8392 17.3708C28.1042 17.6358 28.253 17.9952 28.253 18.37C28.253 18.7448 28.1042 19.1042 27.8392 19.3692C27.5742 19.6342 27.2147 19.7831 26.84 19.7831H19.7831ZM50.1642 12.7177H35.8554C35.3713 11.2248 34.6979 9.80015 33.8516 8.47847H50.1642C52.6002 8.47847 54.9364 9.44617 56.6589 11.1687C58.3815 12.8912 59.3492 15.2274 59.3492 17.6635V50.1642C59.3492 52.6002 58.3815 54.9364 56.6589 56.6589C54.9364 58.3815 52.6002 59.3492 50.1642 59.3492H17.6635C15.2274 59.3492 12.8912 58.3815 11.1687 56.6589C9.44617 54.9364 8.47847 52.6002 8.47847 50.1642V33.8516C9.78698 34.691 11.2114 35.3665 12.7177 35.8554V50.1642C12.7196 50.7539 12.8166 51.3135 13.0088 51.8429L29.4655 35.731C30.5936 34.6266 32.0922 33.9814 33.6697 33.9208C35.2472 33.8602 36.7909 34.3886 38.0004 35.4032L38.3622 35.731L54.816 51.8457C55.0082 51.3182 55.1062 50.7577 55.1099 50.1642V17.6635C55.1099 16.3518 54.5889 15.0938 53.6614 14.1663C52.7338 13.2388 51.4759 12.7177 50.1642 12.7177ZM51.8033 54.8301L35.3975 38.7607C35.0396 38.4099 34.569 38.1973 34.0692 38.1605C33.5695 38.1238 33.0728 38.2653 32.6675 38.56L32.4301 38.7578L16.0186 54.8301C16.5349 55.0129 17.0832 55.1062 17.6635 55.1099H50.1642C50.7379 55.1099 51.2918 55.011 51.8033 54.8301ZM43.1073 18.37C44.7952 18.37 46.4141 19.0405 47.6076 20.2341C48.8012 21.4277 49.4718 23.0465 49.4718 24.7345C49.4718 26.4224 48.8012 28.0413 47.6076 29.2349C46.4141 30.4284 44.7952 31.099 43.1073 31.099C41.4193 31.099 39.8005 30.4284 38.6069 29.2349C37.4133 28.0413 36.7428 26.4224 36.7428 24.7345C36.7428 23.0465 37.4133 21.4277 38.6069 20.2341C39.8005 19.0405 41.4193 18.37 43.1073 18.37ZM43.1073 22.6092C42.5436 22.6092 42.0031 22.8331 41.6045 23.2317C41.2059 23.6303 40.982 24.1708 40.982 24.7345C40.982 25.2981 41.2059 25.8387 41.6045 26.2373C42.0031 26.6358 42.5436 26.8597 43.1073 26.8597C43.6709 26.8597 44.2115 26.6358 44.6101 26.2373C45.0086 25.8387 45.2325 25.2981 45.2325 24.7345C45.2325 24.1708 45.0086 23.6303 44.6101 23.2317C44.2115 22.8331 43.6709 22.6092 43.1073 22.6092Z" fill="black" fill-opacity="0.44"/>
