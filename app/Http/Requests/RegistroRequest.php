@@ -49,10 +49,9 @@ class RegistroRequest extends FormRequest
                 'string',
                 'min:8',
                 'max:100',
-                'regex:/[A-Z]/',          // Requiere al menos una mayúscula
-                'regex:/[a-z]/',          // Requiere al menos una minúscula
-                'regex:/[0-9]/',          // Requiere al menos un número
-                'regex:/[@$!%*?&._#\-]/', // Requiere al menos un carácter especial
+                'regex:/[A-Z]/',                  // Requiere al menos una mayúscula
+                'regex:/[a-z]/',                  // Requiere al menos una minúscula
+                'regex:/[0-9@$!%*?&._#\-]/',      // Requiere al menos un número o símbolo
             ],
         ];
     }
@@ -87,7 +86,7 @@ class RegistroRequest extends FormRequest
             'contrasena.string' => 'La contraseña debe ser una cadena de texto.',
             'contrasena.min' => 'La contraseña debe tener una longitud mínima de 8 caracteres.',
             'contrasena.max' => 'La contraseña no puede exceder los 100 caracteres.',
-            'contrasena.regex' => 'La contraseña debe ser robusta: requiere al menos una letra mayúscula, una letra minúscula, un número y un carácter especial (@, $, !, %, *, ?, &, ., _, #, -).',
+            'contrasena.regex' => 'La contraseña debe ser robusta: requiere al menos una letra mayúscula, una letra minúscula y un número o símbolo (@, $, !, %, *, ?, &, ., _, #, -).',
         ];
     }
 

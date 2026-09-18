@@ -579,11 +579,10 @@ onMounted(() => {
       <div class="space-y-6 bg-white p-2 rounded-2xl">
         
         <!-- PRIMERA FILA: NOMBRE REPORTE + FECHAS -->
-        <!-- PRIMERA FILA: NOMBRE REPORTE -->
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
           <!-- Nombre del reporte* -->
-          <div class="md:col-span-12">
+          <div class="md:col-span-6">
             <label class="block text-sm font-medium text-gray-800 mb-2">
               Nombre del reporte<span class="text-rose-500">*</span>
             </label>
@@ -593,6 +592,46 @@ onMounted(() => {
               placeholder="ACTIVIDADES DE AGOSTO"
               class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 uppercase focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none"
             />
+          </div>
+
+          <!-- Fecha Inicio* -->
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium text-gray-800 mb-2">
+              Fecha Inicio<span class="text-rose-500">*</span>
+            </label>
+            <div class="relative flex items-center">
+              <input 
+                v-model="reporteForm.fecha_inicio"
+                type="date" 
+                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-cyan-800 font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 text-cyan-700 pointer-events-none">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Fecha Finalización* -->
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium text-gray-800 mb-2">
+              Fecha Finalización<span class="text-rose-500">*</span>
+            </label>
+            <div class="relative flex items-center">
+              <input 
+                v-model="reporteForm.fecha_fin"
+                type="date" 
+                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-cyan-800 font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 text-cyan-700 pointer-events-none">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
           </div>
 
         </div>

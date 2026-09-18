@@ -309,12 +309,12 @@ onUnmounted(() => {
     <!-- TARJETA PRINCIPAL — Calcada exactamente a la captura de pantalla -->
     <div class="relative w-full max-w-[420px] bg-white rounded-[24px] shadow-2xl px-8 py-9 my-auto z-10 text-center">
 
-      <!-- Botón de cerrar ✕ arriba a la derecha -->
+      <!-- Botón de cerrar ✕ arriba a la derecha (Regresa al login) -->
       <button
         type="button"
-        @click="emit('close')"
+        @click="emit('volver-login')"
         class="absolute top-5 right-6 text-gray-700 hover:text-black p-1 rounded-full transition-colors cursor-pointer text-lg leading-none"
-        title="Cerrar"
+        title="Volver al inicio de sesión"
         id="btn-close-recuperar"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

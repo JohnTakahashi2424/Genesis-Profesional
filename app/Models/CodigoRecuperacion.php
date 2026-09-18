@@ -58,7 +58,7 @@ class CodigoRecuperacion extends Model
         // 2. Generar código numérico criptográficamente seguro de 6 dígitos
         $codigo = sprintf('%06d', random_int(100000, 999999));
 
-        // 3. Crear registro con 1 minuto y 30 segundos de vigencia (90 segundos según diseño)
+        // 3. Crear registro con 1 minuto y 30 segundos de vigencia (90 segundos)
         return self::create([
             'correo' => $correo,
             'codigo' => $codigo,

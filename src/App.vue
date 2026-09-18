@@ -5,6 +5,8 @@ import RegistroModal from './components/RegistroModal.vue'
 import LoginModal from './components/LoginModal.vue'
 import RecuperarPasswordModal from './components/RecuperarPasswordModal.vue'
 import PasantePanel from './components/PasantePanel.vue'
+import authService from './services/authService'
+import inactivityService from './services/inactivityService'
 
 const vistaActual = ref('landing')
 const tabLandingActual = ref('inicio')
@@ -14,6 +16,18 @@ const mostrarRecuperar = ref(false)
 
 const sincronizarRuta = () => {
   const path = window.location.pathname.toLowerCase()
+
+  // Si existe token y sesión activa, redirigir directamente al panel si se ingresa a /login o a la Landing
+  if (authService.isAuthenticated() && (path === '/login' || path === '/registro' || path === '/' || path === '')) {
+    vistaActual.value = 'panel'
+    mostrarLogin.value = false
+    mostrarRegistro.value = false
+    mostrarRecuperar.value = false
+    if (window.location.pathname !== '/pasante') {
+      window.history.replaceState({ vista: 'panel' }, '', '/pasante')
+    }
+    return
+  }
 
   // Rutas del panel de usuario (pasante / estudiante / supervisor / vicedecano)
   if (
@@ -62,9 +76,20 @@ const sincronizarRuta = () => {
 onMounted(() => {
   sincronizarRuta()
   window.addEventListener('popstate', sincronizarRuta)
+  if (authService.isAuthenticated()) {
+    inactivityService.iniciar(() => handleLogout())
+  }
 })
 
 const handleLogin = () => {
+  if (authService.isAuthenticated()) {
+    vistaActual.value = 'panel'
+    cerrarModales()
+    if (window.location.pathname !== '/pasante') {
+      window.history.pushState({ vista: 'panel' }, '', '/pasante')
+    }
+    return
+  }
   mostrarRegistro.value = false
   mostrarRecuperar.value = false
   mostrarLogin.value = true
@@ -127,11 +152,12 @@ const handleLoginExitoso = (respuesta) => {
   if (window.location.pathname !== rutaDestino) {
     window.history.pushState({ vista: 'panel' }, '', rutaDestino)
   }
+  inactivityService.iniciar(() => handleLogout())
 }
 
-const handleLogout = () => {
-  localStorage.removeItem('genesis_token')
-  localStorage.removeItem('genesis_usuario')
+const handleLogout = async () => {
+  inactivityService.detener()
+  await authService.logout()
   vistaActual.value = 'landing'
   tabLandingActual.value = 'inicio'
   cerrarModales()
