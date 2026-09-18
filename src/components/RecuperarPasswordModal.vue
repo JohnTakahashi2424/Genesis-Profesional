@@ -346,7 +346,7 @@ onUnmounted(() => {
               id="input-recuperar-correo"
               v-model="correo"
               type="email"
-              placeholder="usss@000ugb.edu.sv"
+              placeholder="usss000000@ugb.edu.sv"
               maxlength="100"
               :disabled="loading"
               @input="errorPaso1 = ''"
@@ -368,8 +368,7 @@ onUnmounted(() => {
               class="w-[170px] py-3 rounded-full bg-[#000854] hover:bg-[#00063d] active:scale-[0.98] text-white text-sm font-medium transition-all inline-flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
               style="font-family: 'Lora', Georgia, serif;"
             >
-              <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
-              <span>{{ loading ? 'Enviando...' : 'Enviar código' }}</span>
+              <span>Enviar código</span>
             </button>
           </div>
         </form>
@@ -455,8 +454,7 @@ onUnmounted(() => {
               : 'bg-[#888eb8] opacity-90'"
             style="font-family: 'Lora', Georgia, serif;"
           >
-            <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
-            <span>{{ loading ? 'Verificando...' : 'Verificar' }}</span>
+            <span>Verificar</span>
           </button>
         </div>
       </div>
@@ -551,7 +549,7 @@ onUnmounted(() => {
           <div class="text-center mt-3 mb-5">
             <button
               type="submit"
-              id="btn-cambiar-pass"
+              id="btn-actualizar-contrasena"
               :disabled="!puedeCambiarContrasena || loading"
               class="w-[171px] h-[51px] rounded-[18px] border border-white text-white text-sm font-medium transition-all flex items-center justify-center gap-[10px] px-[10px] mx-auto select-none disabled:cursor-not-allowed"
               :class="puedeCambiarContrasena
@@ -559,8 +557,7 @@ onUnmounted(() => {
                 : 'bg-[#888eb8] shadow-sm'"
               style="font-family: 'Lora', Georgia, serif;"
             >
-              <span v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
-              <span>{{ loading ? 'Cambiando...' : 'Cambiar' }}</span>
+              <span>Cambiar</span>
             </button>
           </div>
 

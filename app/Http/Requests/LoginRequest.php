@@ -44,7 +44,7 @@ class LoginRequest extends FormRequest
         return [
             'correo.required' => 'Debe completar todos los campos para continuar',
             'correo.string' => 'El correo institucional debe ser una cadena de texto.',
-            'correo.email' => 'El correo institucional debe tener un formato válido (ejemplo: usss@000ugb.edu.sv).',
+            'correo.email' => 'El correo institucional debe tener un formato válido (ejemplo: usss000000@ugb.edu.sv).',
             'correo.max' => 'El correo institucional no puede exceder los 100 caracteres.',
 
             'contrasena.required' => 'Debe completar todos los campos para continuar',

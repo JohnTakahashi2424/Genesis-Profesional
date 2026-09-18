@@ -66,8 +66,10 @@ const reporteForm = ref({
 
 // Validación de formulario
 const intentoGuardar = ref(false)
+const intentoAgregarActividad = ref(false)
+
 const errorHorasMensaje = computed(() => {
-  if (!intentoGuardar.value) return ''
+  if (!intentoAgregarActividad.value && !intentoGuardar.value) return ''
   const val = Number(reporteForm.value.horas_registradas)
   if (isNaN(val) || val <= 0) {
     return 'Las horas registradas deben ser mayor a cero'
@@ -75,13 +77,36 @@ const errorHorasMensaje = computed(() => {
   return ''
 })
 
+const onCambioHoras = () => {
+  if (Number(reporteForm.value.horas_registradas) > 0) {
+    intentoAgregarActividad.value = false
+  }
+}
+
 // Estado del Subformulario de Actividad
 const actividadIndexEditando = ref(-1)
+const intentoGuardarActividad = ref(false)
 const actividadForm = ref({
   fecha_actividad: getFechaInicioMesActualString(),
   objetivo: '',
   actividad_realizada: '',
   logros_obtenidos: ''
+})
+
+const errorFechaActividad = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.fecha_actividad
+})
+
+const errorObjetivo = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.objetivo?.trim()
+})
+
+const errorActividadRealizada = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.actividad_realizada?.trim()
+})
+
+const errorLogros = computed(() => {
+  return intentoGuardarActividad.value && !actividadForm.value.logros_obtenidos?.trim()
 })
 
 // Estado de la Vista de Detalle
@@ -94,20 +119,28 @@ const reporteDetalle = ref(null)
 const cargarReportes = async () => {
   cargando.value = true
   try {
-    const userId = usuario.value?.id || usuario.value?.user_id || 4
+    const userId = usuario.value?.id || usuario.value?.user_id
+    if (!userId) {
+      reportes.value = []
+      cargando.value = false
+      return
+    }
     const res = await axios.get('/api/reportes', {
       headers: { 'X-User-Id': userId },
       params: {
+        user_id: userId,
         search: busqueda.value,
         estado: estadoFiltro.value
       }
     })
     if (res.data && res.data.data) {
       reportes.value = res.data.data
+    } else {
+      reportes.value = []
     }
   } catch (err) {
     console.error('Error al cargar reportes:', err)
-    mostrarFeedback('No se pudieron cargar los reportes.', 'error')
+    reportes.value = []
   } finally {
     cargando.value = false
   }
@@ -116,8 +149,7 @@ const cargarReportes = async () => {
 const guardarReporteAPI = async () => {
   intentoGuardar.value = true
 
-  if (!reporteForm.value.nombre_reporte.trim()) {
-    mostrarFeedback('El nombre del reporte es obligatorio.', 'error')
+  if (!reporteForm.value.nombre_reporte?.trim()) {
     return
   }
 
@@ -128,7 +160,7 @@ const guardarReporteAPI = async () => {
 
   cargando.value = true
   try {
-    const userId = usuario.value?.id || usuario.value?.user_id || 4
+    const userId = usuario.value?.id || usuario.value?.user_id
     const payload = {
       user_id: userId,
       nombre_reporte: reporteForm.value.nombre_reporte,
@@ -170,6 +202,7 @@ const abrirNuevoReporte = () => {
   esEdicion.value = false
   reporteIdEditando.value = null
   intentoGuardar.value = false
+  intentoAgregarActividad.value = false
   reporteForm.value = {
     nombre_reporte: 'ACTIVIDADES DE ' + getNombreMesActual(),
     fecha_inicio: getFechaInicioMesActualString(),
@@ -204,6 +237,14 @@ const verDetalle = async (item) => {
 // ----------------------------------------------------
 
 const abrirAgregarActividad = () => {
+  const val = Number(reporteForm.value.horas_registradas)
+  if (isNaN(val) || val <= 0) {
+    intentoAgregarActividad.value = true
+    return
+  }
+  intentoAgregarActividad.value = false
+  mensajeFeedback.value = ''
+  intentoGuardarActividad.value = false
   actividadIndexEditando.value = -1
   actividadForm.value = {
     fecha_actividad: getFechaInicioMesActualString(),
@@ -215,6 +256,8 @@ const abrirAgregarActividad = () => {
 }
 
 const editarActividad = (index) => {
+  mensajeFeedback.value = ''
+  intentoGuardarActividad.value = false
   actividadIndexEditando.value = index
   const act = reporteForm.value.actividades[index]
   actividadForm.value = { ...act }
@@ -226,8 +269,14 @@ const eliminarActividad = (index) => {
 }
 
 const guardarActividad = () => {
-  if (!actividadForm.value.objetivo.trim() || !actividadForm.value.actividad_realizada.trim()) {
-    mostrarFeedback('Por favor completa los campos obligatorios de la actividad.', 'error')
+  intentoGuardarActividad.value = true
+
+  if (
+    !actividadForm.value.fecha_actividad ||
+    !actividadForm.value.objetivo?.trim() ||
+    !actividadForm.value.actividad_realizada?.trim() ||
+    !actividadForm.value.logros_obtenidos?.trim()
+  ) {
     return
   }
 
@@ -237,10 +286,12 @@ const guardarActividad = () => {
     reporteForm.value.actividades.push({ ...actividadForm.value })
   }
 
+  intentoGuardarActividad.value = false
   vistaActual.value = 'formulario'
 }
 
 const cancelarActividad = () => {
+  intentoGuardarActividad.value = false
   vistaActual.value = 'formulario'
 }
 
@@ -319,15 +370,7 @@ onMounted(() => {
 <template>
   <div class="max-w-6xl mx-auto font-sans antialiased text-gray-800">
     
-    <!-- NOTIFICACIÓN DE FEEDBACK -->
-    <div 
-      v-if="mensajeFeedback" 
-      class="mb-4 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-between"
-      :class="tipoFeedback === 'exito' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'"
-    >
-      <span>{{ mensajeFeedback }}</span>
-      <button @click="mensajeFeedback = ''" class="text-xs font-bold hover:underline cursor-pointer">✕</button>
-    </div>
+
 
     <!-- ========================================================================= -->
     <!-- VISTA 1: TABLA PRINCIPAL DE REPORTES (Capturas 1 y 2) -->
@@ -407,13 +450,14 @@ onMounted(() => {
                 v-model="fechaCreacionFiltro"
                 class="w-28 pl-7 pr-2 py-1.5 bg-white border border-cyan-500 rounded-md text-xs text-cyan-800 font-medium text-center focus:outline-none shadow-xs"
               />
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 23 26" fill="none" class="absolute left-2 text-gray-700">
-                <g clip-path="url(#clip0_7350_1298_filtro)">
-                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 21 24" fill="none" class="absolute left-2 pointer-events-none">
+                <g clip-path="url(#clip0_7350_1304_filtro)">
+                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
                 </g>
+                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
                 <defs>
-                  <clipPath id="clip0_7350_1298_filtro">
-                    <rect width="22.75" height="26" fill="white"/>
+                  <clipPath id="clip0_7350_1304_filtro">
+                    <rect width="20.8138" height="23.7872" fill="white"/>
                   </clipPath>
                 </defs>
               </svg>
@@ -427,8 +471,8 @@ onMounted(() => {
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" viewBox="0 0 25 24" fill="none" class="w-[25px] h-[24px] shrink-0">
               <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="white"/>
-              <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#010C67"/>
-              <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#010C67"/>
+              <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#000B58"/>
+              <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#000B58"/>
             </svg>
             <span>Nuevo reporte</span>
           </button>
@@ -590,8 +634,12 @@ onMounted(() => {
               v-model="reporteForm.nombre_reporte"
               type="text" 
               placeholder="ACTIVIDADES DE AGOSTO"
-              class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 uppercase focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none"
+              class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-800 uppercase focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none"
+              :class="intentoGuardar && !reporteForm.nombre_reporte?.trim() ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             />
+            <p v-if="intentoGuardar && !reporteForm.nombre_reporte?.trim()" class="text-xs text-rose-500 mt-1.5 font-medium">
+              Campo obligatorio
+            </p>
           </div>
 
           <!-- Fecha Inicio* -->
@@ -603,13 +651,18 @@ onMounted(() => {
               <input 
                 v-model="reporteForm.fecha_inicio"
                 type="date" 
-                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-cyan-800 font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
+                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#00589B] font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
               />
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 text-cyan-700 pointer-events-none">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
+                <g clip-path="url(#clip0_7350_1304_inicio)">
+                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
+                </g>
+                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
+                <defs>
+                  <clipPath id="clip0_7350_1304_inicio">
+                    <rect width="20.8138" height="23.7872" fill="white"/>
+                  </clipPath>
+                </defs>
               </svg>
             </div>
           </div>
@@ -623,13 +676,18 @@ onMounted(() => {
               <input 
                 v-model="reporteForm.fecha_fin"
                 type="date" 
-                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-cyan-800 font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
+                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#00589B] font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
               />
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 text-cyan-700 pointer-events-none">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
+                <g clip-path="url(#clip0_7350_1304_fin)">
+                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
+                </g>
+                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
+                <defs>
+                  <clipPath id="clip0_7350_1304_fin">
+                    <rect width="20.8138" height="23.7872" fill="white"/>
+                  </clipPath>
+                </defs>
               </svg>
             </div>
           </div>
@@ -644,10 +702,12 @@ onMounted(() => {
           <div class="flex items-center gap-6">
             <input 
               v-model.number="reporteForm.horas_registradas"
+              @input="onCambioHoras"
               type="number" 
               min="0"
               placeholder="0"
-              class="w-32 px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none"
+              class="w-32 px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none"
+              :class="errorHorasMensaje ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             />
             
             <button 
@@ -656,9 +716,9 @@ onMounted(() => {
               class="flex items-center gap-2.5 px-5 py-2 bg-[#000B58] text-white rounded-full text-xs font-semibold hover:bg-[#000840] shadow-sm transition-all cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" viewBox="0 0 25 24" fill="none" class="w-[22px] h-[22px] shrink-0">
-                <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="white"/>
-                <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#010C67"/>
-                <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#010C67"/>
+                <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="#000B58"/>
+                <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="white"/>
+                <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="white"/>
               </svg>
               <span>Agregar actividad</span>
             </button>
@@ -745,12 +805,14 @@ onMounted(() => {
             <div 
               v-for="(img, idx) in reporteForm.evidencias" 
               :key="idx" 
-              class="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group shrink-0 shadow-xs"
+              class="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-xs"
             >
               <img :src="img" alt="Evidencia" class="w-full h-full object-cover" />
               <button 
                 @click="eliminarEvidencia(idx)"
-                class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                type="button"
+                class="absolute top-1.5 right-1.5 bg-gray-600/85 hover:bg-gray-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold cursor-pointer transition-colors shadow-xs"
+                title="Eliminar evidencia"
               >
                 ✕
               </button>
@@ -775,7 +837,7 @@ onMounted(() => {
             type="button" 
             class="px-8 py-2 bg-[#000B58] text-white rounded-full text-sm font-medium hover:bg-[#000840] shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            {{ cargando ? 'Guardando...' : 'Guardar' }}
+            Guardar
           </button>
         </div>
 
@@ -809,16 +871,28 @@ onMounted(() => {
           <label class="block text-sm font-medium text-gray-800 mb-2">
             Fecha de la actividad<span class="text-rose-500">*</span>
           </label>
-          <div class="relative w-48">
+          <div class="relative w-48 flex items-center">
             <input 
               v-model="actividadForm.fecha_actividad"
               type="date" 
-              class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-cyan-800 font-medium focus:ring-2 focus:ring-[#000B58] outline-none"
+              class="w-full pl-10 pr-3 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-medium focus:ring-2 focus:ring-[#000B58] outline-none cursor-pointer"
+              :class="errorFechaActividad ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             />
-            <svg class="w-5 h-5 text-gray-700 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
+              <g clip-path="url(#clip0_7350_1304_actividad)">
+                <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
+              </g>
+              <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
+              <defs>
+                <clipPath id="clip0_7350_1304_actividad">
+                  <rect width="20.8138" height="23.7872" fill="white"/>
+                </clipPath>
+              </defs>
             </svg>
           </div>
+          <p v-if="errorFechaActividad" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- Objetivo de la actividad* -->
@@ -831,12 +905,16 @@ onMounted(() => {
               v-model="actividadForm.objetivo"
               rows="2"
               placeholder="Desarrollar el diseño de de los criterios de aceptacion con el equipo de desarrollo"
-              class="w-full pr-10 p-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              :class="errorObjetivo ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             ></textarea>
             <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
+          <p v-if="errorObjetivo" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- Actividad realizada* -->
@@ -849,12 +927,16 @@ onMounted(() => {
               v-model="actividadForm.actividad_realizada"
               rows="2"
               placeholder="Reunión de 8 horas con la célula águil"
-              class="w-full pr-10 p-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              :class="errorActividadRealizada ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             ></textarea>
             <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
+          <p v-if="errorActividadRealizada" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- Logros obtenidos* -->
@@ -867,12 +949,16 @@ onMounted(() => {
               v-model="actividadForm.logros_obtenidos"
               rows="2"
               placeholder="Metas claras, objetivos definidos, diseño del word base"
-              class="w-full pr-10 p-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
+              :class="errorLogros ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
             ></textarea>
             <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
+          <p v-if="errorLogros" class="text-xs text-rose-500 mt-1.5 font-medium">
+            Campo obligatorio
+          </p>
         </div>
 
         <!-- BOTONES INFERIORES: CANCELAR / GUARDAR -->
@@ -1030,3 +1116,21 @@ onMounted(() => {
 
   </div>
 </template>
+
+<style scoped>
+/* Ocultar el indicador nativo de calendario del navegador para que no se muestre duplicado,
+   cubriendo todo el input para que al hacer clic se abra directamente el selector nativo */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+</style>

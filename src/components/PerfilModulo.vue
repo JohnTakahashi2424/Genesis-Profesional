@@ -133,31 +133,32 @@ const handleGuardadoExitoso = async () => {
     <!-- Vista Calcada de Perfil Profesional (Captura de Pantalla) -->
     <div v-else class="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 text-left max-w-5xl mx-auto relative">
       
-      <!-- Botones Editar y Descargar en la esquina superior derecha -->
-      <div class="absolute top-8 right-8 flex items-center gap-3">
+      <!-- Botones Editar y Descargar en la esquina superior derecha (Figma: flex-col, gap-22px, width 140px) -->
+      <div class="absolute top-8 right-8 flex flex-col items-start gap-[22px] w-[140px] h-[102px]">
         <button
           @click="editandoCv = true"
-          class="px-6 py-2 rounded-full border border-black bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+          class="w-[140px] h-[40px] px-3.5 rounded-[18px] border border-[#010C67] bg-white hover:bg-blue-50 text-[#010C67] text-sm font-medium transition-all shadow-xs flex items-center justify-between cursor-pointer shrink-0"
           style="font-family: 'Lora', Georgia, serif;"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 27 27" fill="none" class="shrink-0">
-            <path d="M25.875 5.625V7.875H24.75V9H23.625V10.125H22.5V11.25H21.375V10.125H20.25V9H19.125V7.875H18V6.75H16.875V5.625H15.75V4.5H16.875V3.375H18V2.25H19.125V1.125H21.375V2.25H22.5V3.375H23.625V4.5H24.75V5.625H25.875ZM19.125 11.25V10.125H18V9H16.875V7.875H15.75V6.75H13.5V7.875H12.375V9H11.25V10.125H10.125V11.25H9V12.375H7.875V13.5H6.75V14.625H5.625V15.75H4.5V16.875H3.375V18H2.25V19.125H1.125V25.875H7.875V24.75H9V23.625H10.125V22.5H11.25V21.375H12.375V20.25H13.5V19.125H14.625V18H15.75V16.875H16.875V15.75H18V14.625H19.125V13.5H20.25V11.25H19.125ZM16.875 13.5V14.625H15.75V15.75H14.625V16.875H13.5V18H12.375V19.125H11.25V20.25H10.125V21.375H9V22.5H7.875V23.625H3.375V19.125H4.5V18H5.625V16.875H6.75V15.75H7.875V14.625H9V13.5H10.125V12.375H11.25V11.25H12.375V10.125H13.5V9H15.75V10.125H16.875V11.25H18V13.5H16.875Z" fill="currentColor"/>
-          </svg>
           <span>Editar</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
         </button>
 
         <a
-          v-if="cvRaw?.url_publica"
-          :href="normalizarUrlFoto(cvRaw.url_publica)"
-          target="_blank"
-          download
-          class="px-6 py-2 rounded-full bg-[#000B58] hover:bg-[#000840] text-white text-sm font-medium transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+          :href="cvRaw?.url_publica ? normalizarUrlFoto(cvRaw.url_publica) : '#'"
+          :target="cvRaw?.url_publica ? '_blank' : '_self'"
+          :download="cvRaw?.url_publica ? true : false"
+          @click="!cvRaw?.url_publica && alert('Por favor, edite y guarde su CV para generar y descargar el archivo PDF.')"
+          class="w-[140px] h-[40px] px-3.5 rounded-[18px] border border-[#010C67] bg-[#010C67] hover:bg-[#01094f] text-white text-sm font-medium transition-all shadow-xs flex items-center justify-between cursor-pointer shrink-0"
           style="font-family: 'Lora', Georgia, serif;"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 17 17" fill="none" class="shrink-0">
-            <path d="M7.5 8.5L6.75 7.75C6.59722 7.59722 6.40278 7.52083 6.16667 7.52083C5.93056 7.52083 5.73611 7.59722 5.58334 7.75C5.43056 7.90278 5.35417 8.09722 5.35417 8.33333C5.35417 8.56944 5.43056 8.76389 5.58334 8.91667L7.75 11.0833C7.91667 11.25 8.11111 11.3333 8.33334 11.3333C8.55556 11.3333 8.75 11.25 8.91667 11.0833L11.0833 8.91667C11.2361 8.76389 11.3125 8.56944 11.3125 8.33333C11.3125 8.09722 11.2361 7.90278 11.0833 7.75C10.9306 7.59722 10.7361 7.52083 10.5 7.52083C10.2639 7.52083 10.0694 7.59722 9.91667 7.75L9.16667 8.5V5.83333C9.16667 5.59722 9.08667 5.39944 8.92667 5.24C8.76667 5.08056 8.56889 5.00056 8.33334 5C8.09778 4.99944 7.9 5.07944 7.74 5.24C7.58 5.40056 7.5 5.59833 7.5 5.83333V8.5ZM8.33334 16.6667C7.18056 16.6667 6.09722 16.4478 5.08334 16.01C4.06945 15.5722 3.1875 14.9786 2.4375 14.2292C1.6875 13.4797 1.09389 12.5978 0.656668 11.5833C0.219446 10.5689 0.00055661 9.48556 1.05485e-06 8.33333C-0.000554501 7.18111 0.218334 6.09778 0.656668 5.08333C1.095 4.06889 1.68861 3.18694 2.4375 2.4375C3.18639 1.68806 4.06834 1.09444 5.08334 0.656667C6.09834 0.218889 7.18167 0 8.33334 0C9.485 0 10.5683 0.218889 11.5833 0.656667C12.5983 1.09444 13.4803 1.68806 14.2292 2.4375C14.9781 3.18694 15.5719 4.06889 16.0108 5.08333C16.4497 6.09778 16.6683 7.18111 16.6667 8.33333C16.665 9.48556 16.4461 10.5689 16.01 11.5833C15.5739 12.5978 14.9803 13.4797 14.2292 14.2292C13.4781 14.9786 12.5961 15.5725 11.5833 16.0108C10.5706 16.4492 9.48722 16.6678 8.33334 16.6667ZM8.33334 15C10.1944 15 11.7708 14.3542 13.0625 13.0625C14.3542 11.7708 15 10.1944 15 8.33333C15 6.47222 14.3542 4.89583 13.0625 3.60417C11.7708 2.3125 10.1944 1.66667 8.33334 1.66667C6.47222 1.66667 4.89583 2.3125 3.60417 3.60417C2.3125 4.89583 1.66667 6.47222 1.66667 8.33333C1.66667 10.1944 2.3125 11.7708 3.60417 13.0625C4.89583 14.3542 6.47222 15 8.33334 15Z" fill="currentColor"/>
-          </svg>
           <span>Descargar</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v8m-3-3l3 3 3-3" />
+          </svg>
         </a>
       </div>
 

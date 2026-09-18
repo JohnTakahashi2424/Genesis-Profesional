@@ -112,12 +112,14 @@ watch(() => form.value.correo, (nuevoCorreo) => {
       if (res && res.disponible) {
         errores.value.correo = ''
       } else {
-        errores.value.correo = res?.mensaje || 'No fue posible procesar el correo institucional'
+        const msg = res?.mensaje || 'Correo institucional ya registrado'
+        errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
       }
     } catch (err) {
       if (err.response && err.response.data) {
         const datos = err.response.data
-        errores.value.correo = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional no válido o no disponible'
+        const msg = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional ya registrado'
+        errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
       }
     }
   }, 400)
@@ -279,13 +281,15 @@ const continuarAPaso2 = async () => {
       errores.value.correo = ''
       estadoFlujo.value = 2
     } else {
-      errores.value.correo = res?.mensaje || 'No fue posible procesar el correo institucional'
+      const msg = res?.mensaje || 'Correo institucional ya registrado'
+      errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
       document.getElementById('input-correo')?.focus()
     }
   } catch (err) {
     if (err.response && err.response.data) {
       const datos = err.response.data
-      errores.value.correo = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional no válido o no disponible'
+      const msg = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional ya registrado'
+      errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
     } else {
       errores.value.correo = 'No se pudo conectar con el servidor para verificar el correo'
     }
@@ -451,14 +455,7 @@ const cerrarYIrALogin = () => {
         </p>
       </div>
 
-      <!-- Alerta de Error General si ocurre en la API -->
-      <div 
-        v-if="errorGeneral" 
-        class="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2 text-left"
-      >
-        <i class="bi bi-exclamation-triangle-fill text-red-500 mt-0.5 text-sm shrink-0"></i>
-        <span>{{ errorGeneral }}</span>
-      </div>
+
 
       <!-- ═══════════════════════════════════════ -->
       <!-- PASO 1: DATOS PERSONALES / CORREO     -->
@@ -500,7 +497,7 @@ const cerrarYIrALogin = () => {
             type="email"
             label="Correo institucional"
             required
-            placeholder="usss@000ugb.edu.sv"
+            placeholder="usss000000@ugb.edu.sv"
             maxlength="100"
             :error="errores.correo"
             @blur="validarCorreoSintaxis(true)"

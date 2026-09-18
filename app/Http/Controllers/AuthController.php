@@ -236,7 +236,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'disponible' => false,
-                'mensaje' => 'Este correo institucional ya tiene una cuenta registrada. Intente iniciar sesión.'
+                'mensaje' => 'Correo institucional ya registrado'
             ], 422);
         }
 

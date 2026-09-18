@@ -39,7 +39,7 @@ class EnviarCodigoRequest extends FormRequest
         return [
             'correo.required' => 'El correo institucional es obligatorio.',
             'correo.string' => 'El correo debe ser una cadena de texto.',
-            'correo.email' => 'El correo institucional debe tener un formato válido (ejemplo: usss@000ugb.edu.sv).',
+            'correo.email' => 'El correo institucional debe tener un formato válido (ejemplo: usss000000@ugb.edu.sv).',
             'correo.max' => 'El correo institucional no puede exceder los 100 caracteres.',
         ];
     }

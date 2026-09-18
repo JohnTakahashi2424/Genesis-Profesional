@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import authService from '../services/authService'
 
 const emit = defineEmits(['close', 'abrir-registro', 'login-exitoso', 'olvide-contrasena'])
@@ -8,11 +8,6 @@ const emit = defineEmits(['close', 'abrir-registro', 'login-exitoso', 'olvide-co
 const form = ref({
   correo: '',
   contrasena: ''
-})
-
-// Validación reactiva de campos completos (activa el botón a azul marino #010c67 según diseño)
-const formCompleto = computed(() => {
-  return form.value.correo.trim().length > 0 && form.value.contrasena.length > 0
 })
 
 // Estados de interfaz
@@ -43,6 +38,9 @@ watch(() => form.value.correo, (nuevoCorreo) => {
 
 // Manejo del envío del formulario y consumo de la API
 const handleLogin = async () => {
+  // Si ya está en proceso de carga, evitar envíos duplicados
+  if (loading.value) return
+
   // Limpiar errores previos
   errorCorreo.value = ''
   errorContrasena.value = ''
@@ -51,24 +49,35 @@ const handleLogin = async () => {
   const correoLimpio = form.value.correo.trim().toLowerCase()
   const pass = form.value.contrasena
 
-  // 1. Validación de campos obligatorios
-  if (!correoLimpio || !pass) {
+  let hayErrores = false
+
+  // 1. Validación de campos obligatorios individuales
+  if (!correoLimpio) {
     errorCorreo.value = 'Debe completar todos los campos para continuar'
+    hayErrores = true
+  } else {
+    // 2. Validación sintáctica y dominio del correo institucional si fue provisto
+    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!regexEmail.test(correoLimpio)) {
+      errorCorreo.value = 'El formato del correo institucional es inválido.'
+      hayErrores = true
+    } else if (!correoLimpio.endsWith('@ugb.edu.sv')) {
+      errorCorreo.value = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
+      hayErrores = true
+    }
+  }
+
+  if (!pass) {
+    errorContrasena.value = 'Debe completar todos los campos para continuar'
+    hayErrores = true
+  }
+
+  // Si hay algún campo faltante o inválido, detener aquí y no consultar la base de datos
+  if (hayErrores) {
     return
   }
 
-  // 2. Validación sintáctica y dominio del correo
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!regexEmail.test(correoLimpio)) {
-    errorCorreo.value = 'El formato del correo institucional es inválido.'
-    return
-  }
-
-  if (!correoLimpio.endsWith('@ugb.edu.sv')) {
-    errorCorreo.value = 'El correo debe pertenecer al dominio institucional (@ugb.edu.sv)'
-    return
-  }
-
+  // Una vez cumplidos los campos, se bloquea el botón para no enviar peticiones de más a la db
   loading.value = true
 
   try {
@@ -96,8 +105,15 @@ const handleLogin = async () => {
         // Credenciales incorrectas o usuario no encontrado (según Imagen 2)
         errorContrasena.value = data.mensaje || 'Correo o contraseña incorrectos. Intentalo de nuevo.'
       } else if (status === 422) {
-        // Fallo de validación en backend (según Imagen 1)
-        errorCorreo.value = data.mensaje || 'Debe completar todos los campos para continuar'
+        // Fallo de validación en backend
+        if (data.errores) {
+          if (data.errores.correo) errorCorreo.value = data.errores.correo[0]
+          if (data.errores.contrasena) errorContrasena.value = data.errores.contrasena[0]
+        }
+        if (!errorCorreo.value && !errorContrasena.value) {
+          if (!form.value.correo.trim()) errorCorreo.value = data.mensaje || 'Debe completar todos los campos para continuar'
+          if (!form.value.contrasena) errorContrasena.value = data.mensaje || 'Debe completar todos los campos para continuar'
+        }
       } else if (status === 403) {
         // Cuenta inactiva
         errorGeneral.value = data.mensaje || 'La cuenta no se encuentra activa en el sistema.'
@@ -164,14 +180,7 @@ const handleOlvideContrasena = () => {
         </p>
       </div>
 
-      <!-- Alerta general para errores del servidor o cuenta inactiva -->
-      <div 
-        v-if="errorGeneral" 
-        class="mb-4 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2 text-left"
-      >
-        <i class="bi bi-exclamation-triangle-fill text-red-500 mt-0.5 text-xs shrink-0"></i>
-        <span>{{ errorGeneral }}</span>
-      </div>
+
 
       <!-- Formulario de inicio de sesión -->
       <form @submit.prevent="handleLogin" class="text-left" novalidate>
@@ -185,7 +194,7 @@ const handleOlvideContrasena = () => {
             id="input-login-correo"
             v-model="form.correo"
             type="email"
-            placeholder="usss@000ugb.edu.sv"
+            placeholder="usss000000@ugb.edu.sv"
             maxlength="100"
             :disabled="loading"
             @input="errorCorreo = ''; errorGeneral = ''"
@@ -247,24 +256,16 @@ const handleOlvideContrasena = () => {
           </button>
         </div>
 
-        <!-- Botón Iniciar Sesión Centrado con color azul marino #010C67 según diseño -->
+        <!-- Botón Iniciar Sesión Centrado con color azul marino #010C67 -->
         <div class="text-center mt-3 mb-5 flex justify-center">
           <button 
             type="submit"
             id="btn-submit-login"
             :disabled="loading"
-            class="border border-white text-white text-base font-medium transition-all flex items-center justify-center gap-[10px] mx-auto cursor-pointer select-none disabled:cursor-not-allowed"
-            :class="formCompleto 
-              ? 'bg-[#010C67] hover:bg-[#01094f] active:scale-[0.98] shadow-md' 
-              : 'bg-[#888eb8] shadow-sm'"
+            class="bg-[#010C67] hover:bg-[#01094f] active:scale-[0.98] border border-white text-white text-base font-medium transition-all flex items-center justify-center gap-[10px] mx-auto cursor-pointer select-none shadow-md disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
             style="display: flex; width: 171px; height: 51.286px; padding: 10px; justify-content: center; align-items: center; gap: 10px; border-radius: 18px; font-family: 'Lora', Georgia, serif;"
           >
-            <!-- Spinner al cargar -->
-            <span 
-              v-if="loading" 
-              class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"
-            ></span>
-            <span>{{ loading ? 'Iniciando...' : 'Iniciar sesión' }}</span>
+            <span>Iniciar sesión</span>
           </button>
         </div>
 

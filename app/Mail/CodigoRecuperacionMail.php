@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -25,12 +26,16 @@ class CodigoRecuperacionMail extends Mailable
     }
 
     /**
-     * Configurar el sobre del correo.
+     * Configurar el sobre del correo con el remitente exacto del servicio SMTP.
      */
     public function envelope(): Envelope
     {
+        $fromAddress = env('MAIL_FROM_ADDRESS', 'noreply@ugb.edu.sv');
+        $fromName = env('MAIL_FROM_NAME', 'Génesis Profesional UGB');
+
         return new Envelope(
-            subject: 'Código de verificación para restablecer tu contraseña - Génesis Profesional',
+            from: new Address($fromAddress, $fromName),
+            subject: 'Código de verificación: ' . $this->codigo . ' - Génesis Profesional',
         );
     }
 
@@ -42,6 +47,24 @@ class CodigoRecuperacionMail extends Mailable
         return new Content(
             view: 'emails.codigo_recuperacion',
         );
+    }
+
+    /**
+     * Configurar cabeceras de alta prioridad para evitar filtro de cuarentena / spam en Microsoft 365 y Exchange.
+     */
+    public function callbacks(): array
+    {
+        return [
+            function ($message) {
+                $headers = $message->getHeaders();
+                $headers->addTextHeader('Auto-Submitted', 'auto-generated');
+                $headers->addTextHeader('X-Auto-Response-Suppress', 'All');
+                $headers->addTextHeader('X-Priority', '1 (Highest)');
+                $headers->addTextHeader('X-MSMail-Priority', 'High');
+                $headers->addTextHeader('Importance', 'High');
+                $headers->addTextHeader('X-Mailer', 'GenesisProfesional-SMTP/1.0');
+            }
+        ];
     }
 
     /**
