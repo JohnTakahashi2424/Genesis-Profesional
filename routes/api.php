@@ -59,6 +59,7 @@ Route::middleware('jwt.auth')->group(function () {
     // Rutas del Módulo de Reportes e Informes
     Route::prefix('reportes')->group(function () {
         Route::get('/', [ReporteController::class, 'index'])->name('api.reportes.index');
+        Route::get('/formulario-inicial', [ReporteController::class, 'formularioInicial'])->name('api.reportes.formulario_inicial');
         Route::get('/{id}', [ReporteController::class, 'show'])->name('api.reportes.show');
         Route::post('/', [ReporteController::class, 'store'])->name('api.reportes.store');
         Route::put('/{id}', [ReporteController::class, 'update'])->name('api.reportes.update');

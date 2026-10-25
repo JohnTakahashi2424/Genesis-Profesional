@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Tabla principal de reportes
+        // 1. Tabla principal de reportes mensuales
         Schema::create('reportes', function (Blueprint $table) {
             $table->id();
 
@@ -20,13 +20,15 @@ return new class extends Migration
                   ->constrained('pasantes')
                   ->onDelete('cascade');
 
-            // Campos del reporte
-            $table->string('nombre_reporte');
+            // Sección: Información General
+            $table->string('area_pasantia', 150);
+            $table->string('nombre_pasante', 150);
+            $table->string('mes', 50);
             $table->date('fecha_inicio');
             $table->date('fecha_fin');
-            $table->integer('horas_registradas')->default(0);
-            
-            // Estado del reporte: 'Enviado', 'En revisión', 'Aprobado'
+            $table->text('objetivo');
+
+            // Estado del reporte: 'Enviado', 'En revisión', 'Aprobado', 'Observado'
             $table->string('estado', 30)->default('En revisión');
 
             // Evidencias fotográficas / archivos adjuntos en formato JSON
@@ -35,7 +37,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // 2. Tabla de actividades asociadas al reporte
+        // 2. Tabla de actividades realizadas del reporte
         Schema::create('actividades_reporte', function (Blueprint $table) {
             $table->id();
 
@@ -45,10 +47,10 @@ return new class extends Migration
                   ->onDelete('cascade');
 
             // Campos detallados de la actividad
-            $table->date('fecha_actividad');
-            $table->text('objetivo');
-            $table->text('actividad_realizada');
-            $table->text('logros_obtenidos');
+            $table->integer('numero')->default(1);
+            $table->text('actividad');
+            $table->date('fecha');
+            $table->text('resultado_aprendizaje');
 
             $table->timestamps();
         });

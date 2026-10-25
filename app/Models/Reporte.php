@@ -14,10 +14,12 @@ class Reporte extends Model
 
     protected $fillable = [
         'pasante_id',
-        'nombre_reporte',
+        'area_pasantia',
+        'nombre_pasante',
+        'mes',
         'fecha_inicio',
         'fecha_fin',
-        'horas_registradas',
+        'objetivo',
         'estado',
         'evidencias',
     ];
@@ -25,9 +27,50 @@ class Reporte extends Model
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
-        'horas_registradas' => 'integer',
         'evidencias' => 'array',
     ];
+
+    protected $appends = [
+        'periodo',
+        'actividades_desarrolladas',
+    ];
+
+    /**
+     * Formatear el periodo del reporte legible (Ej: "01 Febr – 27 Febr 2026").
+     */
+    public function getPeriodoAttribute(): ?string
+    {
+        if (!$this->fecha_inicio || !$this->fecha_fin) {
+            return null;
+        }
+
+        $mesesCortos = [
+            1 => 'Ener', 2 => 'Febr', 3 => 'Mar', 4 => 'Abr',
+            5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+            9 => 'Sept', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'
+        ];
+
+        $diaInicio = $this->fecha_inicio->format('d');
+        $mesInicio = $mesesCortos[(int)$this->fecha_inicio->format('n')] ?? $this->fecha_inicio->format('M');
+
+        $diaFin = $this->fecha_fin->format('d');
+        $mesFin = $mesesCortos[(int)$this->fecha_fin->format('n')] ?? $this->fecha_fin->format('M');
+        $anioFin = $this->fecha_fin->format('Y');
+
+        return "{$diaInicio} {$mesInicio} – {$diaFin} {$mesFin} {$anioFin}";
+    }
+
+    /**
+     * Obtener el número de actividades desarrolladas.
+     */
+    public function getActividadesDesarrolladasAttribute(): int
+    {
+        if ($this->relationLoaded('actividades')) {
+            return $this->actividades->count();
+        }
+
+        return $this->actividades()->count();
+    }
 
     /**
      * Relación con el pasante que creó el reporte.
@@ -42,6 +85,6 @@ class Reporte extends Model
      */
     public function actividades(): HasMany
     {
-        return $this->hasMany(ActividadReporte::class, 'reporte_id', 'id');
+        return $this->hasMany(ActividadReporte::class, 'reporte_id', 'id')->orderBy('numero', 'asc');
     }
 }
