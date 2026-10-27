@@ -90,7 +90,7 @@ const validarCoincidenciaContrasenas = (forzar = false) => {
     form.value.confirmarContrasena.length >= form.value.contrasena.length
   ) {
     if (form.value.contrasena !== form.value.confirmarContrasena) {
-      errores.value.confirmarContrasena = 'Las contraseñas deben ser iguales'
+      errores.value.confirmarContrasena = 'Las contraseñas no coinciden, revíselas e intente de nuevo'
     } else {
       errores.value.confirmarContrasena = ''
     }

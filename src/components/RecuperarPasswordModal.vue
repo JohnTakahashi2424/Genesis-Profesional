@@ -562,7 +562,7 @@ onUnmounted(() => {
             </div>
             <p v-if="confirmarContrasena && !contrasenasCoinciden" class="flex items-center gap-1 text-red-600 text-[11px] mt-1.5 font-medium">
               <i class="bi bi-exclamation-circle text-[12px] shrink-0"></i>
-              <span>Las contraseñas no coinciden.</span>
+              <span>Las contraseñas no coinciden, revíselas e intente de nuevo.</span>
             </p>
           </div>
 
