@@ -61,20 +61,11 @@ class ReporteController extends Controller
             ->withCount('actividades')
             ->orderByDesc('created_at');
 
-        // Filtrar por pasante si se especifica pasante_id o se deduce del usuario
-        if ($pasanteId) {
+        // Filtrar directamente por el usuario (user_id de la tabla users) o pasante
+        if ($userId) {
+            $query->where('user_id', $userId);
+        } elseif ($pasanteId) {
             $query->where('pasante_id', $pasanteId);
-        } elseif ($userId) {
-            $pasante = Pasante::where('user_id', $userId)->first();
-            if ($pasante) {
-                $query->where('pasante_id', $pasante->id);
-            } else {
-                // Usuario sin pasante asignado -> no tiene reportes aún
-                return response()->json([
-                    'exito' => true,
-                    'data' => []
-                ]);
-            }
         }
 
         // Filtro de búsqueda por mes, área, nombre del pasante u objetivo
@@ -164,37 +155,32 @@ class ReporteController extends Controller
             'actividades.*.resultado_aprendizaje.required' => 'El resultado de aprendizaje es requerido.',
         ]);
 
-        // Determinar pasante_id
+        // Determinar user_id y pasante_id
         $jwtUser = $request->attributes->get('jwt_user');
-        $pasanteId = $validated['pasante_id'] ?? null;
         $userId = $validated['user_id'] ?? ($jwtUser->id ?? $request->header('X-User-Id'));
 
-        if (!$pasanteId && $userId) {
-            $pasante = Pasante::firstOrCreate(
-                ['user_id' => $userId],
-                [
-                    'area' => $validated['area_pasantia'] ?? 'Ingeniería en Sistemas',
-                    'tipo_pasantia' => 'interna',
-                    'estado' => 'en_proceso',
-                    'fase_actual' => 'Fase 1'
-                ]
-            );
-            $pasanteId = $pasante->id;
-        }
-
-        if (!$pasanteId) {
+        if (!$userId) {
             return response()->json([
                 'exito' => false,
-                'mensaje' => 'No se encontró ni se pudo vincular el perfil del pasante.'
+                'mensaje' => 'No se encontró la identidad del usuario para vincular el reporte.'
             ], 422);
+        }
+
+        $pasanteId = $validated['pasante_id'] ?? null;
+        if (!$pasanteId) {
+            $pasante = Pasante::where('user_id', $userId)->first();
+            if ($pasante) {
+                $pasanteId = $pasante->id;
+            }
         }
 
         // Procesar imágenes de evidencias (Base64 o archivos multipart)
         $urlsEvidencias = $this->procesarEvidencias($request);
 
-        return DB::transaction(function () use ($validated, $pasanteId, $urlsEvidencias) {
-            // 1. Crear el reporte principal
+        return DB::transaction(function () use ($validated, $userId, $pasanteId, $urlsEvidencias) {
+            // 1. Crear el reporte principal vinculado directamente al usuario
             $reporte = Reporte::create([
+                'user_id' => $userId,
                 'pasante_id' => $pasanteId,
                 'area_pasantia' => $validated['area_pasantia'],
                 'nombre_pasante' => $validated['nombre_pasante'],

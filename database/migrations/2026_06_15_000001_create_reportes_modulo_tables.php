@@ -15,10 +15,16 @@ return new class extends Migration
         Schema::create('reportes', function (Blueprint $table) {
             $table->id();
 
-            // Llave foránea hacia el pasante
-            $table->foreignId('pasante_id')
-                  ->constrained('pasantes')
+            // Llave foránea directa hacia el usuario de la tabla 'users'
+            $table->foreignId('user_id')
+                  ->constrained('users')
                   ->onDelete('cascade');
+
+            // Llave foránea hacia el registro de pasante
+            $table->foreignId('pasante_id')
+                  ->nullable()
+                  ->constrained('pasantes')
+                  ->nullOnDelete();
 
             // Sección: Información General
             $table->string('area_pasantia', 150);

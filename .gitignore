@@ -8,6 +8,8 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+/public/assets/
+/public/images/
 /vendor/
 composer.phar
 .phpunit.result.cache

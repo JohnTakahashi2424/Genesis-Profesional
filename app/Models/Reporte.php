@@ -13,6 +13,7 @@ class Reporte extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'user_id',
         'pasante_id',
         'area_pasantia',
         'nombre_pasante',
@@ -25,8 +26,8 @@ class Reporte extends Model
     ];
 
     protected $casts = [
-        'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
+        'fecha_inicio' => 'date:Y-m-d',
+        'fecha_fin' => 'date:Y-m-d',
         'evidencias' => 'array',
     ];
 
@@ -70,6 +71,14 @@ class Reporte extends Model
         }
 
         return $this->actividades()->count();
+    }
+
+    /**
+     * Relación directa con el usuario de la cuenta (User).
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     /**

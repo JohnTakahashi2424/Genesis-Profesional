@@ -21,7 +21,7 @@ class ActividadReporte extends Model
 
     protected $casts = [
         'numero' => 'integer',
-        'fecha' => 'date',
+        'fecha' => 'date:Y-m-d',
     ];
 
     /**
