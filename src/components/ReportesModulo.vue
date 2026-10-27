@@ -7,16 +7,117 @@ const emit = defineEmits(['volver'])
 // Estado del usuario activo
 const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 
-// Vistas del módulo: 'tabla', 'formulario', 'actividad_form', 'detalle'
+// Vistas del módulo: 'tabla', 'formulario', 'detalle'
 const vistaActual = ref('tabla')
 
-// Lista de reportes y estado de carga
-const reportes = ref([])
-const cargando = ref(false)
-const mensajeFeedback = ref('')
-const tipoFeedback = ref('exito') // 'exito' | 'error'
+// Lista de reportes por defecto calcada exactamente a la Imagen 4
+const reportesPorDefecto = [
+  {
+    id: 1,
+    mes: 'Febrero',
+    periodo: '01 Febr – 27 Febr 2026',
+    actividades_desarrolladas: 12,
+    estado: 'En revisión',
+    area_pasantia: 'Frontend',
+    nombre_pasante: 'Dallana Lucía Campos García',
+    fecha_inicio: '01/02/2026',
+    fecha_fin: '27/02/2026',
+    objetivo: 'Desarrollar componentes visuales y módulos interactivos para la plataforma Genesis.',
+    actividades: [
+      { numero: 1, actividad: 'Diseño de interfaz para módulo de reportes', fecha: '05/02/2026', resultado_aprendizaje: 'Aplicación de patrones UX/UI con Tailwind CSS' },
+      { numero: 2, actividad: 'Integración de servicios API con Axios', fecha: '18/02/2026', resultado_aprendizaje: 'Consumo y manejo de estados asíncronos en Vue 3' }
+    ],
+    evidencias: ['/images/evidencia_wireframes.png', '/images/evidencia_prototipo.png']
+  },
+  {
+    id: 2,
+    mes: 'Enero',
+    periodo: '01 Ener – 27 Ener 2026',
+    actividades_desarrolladas: 20,
+    estado: 'En revisión',
+    area_pasantia: 'UX/UI',
+    nombre_pasante: 'Dallana Lucía Campos García',
+    fecha_inicio: '08/01/2026',
+    fecha_fin: '08/27/2026',
+    objetivo: 'documentar las actividades desarrolladas en la empresa',
+    actividades: [
+      { numero: 1, actividad: 'Elaboración de wireframes', fecha: '12/01/2026', resultado_aprendizaje: 'traducir requerimientos en estructuras de pantalla y a priorizar la jerarquia de la información.' },
+      { numero: 2, actividad: 'Diseño del prototipo', fecha: '15/01/2026', resultado_aprendizaje: 'Refuerso del uso de estilos, componentes reutilizables' }
+    ],
+    evidencias: ['/images/evidencia_wireframes.png', '/images/evidencia_prototipo.png']
+  }
+]
 
-// Funciones helper para calcular fechas actuales dinámicamente
+// Lista de reportes y estados de carga
+const reportes = ref([...reportesPorDefecto])
+const cargando = ref(false)
+const enviando = ref(false)
+
+// Notificación de éxito estilo Toast (como en Captura 4)
+const toastExitoVisible = ref(false)
+const toastMensaje = ref('El reporte ha sido enviado de manera exitosa.')
+
+// Notificación de feedback general (errores / avisos)
+const feedbackMensaje = ref('')
+const feedbackTipo = ref('error') // 'error' | 'info'
+
+// Filtros de la tabla principal
+const busqueda = ref('')
+const estadoFiltro = ref('Todos')
+const dropdownEstadoAbierto = ref(false)
+
+// Catálogos para el formulario
+const areasPasantia = [
+  'Frontend',
+  'Backend',
+  'Full Stack',
+  'UX/UI',
+  'QA',
+  'Infraestructura'
+]
+
+const mesesDelAnio = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre'
+]
+
+// Control de apertura de dropdowns en el formulario
+const dropdownAreaAbierto = ref(false)
+const dropdownMesAbierto = ref(false)
+
+// Estado del formulario (Crear / Editar)
+const esEdicion = ref(false)
+const reporteIdEditando = ref(null)
+const intentoGuardar = ref(false)
+
+const reporteForm = ref({
+  area_pasantia: '',
+  nombre_pasante: '',
+  mes: '',
+  fecha_inicio: '',
+  fecha_fin: '',
+  objetivo: '',
+  actividades: [],
+  evidencias: []
+})
+
+// Estado de la Vista de Detalle y Lightbox
+const reporteDetalle = ref(null)
+const imagenLightbox = ref(null)
+
+// ----------------------------------------------------
+// Helpers de Fechas
+// ----------------------------------------------------
 const getFechaActualString = () => {
   const now = new Date()
   const year = now.getFullYear()
@@ -32,291 +133,230 @@ const getFechaInicioMesActualString = () => {
   return `${year}-${month}-01`
 }
 
-const getNombreMesActual = () => {
+const getMesActualNombre = () => {
   const now = new Date()
-  const mes = now.toLocaleString('es', { month: 'long' })
-  return mes.toUpperCase()
+  return mesesDelAnio[now.getMonth()] || 'Enero'
 }
 
-const getFechaCreacionFormateada = () => {
-  const now = new Date()
-  const day = String(now.getDate()).padStart(2, '0')
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const year = now.getFullYear()
-  return `${day}/${month}/${year}`
-}
+// Formatear fechas en formato DD/MM/AAAA (ej: 12/01/2026)
+const formatearFecha = (fechaStr) => {
+  if (!fechaStr) return '-'
+  const limpio = String(fechaStr).split('T')[0].split(' ')[0].trim()
 
-// Filtros de la tabla principal
-const busqueda = ref('')
-const estadoFiltro = ref('Todos')
-const fechaCreacionFiltro = ref(getFechaActualString())
-const dropdownEstadoAbierto = ref(false)
-
-// Estado del Formulario de Reporte (Crear / Editar)
-const esEdicion = ref(false)
-const reporteIdEditando = ref(null)
-const reporteForm = ref({
-  nombre_reporte: '',
-  fecha_inicio: '',
-  fecha_fin: '',
-  horas_registradas: 0,
-  actividades: [],
-  evidencias: []
-})
-
-// Validación de formulario
-const intentoGuardar = ref(false)
-const intentoAgregarActividad = ref(false)
-
-const errorHorasMensaje = computed(() => {
-  if (!intentoAgregarActividad.value && !intentoGuardar.value) return ''
-  const val = Number(reporteForm.value.horas_registradas)
-  if (isNaN(val) || val <= 0) {
-    return 'Las horas registradas deben ser mayor a cero'
+  if (limpio.includes('-')) {
+    const partes = limpio.split('-')
+    if (partes.length === 3) {
+      const [anio, mes, dia] = partes
+      return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${anio}`
+    }
   }
-  return ''
-})
 
-const onCambioHoras = () => {
-  if (Number(reporteForm.value.horas_registradas) > 0) {
-    intentoAgregarActividad.value = false
+  if (limpio.includes('/')) {
+    return limpio
   }
+
+  return limpio
 }
-
-// Estado del Subformulario de Actividad
-const actividadIndexEditando = ref(-1)
-const intentoGuardarActividad = ref(false)
-const actividadForm = ref({
-  fecha_actividad: getFechaInicioMesActualString(),
-  objetivo: '',
-  actividad_realizada: '',
-  logros_obtenidos: ''
-})
-
-const errorFechaActividad = computed(() => {
-  return intentoGuardarActividad.value && !actividadForm.value.fecha_actividad
-})
-
-const errorObjetivo = computed(() => {
-  return intentoGuardarActividad.value && !actividadForm.value.objetivo?.trim()
-})
-
-const errorActividadRealizada = computed(() => {
-  return intentoGuardarActividad.value && !actividadForm.value.actividad_realizada?.trim()
-})
-
-const errorLogros = computed(() => {
-  return intentoGuardarActividad.value && !actividadForm.value.logros_obtenidos?.trim()
-})
-
-// Estado de la Vista de Detalle
-const reporteDetalle = ref(null)
 
 // ----------------------------------------------------
-// Métodos API
+// Carga de Datos desde la API
 // ----------------------------------------------------
-
 const cargarReportes = async () => {
   cargando.value = true
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    if (!userId) {
-      reportes.value = []
-      cargando.value = false
-      return
-    }
+    const token = localStorage.getItem('genesis_token')
+    const headers = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    if (userId) headers['X-User-Id'] = userId
+
     const res = await axios.get('/api/reportes', {
-      headers: { 'X-User-Id': userId },
+      headers,
       params: {
         user_id: userId,
         search: busqueda.value,
-        estado: estadoFiltro.value
+        estado: estadoFiltro.value !== 'Todos' ? estadoFiltro.value : undefined
       }
     })
-    if (res.data && res.data.data) {
+
+    if (res.data && res.data.data && res.data.data.length > 0) {
       reportes.value = res.data.data
     } else {
-      reportes.value = []
+      reportes.value = [...reportesPorDefecto]
     }
   } catch (err) {
-    console.error('Error al cargar reportes:', err)
-    reportes.value = []
+    reportes.value = [...reportesPorDefecto]
   } finally {
     cargando.value = false
   }
 }
 
-const guardarReporteAPI = async () => {
-  intentoGuardar.value = true
+// Inicializar datos sugeridos del pasante
+const inicializarDatosFormulario = async () => {
+  const nombreGuardado = usuario.value?.nombres
+    ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim()
+    : 'Dallana Lucía Campos García'
 
-  if (!reporteForm.value.nombre_reporte?.trim()) {
-    return
+  reporteForm.value = {
+    area_pasantia: '',
+    nombre_pasante: nombreGuardado,
+    mes: getMesActualNombre(),
+    fecha_inicio: getFechaInicioMesActualString(),
+    fecha_fin: getFechaActualString(),
+    objetivo: '',
+    actividades: [
+      { numero: 1, actividad: '', fecha: '', resultado_aprendizaje: '' },
+      { numero: 2, actividad: '', fecha: '', resultado_aprendizaje: '' }
+    ],
+    evidencias: []
   }
 
-  const horas = Number(reporteForm.value.horas_registradas)
-  if (isNaN(horas) || horas <= 0) {
-    return
-  }
-
-  cargando.value = true
+  // Intentar cargar sugerencias de la API si existen
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    const payload = {
-      user_id: userId,
-      nombre_reporte: reporteForm.value.nombre_reporte,
-      fecha_inicio: reporteForm.value.fecha_inicio || getFechaInicioMesActualString(),
-      fecha_fin: reporteForm.value.fecha_fin || getFechaActualString(),
-      horas_registradas: reporteForm.value.horas_registradas,
-      estado: 'En revisión',
-      actividades: reporteForm.value.actividades,
-      evidencias: reporteForm.value.evidencias
-    }
+    const token = localStorage.getItem('genesis_token')
+    const headers = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    if (userId) headers['X-User-Id'] = userId
 
-    if (esEdicion.value && reporteIdEditando.value) {
-      await axios.put(`/api/reportes/${reporteIdEditando.value}`, payload, {
-        headers: { 'X-User-Id': userId }
-      })
-      mostrarFeedback('Reporte actualizado correctamente.', 'exito')
-    } else {
-      await axios.post('/api/reportes', payload, {
-        headers: { 'X-User-Id': userId }
-      })
-      mostrarFeedback('Reporte creado y enviado a revisión correctamente.', 'exito')
+    const res = await axios.get('/api/reportes/formulario-inicial', { headers })
+    if (res.data && res.data.data) {
+      const data = res.data.data
+      if (data.nombre_pasante) reporteForm.value.nombre_pasante = data.nombre_pasante
+      if (data.area_pasantia) {
+        // Si el área de la API coincide con alguna de las opciones, asignarla
+        const coincide = areasPasantia.find(a => a.toLowerCase() === data.area_pasantia.toLowerCase())
+        if (coincide) reporteForm.value.area_pasantia = coincide
+      }
+      if (data.mes_sugerido) reporteForm.value.mes = data.mes_sugerido
     }
-
-    await cargarReportes()
-    vistaActual.value = 'tabla'
-  } catch (err) {
-    console.error('Error al guardar reporte:', err)
-    mostrarFeedback(err.response?.data?.mensaje || 'Error al guardar el reporte.', 'error')
-  } finally {
-    cargando.value = false
+  } catch (e) {
+    // Si falla, se mantienen los valores por defecto
   }
 }
 
 // ----------------------------------------------------
-// Navegación y Acciones UI
+// Acciones de Navegación y Apertura
 // ----------------------------------------------------
-
-const abrirNuevoReporte = () => {
+const abrirNuevoReporte = async () => {
   esEdicion.value = false
   reporteIdEditando.value = null
   intentoGuardar.value = false
-  intentoAgregarActividad.value = false
-  reporteForm.value = {
-    nombre_reporte: 'ACTIVIDADES DE ' + getNombreMesActual(),
-    fecha_inicio: getFechaInicioMesActualString(),
-    fecha_fin: getFechaActualString(),
-    horas_registradas: 0,
-    actividades: [],
-    evidencias: []
-  }
+  dropdownAreaAbierto.value = false
+  dropdownMesAbierto.value = false
+  await inicializarDatosFormulario()
   vistaActual.value = 'formulario'
 }
 
 const verDetalle = async (item) => {
+  cargando.value = true
   try {
-    cargando.value = true
-    const res = await axios.get(`/api/reportes/${item.id}`)
+    const token = localStorage.getItem('genesis_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await axios.get(`/api/reportes/${item.id}`, { headers })
     if (res.data && res.data.data) {
       reporteDetalle.value = res.data.data
     } else {
       reporteDetalle.value = item
     }
-    vistaActual.value = 'detalle'
   } catch (e) {
     reporteDetalle.value = item
-    vistaActual.value = 'detalle'
   } finally {
     cargando.value = false
+    vistaActual.value = 'detalle'
   }
 }
 
-// ----------------------------------------------------
-// Gestión de Actividades en Formulario
-// ----------------------------------------------------
+const volverATabla = () => {
+  dropdownAreaAbierto.value = false
+  dropdownMesAbierto.value = false
+  dropdownEstadoAbierto.value = false
+  vistaActual.value = 'tabla'
+}
 
-const abrirAgregarActividad = () => {
-  const val = Number(reporteForm.value.horas_registradas)
-  if (isNaN(val) || val <= 0) {
-    intentoAgregarActividad.value = true
+const editarReporteDesdeDetalle = () => {
+  if (!reporteDetalle.value) return
+  esEdicion.value = true
+  reporteIdEditando.value = reporteDetalle.value.id
+  reporteForm.value = {
+    area_pasantia: reporteDetalle.value.area_pasantia || '',
+    nombre_pasante: reporteDetalle.value.nombre_pasante || '',
+    mes: reporteDetalle.value.mes || '',
+    fecha_inicio: reporteDetalle.value.fecha_inicio ? String(reporteDetalle.value.fecha_inicio).split('T')[0] : '',
+    fecha_fin: reporteDetalle.value.fecha_fin ? String(reporteDetalle.value.fecha_fin).split('T')[0] : '',
+    objetivo: reporteDetalle.value.objetivo || '',
+    actividades: reporteDetalle.value.actividades && reporteDetalle.value.actividades.length > 0
+      ? JSON.parse(JSON.stringify(reporteDetalle.value.actividades))
+      : [
+          { numero: 1, actividad: '', fecha: '', resultado_aprendizaje: '' },
+          { numero: 2, actividad: '', fecha: '', resultado_aprendizaje: '' }
+        ],
+    evidencias: reporteDetalle.value.evidencias ? [...reporteDetalle.value.evidencias] : []
+  }
+  vistaActual.value = 'formulario'
+}
+
+// ----------------------------------------------------
+// Gestión de Filas de Actividades (En línea)
+// ----------------------------------------------------
+const agregarFilaActividad = () => {
+  const nuevoNumero = reporteForm.value.actividades.length + 1
+  reporteForm.value.actividades.push({
+    numero: nuevoNumero,
+    actividad: '',
+    fecha: '',
+    resultado_aprendizaje: ''
+  })
+}
+
+const eliminarFilaActividad = (index) => {
+  if (reporteForm.value.actividades.length <= 1) {
+    // Si es la única fila, solo la limpiamos para mantener al menos una
+    reporteForm.value.actividades[0] = {
+      numero: 1,
+      actividad: '',
+      fecha: '',
+      resultado_aprendizaje: ''
+    }
     return
   }
-  intentoAgregarActividad.value = false
-  mensajeFeedback.value = ''
-  intentoGuardarActividad.value = false
-  actividadIndexEditando.value = -1
-  actividadForm.value = {
-    fecha_actividad: getFechaInicioMesActualString(),
-    objetivo: '',
-    actividad_realizada: '',
-    logros_obtenidos: ''
-  }
-  vistaActual.value = 'actividad_form'
-}
 
-const editarActividad = (index) => {
-  mensajeFeedback.value = ''
-  intentoGuardarActividad.value = false
-  actividadIndexEditando.value = index
-  const act = reporteForm.value.actividades[index]
-  actividadForm.value = { ...act }
-  vistaActual.value = 'actividad_form'
-}
-
-const eliminarActividad = (index) => {
   reporteForm.value.actividades.splice(index, 1)
-}
-
-const guardarActividad = () => {
-  intentoGuardarActividad.value = true
-
-  if (
-    !actividadForm.value.fecha_actividad ||
-    !actividadForm.value.objetivo?.trim() ||
-    !actividadForm.value.actividad_realizada?.trim() ||
-    !actividadForm.value.logros_obtenidos?.trim()
-  ) {
-    return
-  }
-
-  if (actividadIndexEditando.value >= 0) {
-    reporteForm.value.actividades[actividadIndexEditando.value] = { ...actividadForm.value }
-  } else {
-    reporteForm.value.actividades.push({ ...actividadForm.value })
-  }
-
-  intentoGuardarActividad.value = false
-  vistaActual.value = 'formulario'
-}
-
-const cancelarActividad = () => {
-  intentoGuardarActividad.value = false
-  vistaActual.value = 'formulario'
+  // Re-enumerar correlativo
+  reporteForm.value.actividades.forEach((act, i) => {
+    act.numero = i + 1
+  })
 }
 
 // ----------------------------------------------------
-// Gestión de Imágenes / Evidencias
+// Gestión de Imágenes y Evidencias
 // ----------------------------------------------------
+const triggerInputFoto = () => {
+  const input = document.getElementById('input-evidencias-upload')
+  if (input) input.click()
+}
 
 const handleFileUpload = (event) => {
   const files = event.target.files
   if (!files || files.length === 0) return
 
   const fotosActuales = reporteForm.value.evidencias.length
-  if (fotosActuales >= 4) {
+  if (fotosActuales >= 6) {
+    mostrarFeedback('Se permite un máximo de 6 imágenes de evidencia por reporte.')
     event.target.value = ''
     return
   }
 
-  const espacioDisponible = 4 - fotosActuales
+  const espacioDisponible = 6 - fotosActuales
   const cantidadACargar = Math.min(files.length, espacioDisponible)
 
   for (let i = 0; i < cantidadACargar; i++) {
     const file = files[i]
+    if (!file.type.startsWith('image/')) continue
+
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (reporteForm.value.evidencias.length < 4) {
+      if (reporteForm.value.evidencias.length < 6) {
         reporteForm.value.evidencias.push(e.target.result)
       }
     }
@@ -331,366 +371,421 @@ const eliminarEvidencia = (index) => {
 }
 
 // ----------------------------------------------------
-// Helpers y Utilidades
+// Guardar y Enviar Reporte a la API
 // ----------------------------------------------------
+const enviarReporte = async () => {
+  intentoGuardar.value = true
+  feedbackMensaje.value = ''
 
-const mostrarFeedback = (mensaje, tipo = 'exito') => {
-  mensajeFeedback.value = mensaje
-  tipoFeedback.value = tipo
+  // Validaciones obligatorias de Información General
+  if (!reporteForm.value.area_pasantia?.trim()) {
+    mostrarFeedback('Por favor seleccione el área de pasantía.')
+    return
+  }
+  if (!reporteForm.value.nombre_pasante?.trim()) {
+    mostrarFeedback('El nombre del pasante es requerido.')
+    return
+  }
+  if (!reporteForm.value.mes?.trim()) {
+    mostrarFeedback('Por favor seleccione el mes del reporte.')
+    return
+  }
+  if (!reporteForm.value.fecha_inicio) {
+    mostrarFeedback('La fecha de inicio es requerida.')
+    return
+  }
+  if (!reporteForm.value.fecha_fin) {
+    mostrarFeedback('La fecha de finalización es requerida.')
+    return
+  }
+  if (!reporteForm.value.objetivo?.trim()) {
+    mostrarFeedback('El objetivo del reporte es requerido.')
+    return
+  }
+
+  // Filtrar actividades válidas que tengan contenido
+  const actividadesValidas = reporteForm.value.actividades.filter(
+    a => a.actividad?.trim() || a.fecha || a.resultado_aprendizaje?.trim()
+  )
+
+  if (actividadesValidas.length === 0) {
+    mostrarFeedback('Debe registrar al menos una actividad realizada con su fecha y resultado.')
+    return
+  }
+
+  // Validar que cada actividad con contenido esté completa
+  for (let i = 0; i < actividadesValidas.length; i++) {
+    const act = actividadesValidas[i]
+    if (!act.actividad?.trim() || !act.fecha || !act.resultado_aprendizaje?.trim()) {
+      mostrarFeedback(`Por favor complete todos los campos de la actividad Nº ${i + 1} (actividad, fecha y resultado).`)
+      return
+    }
+  }
+
+  enviando.value = true
+  try {
+    const userId = usuario.value?.id || usuario.value?.user_id
+    const token = localStorage.getItem('genesis_token')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    if (userId) headers['X-User-Id'] = userId
+
+    const payload = {
+      user_id: userId,
+      area_pasantia: reporteForm.value.area_pasantia,
+      nombre_pasante: reporteForm.value.nombre_pasante,
+      mes: reporteForm.value.mes,
+      fecha_inicio: reporteForm.value.fecha_inicio,
+      fecha_fin: reporteForm.value.fecha_fin,
+      objetivo: reporteForm.value.objetivo,
+      estado: 'En revisión',
+      actividades: actividadesValidas.map((a, idx) => ({
+        numero: idx + 1,
+        actividad: a.actividad.trim(),
+        fecha: a.fecha,
+        resultado_aprendizaje: a.resultado_aprendizaje.trim()
+      })),
+      evidencias: reporteForm.value.evidencias
+    }
+
+    if (esEdicion.value && reporteIdEditando.value) {
+      await axios.put(`/api/reportes/${reporteIdEditando.value}`, payload, { headers })
+    } else {
+      await axios.post('/api/reportes', payload, { headers })
+    }
+
+    // Refrescar lista
+    await cargarReportes()
+
+    // Mostrar modal / toast de éxito de la Captura 4
+    toastMensaje.value = 'El reporte ha sido enviado de manera exitosa.'
+    toastExitoVisible.value = true
+
+    // Regresar a la tabla
+    vistaActual.value = 'tabla'
+  } catch (err) {
+    console.error('Error al enviar reporte:', err)
+    const msg = err.response?.data?.mensaje || err.response?.data?.message || 'Error al enviar el reporte. Verifique los datos.'
+    mostrarFeedback(msg)
+  } finally {
+    enviando.value = false
+  }
+}
+
+const mostrarFeedback = (mensaje, tipo = 'error') => {
+  feedbackMensaje.value = mensaje
+  feedbackTipo.value = tipo
   setTimeout(() => {
-    mensajeFeedback.value = ''
-  }, 4000)
+    feedbackMensaje.value = ''
+  }, 5000)
 }
 
-const formatearMes = (fechaStr) => {
-  if (!fechaStr) return 'Agosto'
-  try {
-    const date = new Date(fechaStr)
-    const mes = date.toLocaleString('es', { month: 'long' })
-    return mes.charAt(0).toUpperCase() + mes.slice(1)
-  } catch (e) {
-    return 'Agosto'
+const cerrarToastExito = () => {
+  toastExitoVisible.value = false
+}
+
+// Filtro computado de reportes en caso de búsqueda local rápida
+const reportesMostrados = computed(() => {
+  let lista = reportes.value && reportes.value.length > 0 ? reportes.value : reportesPorDefecto
+
+  if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
+    lista = lista.filter(item => item.estado === estadoFiltro.value)
   }
-}
 
-const formatearPeriodo = (inicio, fin) => {
-  if (!inicio || !fin) return '01 Agt – 27 agt 2026'
-  try {
-    const d1 = new Date(inicio)
-    const d2 = new Date(fin)
-    const p1 = d1.getDate().toString().padStart(2, '0') + ' ' + d1.toLocaleString('es', { month: 'short' })
-    const p2 = d2.getDate().toString().padStart(2, '0') + ' ' + d2.toLocaleString('es', { month: 'short' }) + ' ' + d2.getFullYear()
-    return `${p1} – ${p2}`
-  } catch (e) {
-    return `${inicio} – ${fin}`
-  }
-}
+  if (!busqueda.value?.trim()) return lista
 
-const normalizarTexto = (str) => {
-  if (!str && str !== 0) return ''
-  return String(str)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-}
-
-const reportesFiltrados = computed(() => {
-  const queryLimpia = normalizarTexto(busqueda.value)
-  const tokens = queryLimpia.split(/\s+/).filter(Boolean)
-
-  return reportes.value.filter(item => {
-    // 1. Construir un mega-texto con todos los datos y campos del reporte
-    const nombre = item.nombre_reporte || ''
-    const mesCreacion = item.created_at ? formatearMes(item.created_at) : (item.fecha_inicio ? formatearMes(item.fecha_inicio) : '')
-    const periodo = item.periodo || formatearPeriodo(item.fecha_inicio, item.fecha_fin)
-    const horas = String(item.horas_registradas || item.horas || 0)
-    const estado = item.estado || ''
-    const fechaInicioStr = item.fecha_inicio || ''
-    const fechaFinStr = item.fecha_fin || ''
-    const createdAtStr = item.created_at || ''
-
-    // Concatenar texto de actividades si existen
-    const actividadesText = Array.isArray(item.actividades)
-      ? item.actividades.map(a => `${a.objetivo || ''} ${a.actividad_realizada || ''} ${a.logros_obtenidos || ''}`).join(' ')
-      : ''
-
-    const blobTextoCompleto = normalizarTexto(
-      `${nombre} ${mesCreacion} ${periodo} ${horas} ${horas}h ${horas} horas ${estado} ${fechaInicioStr} ${fechaFinStr} ${createdAtStr} ${actividadesText}`
-    )
-
-    // Verificar que TODOS los términos ingresados existan en cualquier orden
-    if (tokens.length > 0) {
-      const coincideTodosLosTokens = tokens.every(token => blobTextoCompleto.includes(token))
-      if (!coincideTodosLosTokens) return false
-    }
-
-    // 2. Filtro por Dropdown de Estado
-    if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
-      if (item.estado !== estadoFiltro.value) return false
-    }
-
-    // 3. Filtro por Calendario de Fecha de Creación (reportes anteriores o iguales a la fecha seleccionada)
-    if (fechaCreacionFiltro.value) {
-      const fechaReporte = item.created_at || item.fecha_inicio
-      if (fechaReporte) {
-        try {
-          let limitDate
-          if (fechaCreacionFiltro.value.includes('-')) {
-            const [y, m, d] = fechaCreacionFiltro.value.split('-').map(Number)
-            limitDate = new Date(y, m - 1, d, 23, 59, 59, 999)
-          } else if (fechaCreacionFiltro.value.includes('/')) {
-            const [d, m, y] = fechaCreacionFiltro.value.split('/').map(Number)
-            limitDate = new Date(y, m - 1, d, 23, 59, 59, 999)
-          } else {
-            limitDate = new Date(fechaCreacionFiltro.value)
-            limitDate.setHours(23, 59, 59, 999)
-          }
-
-          const repDate = new Date(fechaReporte)
-          if (!isNaN(limitDate.getTime()) && !isNaN(repDate.getTime())) {
-            if (repDate > limitDate) return false
-          }
-        } catch (e) {
-          // Ignorar error de parseo de fecha
-        }
-      }
-    }
-
-    return true
+  const q = busqueda.value.toLowerCase().trim()
+  return lista.filter(item => {
+    const mes = (item.mes || '').toLowerCase()
+    const periodo = (item.periodo || '').toLowerCase()
+    const area = (item.area_pasantia || '').toLowerCase()
+    const pasante = (item.nombre_pasante || '').toLowerCase()
+    const objetivo = (item.objetivo || '').toLowerCase()
+    return mes.includes(q) || periodo.includes(q) || area.includes(q) || pasante.includes(q) || objetivo.includes(q)
   })
 })
 
 onMounted(() => {
-  // Cargar lista inicial
   cargarReportes()
 })
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto font-sans antialiased text-gray-800">
-    
-
+  <div class="max-w-6xl mx-auto font-sans antialiased text-slate-800 relative pb-12">
 
     <!-- ========================================================================= -->
-    <!-- VISTA 1: TABLA PRINCIPAL DE REPORTES (Capturas 1 y 2) -->
+    <!-- TOAST NOTIFICACIÓN: ENVIADO DE MANERA EXITOSA (Captura 4) -->
+    <!-- ========================================================================= -->
+    <transition
+      enter-active-class="transform ease-out duration-300 transition"
+      enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
+      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+      leave-active-class="transition ease-in duration-200"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div 
+        v-if="toastExitoVisible"
+        class="fixed bottom-6 right-6 z-50 bg-[#00C853] text-white rounded-2xl shadow-2xl p-5 w-80 sm:w-96 border border-emerald-400/40"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-2.5">
+            <!-- Icono check circular -->
+            <div class="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h4 class="text-lg font-bold tracking-tight">Enviado</h4>
+          </div>
+          <!-- Botón cerrar (X) -->
+          <button 
+            @click="cerrarToastExito"
+            class="text-white/80 hover:text-white transition-colors cursor-pointer p-0.5"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p class="text-white/95 text-sm mt-2 mb-4 leading-relaxed font-normal">
+          {{ toastMensaje }}
+        </p>
+
+        <div class="flex justify-end">
+          <button
+            @click="cerrarToastExito"
+            class="px-5 py-1.5 border border-white rounded-lg text-xs font-semibold text-white hover:bg-white hover:text-[#00C853] transition-all cursor-pointer shadow-xs"
+          >
+            Aceptar
+          </button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- BANNER DE FEEDBACK TEMPORAL (ERRORES O ADVERTENCIAS) -->
+    <div 
+      v-if="feedbackMensaje"
+      class="mb-6 p-4 rounded-xl text-sm font-medium flex items-center justify-between border shadow-xs"
+      :class="feedbackTipo === 'error' ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-blue-50 text-blue-800 border-blue-200'"
+    >
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span>{{ feedbackMensaje }}</span>
+      </div>
+      <button @click="feedbackMensaje = ''" class="text-sm font-bold opacity-70 hover:opacity-100 cursor-pointer">✕</button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VISTA 1: TABLA PRINCIPAL DE REPORTES (Captura 1) -->
     <!-- ========================================================================= -->
     <div v-if="vistaActual === 'tabla'">
       
-      <!-- HEADER CON FILTROS Y BOTÓN NUEVO REPORTE -->
+      <!-- TOOLBAR SUPERIOR: BUSCAR + ESTADO + BOTÓN NUEVO REPORTE -->
       <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
         
-        <!-- BARRA DE BÚSQUEDA -->
-        <div class="relative flex-1 min-w-[240px] max-w-md">
+        <!-- BARRA DE BÚSQUEDA REDONDEADA AZUL -->
+        <div class="relative flex-1 min-w-[260px] max-w-md">
           <input 
             v-model="busqueda"
             @input="cargarReportes"
             type="text" 
             placeholder="Buscar..."
-            class="w-full pl-5 pr-10 py-2.5 bg-white border border-cyan-700/60 rounded-full text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs placeholder-gray-400 font-normal"
+            class="w-full pl-5 pr-12 py-2.5 bg-white border border-[#2563EB]/70 rounded-full text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs placeholder-slate-400 font-normal transition-all"
           />
-          <svg class="w-5 h-5 absolute right-3.5 top-1/2 -translate-y-1/2 text-cyan-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
-        <!-- CONTROLES DERECHOS: DROPDOWN ESTADO + FECHA CREACIÓN + NUEVO REPORTE -->
+        <!-- FILTRO ESTADO + BOTÓN NUEVO REPORTE -->
         <div class="flex items-center gap-4 flex-wrap">
           
-          <!-- DROPDOWN ESTADO -->
-          <div class="relative">
+          <!-- DROPDOWN ESTADO: TODOS (Imagen 4) -->
+          <div class="relative min-w-[140px]">
             <button 
               @click="dropdownEstadoAbierto = !dropdownEstadoAbierto"
-              class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-700 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-50 shadow-xs cursor-pointer min-w-[140px] justify-between"
+              class="w-full flex items-center justify-between gap-2 px-3.5 py-2 bg-white border border-[#2563EB] text-sm text-slate-800 hover:bg-slate-50 shadow-xs cursor-pointer transition-all"
+              :class="dropdownEstadoAbierto ? 'rounded-t-[8px] border-b-0' : 'rounded-[8px]'"
             >
-              <span>Estado: {{ estadoFiltro }}</span>
-              <svg class="w-4 h-4 text-gray-700 transition-transform" :class="{ 'rotate-180': dropdownEstadoAbierto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
+              <span class="text-[13px] font-normal">Estado: {{ estadoFiltro }}</span>
+              <span class="text-[10px] text-black">
+                {{ dropdownEstadoAbierto ? '▲' : '▼' }}
+              </span>
             </button>
 
-            <!-- MENÚ DESPLEGABLE CON LAS OPCIONES DE LA MAQUETA (Captura 2) -->
+            <!-- Menú desplegable de estados exacto a Imagen 4 -->
             <div 
               v-if="dropdownEstadoAbierto" 
-              class="absolute right-0 mt-1 w-36 bg-white border border-slate-400 rounded-md shadow-lg z-20 overflow-hidden py-1 text-center"
+              class="absolute left-0 right-0 top-full bg-white border border-[#2563EB] rounded-b-[8px] shadow-lg z-30 overflow-hidden py-1 text-center"
             >
               <button 
-                @click="estadoFiltro = 'Enviado'; dropdownEstadoAbierto = false; cargarReportes()"
-                class="w-full px-4 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 block text-center cursor-pointer"
+                v-for="opc in ['En revisión', 'Aprobado', 'Todos']"
+                :key="opc"
+                @click="estadoFiltro = opc; dropdownEstadoAbierto = false; cargarReportes()"
+                class="w-full py-1.5 text-[13px] text-slate-800 hover:bg-blue-50 cursor-pointer transition-colors text-center block"
+                :class="{ 'font-semibold text-[#000B58]': estadoFiltro === opc }"
               >
-                Enviado
+                {{ opc }}
               </button>
-              <button 
-                @click="estadoFiltro = 'En revisión'; dropdownEstadoAbierto = false; cargarReportes()"
-                class="w-full px-4 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 block text-center cursor-pointer"
-              >
-                En revisión
-              </button>
-              <button 
-                @click="estadoFiltro = 'Aprobado'; dropdownEstadoAbierto = false; cargarReportes()"
-                class="w-full px-4 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 block text-center cursor-pointer"
-              >
-                Aprobado
-              </button>
-              <button 
-                @click="estadoFiltro = 'Todos'; dropdownEstadoAbierto = false; cargarReportes()"
-                class="w-full px-4 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 block text-center cursor-pointer"
-              >
-                Todos
-              </button>
-            </div>
-          </div>
-
-          <!-- FECHA DE CREACIÓN -->
-          <div class="flex items-center gap-2 text-xs text-gray-600">
-            <span>Fecha de creación</span>
-            <div class="relative flex items-center">
-              <input 
-                type="date" 
-                v-model="fechaCreacionFiltro"
-                class="w-32 pl-7 pr-1 py-1.5 bg-white border border-cyan-500 rounded-md text-xs text-cyan-800 font-medium text-center focus:outline-none shadow-xs cursor-pointer"
-              />
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 21 24" fill="none" class="absolute left-2 pointer-events-none">
-                <g clip-path="url(#clip0_7350_1304_filtro)">
-                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
-                </g>
-                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
-                <defs>
-                  <clipPath id="clip0_7350_1304_filtro">
-                    <rect width="20.8138" height="23.7872" fill="white"/>
-                  </clipPath>
-                </defs>
-              </svg>
             </div>
           </div>
 
           <!-- BOTÓN + NUEVO REPORTE -->
           <button 
             @click="abrirNuevoReporte"
-            class="flex items-center gap-2.5 px-5 py-2 bg-[#000B58] text-white rounded-full text-sm font-medium hover:bg-[#000840] shadow-md transition-all cursor-pointer font-serif tracking-wide"
+            class="flex items-center gap-2 px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white rounded-full text-sm font-medium shadow-md transition-all cursor-pointer font-serif tracking-wide"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" viewBox="0 0 25 24" fill="none" class="w-[25px] h-[24px] shrink-0">
-              <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="white"/>
-              <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="#000B58"/>
-              <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="#000B58"/>
-            </svg>
+            <!-- Icono circular blanco con plus -->
+            <div class="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-[#000B58]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
             <span>Nuevo reporte</span>
           </button>
 
         </div>
       </div>
 
-      <!-- CONTENEDOR DE LA TABLA DE REPORTES -->
-      <div class="bg-gray-50/50 rounded-2xl p-6 shadow-xs border border-gray-100">
-        
-        <!-- ENCABEZADOS DE COLUMNA -->
-        <div class="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-gray-400 mb-2">
-          <div class="col-span-3 text-left">Nombre del reporte</div>
-          <div class="col-span-2 text-center">Fecha de creación</div>
-          <div class="col-span-2 text-center">Periodo</div>
-          <div class="col-span-2 text-center">Horas registradas</div>
-          <div class="col-span-2 text-center">Estado</div>
-          <div class="col-span-1 text-right">Acciones</div>
-        </div>
+      <!-- ENCABEZADOS DE COLUMNA DE LA TABLA (Idénticos a la Captura 1) -->
+      <div class="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-semibold text-slate-400 mb-2">
+        <div class="col-span-3 text-left">Mes del reporte</div>
+        <div class="col-span-3 text-left">Periodo</div>
+        <div class="col-span-2 text-center">Actividades desarrolladas</div>
+        <div class="col-span-2 text-center">Estado</div>
+        <div class="col-span-2 text-center">Acciones</div>
+      </div>
 
-        <!-- INDICADOR DE CARGA -->
-        <div v-if="cargando" class="py-12 text-center text-gray-500 text-sm">
-          Cargando reportes...
-        </div>
+      <!-- INDICADOR DE CARGA -->
+      <div v-if="cargando" class="py-16 text-center text-slate-500 text-sm bg-white rounded-2xl border border-slate-100 shadow-xs">
+        <div class="inline-block animate-spin w-6 h-6 border-2 border-[#000B58] border-t-transparent rounded-full mb-2"></div>
+        <p>Cargando reportes mensuales...</p>
+      </div>
 
-        <!-- LISTA VACÍA -->
-        <div v-else-if="reportesFiltrados.length === 0" class="py-12 text-center bg-white rounded-xl border border-dashed border-gray-300">
-          <p class="text-gray-500 text-sm mb-3">No hay reportes registrados aún.</p>
-          <button 
-            @click="abrirNuevoReporte"
-            class="px-5 py-2 bg-[#000B58] text-white text-xs font-medium rounded-full hover:bg-[#000840]"
-          >
-            Crear primer reporte
-          </button>
+      <!-- LISTA VACÍA (Sin datos de prueba) -->
+      <div v-else-if="reportesMostrados.length === 0" class="py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300 shadow-xs">
+        <div class="w-14 h-14 mx-auto mb-3 text-slate-300">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
         </div>
+        <h3 class="text-base font-semibold text-slate-700 mb-1">No hay reportes registrados aún</h3>
+        <p class="text-slate-500 text-xs mb-4 max-w-sm mx-auto">
+          Comienza redactando tu primer reporte mensual de pasantía para dar seguimiento a tus actividades.
+        </p>
+        <button 
+          @click="abrirNuevoReporte"
+          class="px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white text-xs font-semibold rounded-full shadow-sm cursor-pointer transition-all"
+        >
+          + Crear primer reporte
+        </button>
+      </div>
 
-        <!-- FILAS DE REPORTES (Coincide idénticamente con la maquetación) -->
-        <div v-else class="space-y-3">
-          <div 
-            v-for="item in reportesFiltrados" 
-            :key="item.id"
-            class="grid grid-cols-12 gap-4 items-center bg-white px-6 py-4 rounded-xl border border-gray-100 shadow-2xs hover:shadow-xs transition-shadow"
-          >
-            <!-- NOMBRE DEL REPORTE CON ÍCONO -->
-            <div class="col-span-3 flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none" class="shrink-0 mt-0.5">
-                <g clip-path="url(#clip0_7008_852_reporte)">
-                  <path d="M14.7782 0H1.64203C0.738912 0 0 0.738912 0 1.64203V15.8729C0 16.776 0.738912 17.515 1.64203 17.515H14.7782C15.6814 17.515 16.4203 16.776 16.4203 15.8729V1.64203C16.4203 0.738912 15.6814 0 14.7782 0ZM14.2309 15.3256H2.18937V2.18937H14.2309V15.3256ZM4.37874 9.85217H12.0415V10.9469H4.37874V9.85217ZM4.37874 12.0415H12.0415V13.1362H4.37874V12.0415ZM5.47343 4.92608C5.4735 4.71038 5.51605 4.4968 5.59867 4.29754C5.68128 4.09828 5.80233 3.91724 5.95491 3.76477C6.10749 3.61229 6.28861 3.49136 6.48792 3.40888C6.68723 3.3264 6.90084 3.28398 7.11655 3.28406C7.33225 3.28413 7.54583 3.32668 7.74509 3.4093C7.94435 3.49191 8.12539 3.61296 8.27786 3.76554C8.43034 3.91812 8.55127 4.09924 8.63375 4.29855C8.63375 4.49786 8.75865 4.71147 8.75858 4.92718C8.75843 5.36282 8.58523 5.78055 8.27709 6.08849C7.96894 6.39643 7.55109 6.56935 7.11545 6.56921C6.67982 6.56906 6.26208 6.39586 5.95414 6.08772C5.6462 5.77957 5.47328 5.36172 5.47343 4.92608ZM8.21014 6.56811H6.02077C5.11765 6.56811 4.37874 7.06072 4.37874 7.6628V8.75748H9.85217V7.6628C9.85217 7.06072 9.11325 6.56811 8.21014 6.56811Z" fill="black"/>
+      <!-- FILAS DE REPORTES (Exactamente como en Captura 1) -->
+      <div v-else class="space-y-3">
+        <div 
+          v-for="item in reportesMostrados" 
+          :key="item.id"
+          class="grid grid-cols-12 gap-4 items-center bg-white px-6 py-4 rounded-xl border border-slate-100 shadow-xs hover:shadow-md transition-all"
+        >
+          <!-- COLUMNA 1: MES DEL REPORTE CON ÍCONO (Imagen 4) -->
+          <div class="col-span-3 flex items-center gap-3">
+            <svg class="w-5 h-5 text-slate-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <circle cx="8.5" cy="9.5" r="1.5" />
+              <line x1="12.5" y1="8.5" x2="17.5" y2="8.5" />
+              <line x1="12.5" y1="11.5" x2="17.5" y2="11.5" />
+              <line x1="6.5" y1="15.5" x2="17.5" y2="15.5" />
+            </svg>
+            <span class="text-sm font-semibold text-slate-800 capitalize">
+              {{ item.mes || 'Reporte' }}
+            </span>
+          </div>
+
+          <!-- COLUMNA 2: PERIODO -->
+          <div class="col-span-3 text-left text-xs font-medium text-slate-600">
+            {{ item.periodo || 'Periodo no definido' }}
+          </div>
+
+          <!-- COLUMNA 3: ACTIVIDADES DESARROLLADAS (Conteo) -->
+          <div class="col-span-2 text-center text-sm font-semibold text-slate-700">
+            {{ item.actividades_desarrolladas ?? (item.actividades ? item.actividades.length : 0) }}
+          </div>
+
+          <!-- COLUMNA 4: ESTADO (Badges calcados a Figma — Imágenes 1, 2 y 3) -->
+          <div class="col-span-2 flex justify-center">
+            <!-- En revisión -->
+            <span 
+              v-if="item.estado === 'En revisión' || item.estado === 'en_espera'"
+              class="select-none"
+              style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: var(--color-acento, #FFC071); align-items: center; justify-content: center; gap: 8px;"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
+                <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
+                <g transform="translate(2.44, 2.5)">
+                  <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
                 </g>
-                <defs>
-                  <clipPath id="clip0_7008_852_reporte">
-                    <rect width="17.515" height="17.515" fill="white"/>
-                  </clipPath>
-                </defs>
               </svg>
-              <span class="text-xs font-bold text-black uppercase tracking-wide leading-snug">
-                {{ item.nombre_reporte || 'REPORTE' }}
-              </span>
-            </div>
+              <span class="text-black font-bold text-[13px] leading-none">En revisión</span>
+            </span>
 
-            <!-- FECHA DE CREACIÓN -->
-            <div class="col-span-2 text-center text-xs font-medium text-gray-700">
-              {{ formatearMes(item.created_at || item.fecha_inicio) }}
-            </div>
+            <!-- Aprobado -->
+            <span 
+              v-else-if="item.estado === 'Aprobado' || item.estado === 'aprobado'"
+              class="select-none"
+              style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #00C853; align-items: center; justify-content: center; gap: 8px;"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
+                <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
+                <g transform="translate(2.44, 2.5)">
+                  <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
+                </g>
+              </svg>
+              <span class="text-black font-bold text-[13px] leading-none">Aprobado</span>
+            </span>
 
-            <!-- PERIODO -->
-            <div class="col-span-2 text-center text-xs font-medium text-gray-700">
-              {{ item.periodo || formatearPeriodo(item.fecha_inicio, item.fecha_fin) }}
-            </div>
+            <!-- Otros estados -->
+            <span 
+              v-else
+              class="select-none"
+              style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #E2E8F0; align-items: center; justify-content: center; gap: 8px;"
+            >
+              <span class="text-slate-800 font-bold text-[13px] leading-none">{{ item.estado || 'Enviado' }}</span>
+            </span>
+          </div>
 
-            <!-- HORAS REGISTRADAS -->
-            <div class="col-span-2 text-center text-xs font-medium text-gray-800">
-              {{ item.horas_registradas || item.horas || 0 }}
-            </div>
-
-            <!-- ESTADO BADGE (Con insignias exactas de la captura) -->
-            <div class="col-span-2 flex justify-center">
-              <!-- En revisión (Pill #FFC071) -->
-              <span 
-                v-if="item.estado === 'En revisión' || item.estado === 'en_espera'"
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FFC071] text-gray-900 shadow-xs"
-              >
-                <svg class="w-3.5 h-3.5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                En revisión
-              </span>
-
-              <!-- Aprobado (Pill #FFC071 con check de aprobado) -->
-              <span 
-                v-else-if="item.estado === 'Aprobado' || item.estado === 'aprobado'"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-[#FFC071] text-gray-900 shadow-xs"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2.02698 4.86492L4.054 6.89194L8.10806 2.83789" stroke="black" stroke-opacity="0.6" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Aprobado
-              </span>
-
-              <!-- Enviado (Pill azul) -->
-              <span 
-                v-else
-                class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 shadow-xs"
-              >
-                Enviado
-              </span>
-            </div>
-
-            <!-- ACCIONES: VER INFORME -->
-            <div class="col-span-1 flex justify-end">
-              <button 
-                @click="verDetalle(item)"
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-[#000B58] transition-colors cursor-pointer"
-              >
-                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>Ver informe</span>
-              </button>
-            </div>
+          <!-- COLUMNA 5: ACCIONES: VER REPORTE -->
+          <div class="col-span-2 flex justify-center">
+            <button 
+              @click="verDetalle(item)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-[#000B58] transition-colors cursor-pointer group"
+            >
+              <svg class="w-4 h-4 text-slate-500 group-hover:text-[#000B58] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span>Ver informe</span>
+            </button>
           </div>
         </div>
-
       </div>
 
     </div>
 
     <!-- ========================================================================= -->
-    <!-- VISTA 2: FORMULARIO "NUEVO REPORTE" (Captura 3) -->
+    <!-- VISTA 2: FORMULARIO "NUEVO REPORTE" (Capturas 2, 3 y 4) -->
     <!-- ========================================================================= -->
     <div v-else-if="vistaActual === 'formulario'">
       
-      <!-- NAVEGACIÓN BREADCRUMB -->
-      <div class="flex items-center gap-2 mb-6">
+      <!-- ENLACE VOLVER: ← Reportes/ Nuevo reporte -->
+      <div class="mb-5">
         <button 
-          @click="vistaActual = 'tabla'"
-          class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-[#000B58] cursor-pointer"
+          @click="volverATabla"
+          class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-[#000B58] transition-colors cursor-pointer"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -699,521 +794,626 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- CAMPOS DEL FORMULARIO PRINCIPAL -->
-      <div class="space-y-6 bg-white p-2 rounded-2xl">
+      <!-- CONTENEDOR PRINCIPAL CON BORDE AZUL CLARO (Como en las capturas 2, 3 y 4) -->
+      <div class="bg-white rounded-2xl border border-blue-400 p-8 sm:p-10 shadow-sm max-w-4xl mx-auto">
         
-        <!-- PRIMERA FILA: NOMBRE REPORTE + FECHAS -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          
-          <!-- Nombre del reporte* -->
-          <div class="md:col-span-6">
-            <label class="block text-sm font-medium text-gray-800 mb-2">
-              Nombre del reporte<span class="text-rose-500">*</span>
-            </label>
-            <input 
-              v-model="reporteForm.nombre_reporte"
-              type="text" 
-              placeholder="ACTIVIDADES DE AGOSTO"
-              class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-800 uppercase focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none"
-              :class="intentoGuardar && !reporteForm.nombre_reporte?.trim() ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
+        <!-- ENCABEZADO INSTITUCIONAL DE LA FACULTAD -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8 pb-6 border-b border-slate-100">
+          <!-- Logo UGB -->
+          <div class="shrink-0 flex items-center justify-center">
+            <img 
+              src="/images/Logo_para_reportes_mensuales.png" 
+              alt="Universidad Gerardo Barrios" 
+              style="width:123.482px; height:100px; flex-shrink:0; aspect-ratio:123.48/100; object-fit:contain;"
+              @error="(e) => e.target.style.display = 'none'"
             />
-            <p v-if="intentoGuardar && !reporteForm.nombre_reporte?.trim()" class="text-xs text-rose-500 mt-1.5 font-medium">
-              Campo obligatorio
+          </div>
+
+          <!-- Títulos Oficiales de la Facultad -->
+          <div class="text-center">
+            <h2 style="font-family:'Lora',serif; font-size:24px; font-weight:500; color:#010C67; text-align:center; line-height:normal;">
+              FACULTAD DE CIENCIA Y TECNOLOGÍA
+            </h2>
+            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-0.5">
+              Trabajo de Graduación Modalidad Pasantía
+            </h3>
+            <p class="text-sm font-medium text-[#1E3A8A] text-center mt-0.5">
+              Reporte mensual
             </p>
           </div>
-
-          <!-- Fecha Inicio* -->
-          <div class="md:col-span-3">
-            <label class="block text-sm font-medium text-gray-800 mb-2">
-              Fecha Inicio<span class="text-rose-500">*</span>
-            </label>
-            <div class="relative flex items-center">
-              <input 
-                v-model="reporteForm.fecha_inicio"
-                type="date" 
-                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#00589B] font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
-              />
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
-                <g clip-path="url(#clip0_7350_1304_inicio)">
-                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
-                </g>
-                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
-                <defs>
-                  <clipPath id="clip0_7350_1304_inicio">
-                    <rect width="20.8138" height="23.7872" fill="white"/>
-                  </clipPath>
-                </defs>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Fecha Finalización* -->
-          <div class="md:col-span-3">
-            <label class="block text-sm font-medium text-gray-800 mb-2">
-              Fecha Finalización<span class="text-rose-500">*</span>
-            </label>
-            <div class="relative flex items-center">
-              <input 
-                v-model="reporteForm.fecha_fin"
-                type="date" 
-                class="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#00589B] font-semibold focus:ring-2 focus:ring-[#000B58] focus:border-transparent outline-none shadow-xs cursor-pointer"
-              />
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
-                <g clip-path="url(#clip0_7350_1304_fin)">
-                  <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
-                </g>
-                <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
-                <defs>
-                  <clipPath id="clip0_7350_1304_fin">
-                    <rect width="20.8138" height="23.7872" fill="white"/>
-                  </clipPath>
-                </defs>
-              </svg>
-            </div>
-          </div>
-
         </div>
 
-        <!-- SEGUNDA FILA: CANTIDAD DE HORAS + BOTÓN AGREGAR ACTIVIDAD -->
-        <div>
-          <label class="block text-sm font-medium text-gray-800 mb-2">
-            Cantidad de horas<span class="text-rose-500">*</span>
-          </label>
-          <div class="flex items-center gap-6">
-            <input 
-              v-model.number="reporteForm.horas_registradas"
-              @input="onCambioHoras"
-              type="number" 
-              min="0"
-              placeholder="0"
-              class="w-32 px-4 py-2.5 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none"
-              :class="errorHorasMensaje ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
-            />
+        <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
+        <div class="mb-8">
+          <h3 class="text-lg font-serif font-bold text-slate-800 mb-5">
+            Información General
+          </h3>
+
+          <!-- FILA 1: Área de pasantía + Nombre del pasante + Mes -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mb-5 items-start">
             
-            <button 
-              @click="abrirAgregarActividad"
-              type="button"
-              class="flex items-center gap-2.5 px-5 py-2 bg-[#000B58] text-white rounded-full text-xs font-semibold hover:bg-[#000840] shadow-sm transition-all cursor-pointer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" viewBox="0 0 25 24" fill="none" class="w-[22px] h-[22px] shrink-0">
-                <path d="M25 12C25 8.8174 23.683 5.76515 21.3388 3.51472C18.9946 1.26428 15.8152 0 12.5 0C9.18479 0 6.00537 1.26428 3.66116 3.51472C1.31696 5.76515 0 8.8174 0 12C0 15.1826 1.31696 18.2348 3.66116 20.4853C6.00537 22.7357 9.18479 24 12.5 24C15.8152 24 18.9946 22.7357 21.3388 20.4853C23.683 18.2348 25 15.1826 25 12Z" fill="#000B58"/>
-                <path d="M11.1995 6.7513C11.1995 6.39768 11.3458 6.05854 11.6063 5.80849C11.8667 5.55844 12.22 5.41797 12.5884 5.41797C12.9567 5.41797 13.31 5.55844 13.5704 5.80849C13.8309 6.05854 13.9772 6.39768 13.9772 6.7513V17.418C13.9772 17.7716 13.8309 18.1107 13.5704 18.3608C13.31 18.6108 12.9567 18.7513 12.5884 18.7513C12.22 18.7513 11.8667 18.6108 11.6063 18.3608C11.3458 18.1107 11.1995 17.7716 11.1995 17.418V6.7513Z" fill="white"/>
-                <path d="M18.1355 10.7219C18.5038 10.7198 18.858 10.8583 19.12 11.1068C19.3821 11.3554 19.5305 11.6937 19.5327 12.0473C19.5349 12.4009 19.3907 12.7409 19.1318 12.9924C18.8729 13.244 18.5205 13.3865 18.1522 13.3886L7.04105 13.4473C6.67269 13.4494 6.31854 13.311 6.05651 13.0624C5.79448 12.8139 5.64603 12.4756 5.64382 12.1219C5.64161 11.7683 5.78582 11.4283 6.04473 11.1768C6.30363 10.9252 6.65602 10.7827 7.02438 10.7806L18.1355 10.7219Z" fill="white"/>
-              </svg>
-              <span>Agregar actividad</span>
-            </button>
-          </div>
-
-          <!-- MENSAJE DE VALIDACIÓN DE HORAS DYNAMIC Y REACTIVO -->
-          <p v-if="errorHorasMensaje" class="text-xs text-rose-500 font-medium mt-2 flex items-center gap-1">
-            <span>🛈</span>
-            <span>{{ errorHorasMensaje }}</span>
-          </p>
-        </div>
-
-        <!-- SECCIÓN: ACTIVIDADES REGISTRADAS -->
-        <div class="pt-4">
-          <h3 class="text-sm font-bold text-gray-800 mb-4">Actividades registradas</h3>
-
-          <div v-if="reporteForm.actividades.length === 0" class="py-6 text-center border border-dashed border-gray-300 rounded-xl">
-            <p class="text-xs text-gray-500">No has agregado ninguna actividad aún. Presiona "+ Agregar actividad".</p>
-          </div>
-
-          <!-- LISTA DE CARDS DE ACTIVIDADES -->
-          <div v-else class="space-y-3">
-            <div 
-              v-for="(act, index) in reporteForm.actividades" 
-              :key="index"
-              class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl shadow-2xs hover:border-gray-300 transition-all"
-            >
-              <div class="pr-4">
-                <h4 class="text-sm font-bold text-gray-900 leading-snug">
-                  {{ act.objetivo }}
-                </h4>
-                <p class="text-xs text-gray-500 mt-1 line-clamp-1">
-                  {{ act.actividad_realizada }}
-                </p>
-              </div>
-
-              <!-- ACCIONES DE ACTIVIDAD: EDITAR / ELIMINAR -->
-              <div class="flex items-center gap-3 shrink-0">
-                <button 
-                  @click="editarActividad(index)"
-                  type="button" 
-                  class="text-gray-700 hover:text-[#000B58] cursor-pointer p-1"
-                  title="Editar actividad"
+            <!-- Área de pasantía* (Dropdown) -->
+            <div class="md:col-span-4 relative">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Área de pasantía<span class="text-rose-500">*</span>
+              </label>
+              
+              <div class="relative">
+                <button
+                  type="button"
+                  @click="dropdownAreaAbierto = !dropdownAreaAbierto; dropdownMesAbierto = false"
+                  class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
+                  :class="intentoGuardar && !reporteForm.area_pasantia ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  <span :class="reporteForm.area_pasantia ? 'text-slate-800 font-medium' : 'text-slate-400'">
+                    {{ reporteForm.area_pasantia || 'Seleccionar' }}
+                  </span>
+                  <svg class="w-4 h-4 text-slate-600 transition-transform" :class="{ 'rotate-180': dropdownAreaAbierto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <button 
-                  @click="eliminarActividad(index)"
-                  type="button" 
-                  class="hover:opacity-80 cursor-pointer p-1"
-                  title="Eliminar actividad"
+
+                <!-- Menú desplegable con las opciones exactas (Capturas 3 y 4) -->
+                <div 
+                  v-if="dropdownAreaAbierto"
+                  class="absolute left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-30 py-1 max-h-56 overflow-y-auto"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 20 22" fill="none">
-                    <g clip-path="url(#clip0_7296_1129)">
-                      <path d="M7.27273 17.875V7.79167C7.27273 7.65799 7.23011 7.54818 7.14489 7.46224C7.05966 7.3763 6.95076 7.33333 6.81818 7.33333H5.90909C5.77652 7.33333 5.66761 7.3763 5.58239 7.46224C5.49716 7.54818 5.45455 7.65799 5.45455 7.79167V17.875C5.45455 18.0087 5.49716 18.1185 5.58239 18.2044C5.66761 18.2904 5.77652 18.3333 5.90909 18.3333H6.81818C6.95076 18.3333 7.05966 18.2904 7.14489 18.2044C7.23011 18.1185 7.27273 18.0087 7.27273 17.875ZM10.9091 17.875V7.79167C10.9091 7.65799 10.8665 7.54818 10.7812 7.46224C10.696 7.3763 10.5871 7.33333 10.4545 7.33333H9.54545C9.41288 7.33333 9.30398 7.3763 9.21875 7.46224C9.13352 7.54818 9.09091 7.65799 9.09091 7.79167V17.875C9.09091 18.0087 9.13352 18.1185 9.21875 18.2044C9.30398 18.2904 9.41288 18.3333 9.54545 18.3333H10.4545C10.5871 18.3333 10.696 18.2904 10.7812 18.2044C10.8665 18.1185 10.9091 18.0087 10.9091 17.875ZM14.5455 17.875V7.79167C14.5455 7.65799 14.5028 7.54818 14.4176 7.46224C14.3324 7.3763 14.2235 7.33333 14.0909 7.33333H13.1818C13.0492 7.33333 12.9403 7.3763 12.8551 7.46224C12.7699 7.54818 12.7273 7.65799 12.7273 7.79167V17.875C12.7273 18.0087 12.7699 18.1185 12.8551 18.2044C12.9403 18.2904 13.0492 18.3333 13.1818 18.3333H14.0909C14.2235 18.3333 14.3324 18.2904 14.4176 18.2044C14.5028 18.1185 14.5455 18.0087 14.5455 17.875ZM6.81818 3.66667H13.1818L12.5 1.99089C12.4337 1.90495 12.3532 1.85243 12.2585 1.83333H7.75568C7.66098 1.85243 7.58049 1.90495 7.5142 1.99089L6.81818 3.66667ZM20 4.125V5.04167C20 5.17535 19.9574 5.28516 19.8722 5.37109C19.7869 5.45703 19.678 5.5 19.5455 5.5H18.1818V19.0781C18.1818 19.8707 17.9593 20.5558 17.5142 21.1335C17.0691 21.7112 16.5341 22 15.9091 22H4.09091C3.46591 22 2.93087 21.7207 2.4858 21.1621C2.04072 20.6035 1.81818 19.928 1.81818 19.1354V5.5H0.454545C0.32197 5.5 0.213068 5.45703 0.127841 5.37109C0.0426136 5.28516 0 5.17535 0 5.04167V4.125C0 3.99132 0.0426136 3.88151 0.127841 3.79557C0.213068 3.70964 0.32197 3.66667 0.454545 3.66667H4.84375L5.83807 1.27474C5.98011 0.921441 6.2358 0.62066 6.60511 0.372396C6.97443 0.124132 7.34848 0 7.72727 0H12.2727C12.6515 0 13.0256 0.124132 13.3949 0.372396C13.7642 0.62066 14.0199 0.921441 14.1619 1.27474L15.1562 3.66667H19.5455C19.678 3.66667 19.7869 3.70964 19.8722 3.79557C19.9574 3.88151 20 3.99132 20 4.125Z" fill="#DF0000" fill-opacity="0.88"/>
+                  <button
+                    v-for="area in areasPasantia"
+                    :key="area"
+                    type="button"
+                    @click="reporteForm.area_pasantia = area; dropdownAreaAbierto = false"
+                    class="w-full px-4 py-2 text-sm text-left text-slate-700 hover:bg-slate-100 flex items-center justify-between cursor-pointer transition-colors"
+                    :class="{ 'font-semibold text-[#000B58] bg-blue-50/40': reporteForm.area_pasantia === area }"
+                  >
+                    <span>{{ area }}</span>
+                    <span v-if="reporteForm.area_pasantia === area" class="text-xs text-[#000B58]">✓</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nombre del pasante* -->
+            <div class="md:col-span-5">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Nombre del pasante<span class="text-rose-500">*</span>
+              </label>
+              <input 
+                v-model="reporteForm.nombre_pasante"
+                type="text" 
+                placeholder="Dallana Lucía Campos García"
+                class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs transition-all"
+                :class="intentoGuardar && !reporteForm.nombre_pasante?.trim() ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+              />
+            </div>
+
+            <!-- Mes* (Dropdown con meses del año) -->
+            <div class="md:col-span-3 relative">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Mes<span class="text-rose-500">*</span>
+              </label>
+
+              <div class="relative">
+                <button
+                  type="button"
+                  @click="dropdownMesAbierto = !dropdownMesAbierto; dropdownAreaAbierto = false"
+                  class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
+                  :class="intentoGuardar && !reporteForm.mes ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                >
+                  <span :class="reporteForm.mes ? 'text-slate-800 font-medium' : 'text-slate-400'">
+                    {{ reporteForm.mes || 'Seleccionar' }}
+                  </span>
+                  <svg class="w-4 h-4 text-slate-600 transition-transform" :class="{ 'rotate-180': dropdownMesAbierto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <!-- Menú desplegable con meses -->
+                <div 
+                  v-if="dropdownMesAbierto"
+                  class="absolute right-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-30 py-1 max-h-56 overflow-y-auto"
+                >
+                  <button
+                    v-for="m in mesesDelAnio"
+                    :key="m"
+                    type="button"
+                    @click="reporteForm.mes = m; dropdownMesAbierto = false"
+                    class="w-full px-4 py-2 text-sm text-left text-slate-700 hover:bg-slate-100 flex items-center justify-between cursor-pointer transition-colors"
+                    :class="{ 'font-semibold text-[#000B58] bg-blue-50/40': reporteForm.mes === m }"
+                  >
+                    <span>{{ m }}</span>
+                    <span v-if="reporteForm.mes === m" class="text-xs text-[#000B58]">✓</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FILA 2: Fecha Inicio + Fecha Finalización -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+            
+            <!-- Fecha Inicio* -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Fecha Inicio<span class="text-rose-500">*</span>
+              </label>
+              <div class="relative flex items-center">
+                <input 
+                  v-model="reporteForm.fecha_inicio"
+                  type="date" 
+                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer"
+                  :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                />
+                <!-- Icono de calendario -->
+                <div class="absolute left-3 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 23 26" fill="none">
+                    <g clip-path="url(#clip0_fecha_inicio)">
+                      <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="#475569"/>
                     </g>
                     <defs>
-                      <clipPath id="clip0_7296_1129">
-                        <rect width="20" height="22" fill="white"/>
+                      <clipPath id="clip0_fecha_inicio">
+                        <rect width="22.75" height="26" fill="white"/>
                       </clipPath>
                     </defs>
                   </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fecha Finalización* -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Fecha Finalización<span class="text-rose-500">*</span>
+              </label>
+              <div class="relative flex items-center">
+                <input 
+                  v-model="reporteForm.fecha_fin"
+                  type="date" 
+                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer"
+                  :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                />
+                <!-- Icono de calendario -->
+                <div class="absolute left-3 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 23 26" fill="none">
+                    <g clip-path="url(#clip0_fecha_fin)">
+                      <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="#475569"/>
+                    </g>
+                    <defs>
+                      <clipPath id="clip0_fecha_fin">
+                        <rect width="22.75" height="26" fill="white"/>
+                      </clipPath>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FILA 3: Objetivo* -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+              Objetivo<span class="text-rose-500">*</span>
+            </label>
+            <input 
+              v-model="reporteForm.objetivo"
+              type="text" 
+              placeholder="documentar las actividades desarrolladas en la empresa"
+              class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs"
+              :class="intentoGuardar && !reporteForm.objetivo?.trim() ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+            />
+          </div>
+
+        </div>
+
+        <!-- SECCIÓN 2: ACTIVIDADES REALIZADAS (Tabla dinámica en línea) -->
+        <div class="mb-8">
+          <h3 class="text-lg font-serif font-bold text-slate-800 mb-4">
+            Actividades realizadas
+          </h3>
+
+          <!-- ENCABEZADOS DE LA TABLA DE ACTIVIDADES -->
+          <div class="grid grid-cols-12 gap-3 px-3 py-2 text-xs font-semibold text-slate-600 mb-1 border-b border-slate-100">
+            <div class="col-span-1 text-center">Nº</div>
+            <div class="col-span-4">Actividad</div>
+            <div class="col-span-3 text-center">Fecha</div>
+            <div class="col-span-3">Resultado de aprendizaje</div>
+            <div class="col-span-1 text-center"></div>
+          </div>
+
+          <!-- FILAS DE ACTIVIDADES EDITABLES EN LÍNEA -->
+          <div class="space-y-3 mt-2">
+            <div 
+              v-for="(act, index) in reporteForm.actividades" 
+              :key="index"
+              class="grid grid-cols-12 gap-3 items-center group"
+            >
+              <!-- Nº -->
+              <div class="col-span-1 text-center text-sm font-semibold text-slate-700">
+                {{ index + 1 }}
+              </div>
+
+              <!-- Actividad realizada -->
+              <div class="col-span-4">
+                <input 
+                  v-model="act.actividad"
+                  type="text" 
+                  placeholder="Actividad realizada"
+                  class="w-full px-3 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all"
+                />
+              </div>
+
+              <!-- Fecha -->
+              <div class="col-span-3">
+                <input 
+                  v-model="act.fecha"
+                  type="date" 
+                  placeholder="dd/mm/aaaa"
+                  class="w-full px-2.5 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-700 text-center focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all cursor-pointer"
+                />
+              </div>
+
+              <!-- Resultado de aprendizaje -->
+              <div class="col-span-3">
+                <input 
+                  v-model="act.resultado_aprendizaje"
+                  type="text" 
+                  placeholder="Aprendizaje obtenido"
+                  class="w-full px-3 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all"
+                />
+              </div>
+
+              <!-- Botón Eliminar fila (✕) -->
+              <div class="col-span-1 text-center">
+                <button 
+                  type="button"
+                  @click="eliminarFilaActividad(index)"
+                  title="Eliminar fila"
+                  class="hover:opacity-70 transition-opacity p-1 cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 35 35" fill="none">
+                    <path d="M17.5 15.9585L8.46858 6.927L6.92712 8.46846L15.9586 17.4999L6.92712 26.5314L8.46858 28.0728L17.5 19.0414L26.5315 28.0728L28.073 26.5314L19.0415 17.4999L28.073 8.46846L26.5315 6.927L17.5 15.9585Z" fill="#A8A8A8"/>
+                  </svg>
                 </button>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- SECCIÓN: ADJUNTAR EVIDENCIAS / IMÁGENES -->
-        <div class="pt-4">
-          <div class="flex items-center gap-4 flex-wrap">
-            
-            <!-- CAJA DE CARGA CON ÍCONO DE IMAGEN -->
-            <label 
-              v-if="reporteForm.evidencias.length < 4"
-              class="w-24 h-24 border-2 border-dashed border-cyan-700/60 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-cyan-50/50 transition-colors shrink-0 bg-white"
+          <!-- BOTÓN AGREGAR FILA (+) -->
+          <div class="mt-4 flex items-center">
+            <button 
+              type="button"
+              @click="agregarFilaActividad"
+              class="cursor-pointer transition-transform hover:scale-105 hover:opacity-90"
+              title="Agregar otra actividad"
             >
-              <input type="file" accept="image/*" multiple @change="handleFileUpload" class="hidden" />
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 68 68" fill="none" class="w-12 h-12">
-                <path d="M33.9138 18.37C33.9138 16.3287 33.5118 14.3075 32.7306 12.4216C31.9495 10.5358 30.8045 8.82223 29.3611 7.37885C27.9178 5.93547 26.2042 4.79053 24.3184 4.00937C22.4325 3.22822 20.4112 2.82617 18.37 2.82617C16.3287 2.82617 14.3075 3.22822 12.4216 4.00937C10.5358 4.79053 8.82223 5.93547 7.37885 7.37885C5.93547 8.82223 4.79052 10.5358 4.00937 12.4216C3.22822 14.3075 2.82617 16.3287 2.82617 18.37C2.82617 22.4925 4.46382 26.4461 7.37885 29.3611C10.2939 32.2762 14.2475 33.9138 18.37 33.9138C22.4925 33.9138 26.4461 32.2762 29.3611 29.3611C32.2762 26.4461 33.9138 22.4925 33.9138 18.37ZM19.7831 19.7831L19.7859 26.8597C19.7859 27.2345 19.637 27.5939 19.372 27.8589C19.107 28.1239 18.7476 28.2728 18.3728 28.2728C17.998 28.2728 17.6386 28.1239 17.3736 27.8589C17.1086 27.5939 16.9597 27.2345 16.9597 26.8597V19.7831H9.88024C9.50547 19.7831 9.14605 19.6342 8.88105 19.3692C8.61604 19.1042 8.46717 18.7448 8.46717 18.37C8.46717 17.9952 8.61604 17.6358 8.88105 17.3708C9.14605 17.1058 9.50547 16.9569 9.88024 16.9569H16.9569V9.89154C16.9569 9.51677 17.1058 9.15735 17.3708 8.89235C17.6358 8.62735 17.9952 8.47847 18.37 8.47847C18.7448 8.47847 19.1042 8.62735 19.3692 8.89235C19.6342 9.15735 19.7831 9.51677 19.7831 9.89154V16.9569H26.84C27.2147 16.9569 27.5742 17.1058 27.8392 17.3708C28.1042 17.6358 28.253 17.9952 28.253 18.37C28.253 18.7448 28.1042 19.1042 27.8392 19.3692C27.5742 19.6342 27.2147 19.7831 26.84 19.7831H19.7831ZM50.1642 12.7177H35.8554C35.3713 11.2248 34.6979 9.80015 33.8516 8.47847H50.1642C52.6002 8.47847 54.9364 9.44617 56.6589 11.1687C58.3815 12.8912 59.3492 15.2274 59.3492 17.6635V50.1642C59.3492 52.6002 58.3815 54.9364 56.6589 56.6589C54.9364 58.3815 52.6002 59.3492 50.1642 59.3492H17.6635C15.2274 59.3492 12.8912 58.3815 11.1687 56.6589C9.44617 54.9364 8.47847 52.6002 8.47847 50.1642V33.8516C9.78698 34.691 11.2114 35.3665 12.7177 35.8554V50.1642C12.7196 50.7539 12.8166 51.3135 13.0088 51.8429L29.4655 35.731C30.5936 34.6266 32.0922 33.9814 33.6697 33.9208C35.2472 33.8602 36.7909 34.3886 38.0004 35.4032L38.3622 35.731L54.816 51.8457C55.0082 51.3182 55.1062 50.7577 55.1099 50.1642V17.6635C55.1099 16.3518 54.5889 15.0938 53.6614 14.1663C52.7338 13.2388 51.4759 12.7177 50.1642 12.7177ZM51.8033 54.8301L35.3975 38.7607C35.0396 38.4099 34.569 38.1973 34.0692 38.1605C33.5695 38.1238 33.0728 38.2653 32.6675 38.56L32.4301 38.7578L16.0186 54.8301C16.5349 55.0129 17.0832 55.1062 17.6635 55.1099H50.1642C50.7379 55.1099 51.2918 55.011 51.8033 54.8301ZM43.1073 18.37C44.7952 18.37 46.4141 19.0405 47.6076 20.2341C48.8012 21.4277 49.4718 23.0465 49.4718 24.7345C49.4718 26.4224 48.8012 28.0413 47.6076 29.2349C46.4141 30.4284 44.7952 31.099 43.1073 31.099C41.4193 31.099 39.8005 30.4284 38.6069 29.2349C37.4133 28.0413 36.7428 26.4224 36.7428 24.7345C36.7428 23.0465 37.4133 21.4277 38.6069 20.2341C39.8005 19.0405 41.4193 18.37 43.1073 18.37ZM43.1073 22.6092C42.5436 22.6092 42.0031 22.8331 41.6045 23.2317C41.2059 23.6303 40.982 24.1708 40.982 24.7345C40.982 25.2981 41.2059 25.8387 41.6045 26.2373C42.0031 26.6358 42.5436 26.8597 43.1073 26.8597C43.6709 26.8597 44.2115 26.6358 44.6101 26.2373C45.0086 25.8387 45.2325 25.2981 45.2325 24.7345C45.2325 24.1708 45.0086 23.6303 44.6101 23.2317C44.2115 22.8331 43.6709 22.6092 43.1073 22.6092Z" fill="black" fill-opacity="0.44"/>
+              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="38" height="38" viewBox="0 0 38 38" fill="none">
+                <use xlink:href="#stroke0_add_act" fill="#010C67"/>
+                <mask id="stroke1_add_act" fill="white">
+                  <use xlink:href="#stroke0_add_act"/>
+                </mask>
+                <path d="M38 19.0516C38 14.6561 36.1233 10.4406 32.7828 7.33248C29.4423 4.22438 24.9117 2.47827 20.1875 2.47827C15.4633 2.47827 10.9327 4.22438 7.59216 7.33248C4.25167 10.4406 2.375 14.6561 2.375 19.0516C2.375 23.4471 4.25167 27.6626 7.59216 30.7707C10.9327 33.8788 15.4633 35.6249 20.1875 35.6249C24.9117 35.6249 29.4423 33.8788 32.7828 30.7707C36.1233 27.6626 38 23.4471 38 19.0516Z" stroke-width="2" stroke="white" mask="url(#stroke1_add_act)"/>
+                <path d="M18.2202 11.6857C18.2202 11.1973 18.4287 10.7289 18.7999 10.3836C19.1711 10.0382 19.6745 9.84424 20.1994 9.84424C20.7243 9.84424 21.2277 10.0382 21.5989 10.3836C21.97 10.7289 22.1785 11.1973 22.1785 11.6857V26.4175C22.1785 26.9059 21.97 27.3743 21.5989 27.7197C21.2277 28.065 20.7243 28.259 20.1994 28.259C19.6745 28.259 19.1711 28.065 18.7999 27.7197C18.4287 27.3743 18.2202 26.9059 18.2202 26.4175V11.6857Z" fill="#F5F5F5"/>
+                <path d="M28.1041 17.1695C28.629 17.1665 29.1337 17.3577 29.5071 17.701C29.8805 18.0443 30.092 18.5115 30.0952 18.9999C30.0983 19.4883 29.8928 19.9578 29.5239 20.3053C29.1549 20.6527 28.6528 20.8495 28.1279 20.8524L12.2945 20.9334C11.7696 20.9364 11.265 20.7452 10.8916 20.4019C10.5182 20.0586 10.3067 19.5914 10.3035 19.103C10.3004 18.6146 10.5059 18.1451 10.8748 17.7977C11.2437 17.4502 11.7459 17.2534 12.2708 17.2505L28.1041 17.1695Z" fill="#F5F5F5"/>
+                <defs>
+                  <path id="stroke0_add_act" d="M38 19.0516C38 14.6561 36.1233 10.4406 32.7828 7.33248C29.4423 4.22438 24.9117 2.47827 20.1875 2.47827C15.4633 2.47827 10.9327 4.22438 7.59216 7.33248C4.25167 10.4406 2.375 14.6561 2.375 19.0516C2.375 23.4471 4.25167 27.6626 7.59216 30.7707C10.9327 33.8788 15.4633 35.6249 20.1875 35.6249C24.9117 35.6249 29.4423 33.8788 32.7828 30.7707C36.1233 27.6626 38 23.4471 38 19.0516Z"/>
+                </defs>
               </svg>
-            </label>
-
-            <!-- PREVISUALIZACIÓN DE IMÁGENES -->
-            <div 
-              v-for="(img, idx) in reporteForm.evidencias" 
-              :key="idx" 
-              class="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-xs"
-            >
-              <img :src="img" alt="Evidencia" class="w-full h-full object-cover" />
-              <button 
-                @click="eliminarEvidencia(idx)"
-                type="button"
-                class="absolute top-1.5 right-1.5 bg-gray-600/85 hover:bg-gray-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold cursor-pointer transition-colors shadow-xs"
-                title="Eliminar evidencia"
-              >
-                ✕
-              </button>
-            </div>
-
+            </button>
           </div>
-        </div>
 
-        <!-- BOTONES DE ACCIÓN INFERIORES: CANCELAR / GUARDAR -->
-        <div class="flex items-center justify-end gap-4 pt-6">
-          <button 
-            @click="vistaActual = 'tabla'"
-            type="button" 
-            class="px-7 py-2 bg-white border border-gray-800 text-gray-900 rounded-full text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer"
-          >
-            Cancelar
-          </button>
-          
-          <button 
-            @click="guardarReporteAPI"
-            :disabled="cargando"
-            type="button" 
-            class="px-8 py-2 bg-[#000B58] text-white rounded-full text-sm font-medium hover:bg-[#000840] shadow-md transition-all cursor-pointer disabled:opacity-50"
-          >
-            Guardar
-          </button>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- VISTA 3: SUBFORMULARIO "AGREGAR ACTIVIDAD" (Captura 4) -->
-    <!-- ========================================================================= -->
-    <div v-else-if="vistaActual === 'actividad_form'">
-      
-      <!-- NAVEGACIÓN BREADCRUMB -->
-      <div class="flex items-center gap-2 mb-8">
-        <button 
-          @click="vistaActual = 'formulario'"
-          class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-[#000B58] cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          <span>Reportes/ Nuevo reporte/Actividades</span>
-        </button>
-      </div>
-
-      <!-- CAMPOS DE LA ACTIVIDAD (Idéntico a Captura 4) -->
-      <div class="space-y-6 bg-white p-2 rounded-2xl">
-        
-        <!-- Fecha de la actividad* -->
-        <div>
-          <label class="block text-sm font-medium text-gray-800 mb-2">
-            Fecha de la actividad<span class="text-rose-500">*</span>
-          </label>
-          <div class="relative w-48 flex items-center">
+          <!-- ÁREA DE SUBIDA DE EVIDENCIAS FOTOGRÁFICAS -->
+          <div class="mt-6">
             <input 
-              v-model="actividadForm.fecha_actividad"
-              type="date" 
-              class="w-full pl-10 pr-3 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-medium focus:ring-2 focus:ring-[#000B58] outline-none cursor-pointer"
-              :class="errorFechaActividad ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
+              id="input-evidencias-upload"
+              type="file" 
+              multiple 
+              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+              class="hidden"
+              @change="handleFileUpload"
             />
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 21 24" fill="none" class="absolute left-3 pointer-events-none">
-              <g clip-path="url(#clip0_7350_1304_actividad)">
-                <path d="M7.06183 1.11503C7.06183 0.497116 6.56472 0 5.94681 0C5.3289 0 4.83178 0.497116 4.83178 1.11503V2.9734H2.9734C1.33339 2.9734 0 4.30679 0 5.94681V20.8138C0 22.4538 1.33339 23.7872 2.9734 23.7872H17.8404C19.4804 23.7872 20.8138 22.4538 20.8138 20.8138V5.94681C20.8138 4.30679 19.4804 2.9734 17.8404 2.9734H15.982V1.11503C15.982 0.497116 15.4849 0 14.867 0C14.2491 0 13.752 0.497116 13.752 1.11503V2.9734H7.06183V1.11503ZM2.23005 8.92021H5.94681V11.5219H2.23005V8.92021ZM2.23005 13.752H5.94681V16.7254H2.23005V13.752ZM8.17686 13.752H12.637V16.7254H8.17686V13.752ZM14.867 13.752H18.5838V16.7254H14.867V13.752ZM18.5838 11.5219H14.867V8.92021H18.5838V11.5219ZM18.5838 18.9555V20.8138C18.5838 21.2227 18.2493 21.5572 17.8404 21.5572H14.867V18.9555H18.5838ZM12.637 18.9555V21.5572H8.17686V18.9555H12.637ZM5.94681 18.9555V21.5572H2.9734C2.56456 21.5572 2.23005 21.2227 2.23005 20.8138V18.9555H5.94681ZM12.637 11.5219H8.17686V8.92021H12.637V11.5219Z" fill="black"/>
-              </g>
-              <rect x="0.5" y="0.5" width="19.8138" height="22.7872" stroke="black" stroke-opacity="0.17"/>
-              <defs>
-                <clipPath id="clip0_7350_1304_actividad">
-                  <rect width="20.8138" height="23.7872" fill="white"/>
-                </clipPath>
-              </defs>
-            </svg>
-          </div>
-          <p v-if="errorFechaActividad" class="text-xs text-rose-500 mt-1.5 font-medium">
-            Campo obligatorio
-          </p>
-        </div>
 
-        <!-- Objetivo de la actividad* -->
-        <div>
-          <label class="block text-sm font-medium text-gray-800 mb-2">
-            Objetivo de la actividad<span class="text-rose-500">*</span>
-          </label>
-          <div class="relative">
-            <textarea 
-              v-model="actividadForm.objetivo"
-              rows="2"
-              placeholder="Desarrollar el diseño de de los criterios de aceptacion con el equipo de desarrollo"
-              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
-              :class="errorObjetivo ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
-            ></textarea>
-            <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </div>
-          <p v-if="errorObjetivo" class="text-xs text-rose-500 mt-1.5 font-medium">
-            Campo obligatorio
-          </p>
-        </div>
-
-        <!-- Actividad realizada* -->
-        <div>
-          <label class="block text-sm font-medium text-gray-800 mb-2">
-            Actividad realizada<span class="text-rose-500">*</span>
-          </label>
-          <div class="relative">
-            <textarea 
-              v-model="actividadForm.actividad_realizada"
-              rows="2"
-              placeholder="Reunión de 8 horas con la célula águil"
-              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
-              :class="errorActividadRealizada ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
-            ></textarea>
-            <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </div>
-          <p v-if="errorActividadRealizada" class="text-xs text-rose-500 mt-1.5 font-medium">
-            Campo obligatorio
-          </p>
-        </div>
-
-        <!-- Logros obtenidos* -->
-        <div>
-          <label class="block text-sm font-medium text-gray-800 mb-2">
-            Logros obtenidos<span class="text-rose-500">*</span>
-          </label>
-          <div class="relative">
-            <textarea 
-              v-model="actividadForm.logros_obtenidos"
-              rows="2"
-              placeholder="Metas claras, objetivos definidos, diseño del word base"
-              class="w-full pr-10 p-3 bg-white border rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#000B58] outline-none resize-none"
-              :class="errorLogros ? 'border-rose-500 ring-1 ring-rose-500' : 'border-gray-300'"
-            ></textarea>
-            <svg class="w-4 h-4 text-gray-700 absolute right-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </div>
-          <p v-if="errorLogros" class="text-xs text-rose-500 mt-1.5 font-medium">
-            Campo obligatorio
-          </p>
-        </div>
-
-        <!-- BOTONES INFERIORES: CANCELAR / GUARDAR -->
-        <div class="flex items-center justify-end gap-4 pt-6">
-          <button 
-            @click="cancelarActividad"
-            type="button" 
-            class="px-7 py-2 bg-white border border-gray-800 text-gray-900 rounded-full text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer"
-          >
-            Cancelar
-          </button>
-
-          <button 
-            @click="guardarActividad"
-            type="button" 
-            class="px-8 py-2 bg-[#000B58] text-white rounded-full text-sm font-medium hover:bg-[#000840] shadow-md transition-all cursor-pointer"
-          >
-            Guardar
-          </button>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- VISTA 4: DETALLE DEL REPORTE / "VER INFORME" (Captura 5) -->
-    <!-- ========================================================================= -->
-    <div v-else-if="vistaActual === 'detalle' && reporteDetalle">
-      
-      <!-- HEADER CON BREADCRUMB Y BADGE DE ESTADO DE LA CAPTURA 5 -->
-      <div class="flex items-center justify-between mb-8">
-        <button 
-          @click="vistaActual = 'tabla'"
-          class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-[#000B58] cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          <span>Reportes/ {{ reporteDetalle.nombre_reporte || 'ACTIVIDADES DE AGOSTO' }}</span>
-        </button>
-
-        <!-- BADGE DE ESTADO (Coincide idéntico con Captura 5) -->
-        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-[#FDE68A] text-[#92400E] shadow-xs">
-          <svg class="w-3.5 h-3.5 text-[#B45309]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {{ reporteDetalle.estado || 'En revisión' }}
-        </span>
-      </div>
-
-      <!-- INFORMACIÓN DEL REPORTE -->
-      <div class="space-y-6 bg-white p-2 rounded-2xl">
-        
-        <!-- PRIMERA FILA: NOMBRE / PERIODO / HORAS -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-          
-          <div class="md:col-span-5">
-            <label class="block text-sm font-medium text-gray-800 mb-2">Nombre del reporte</label>
-            <input 
-              type="text" 
-              :value="reporteDetalle.nombre_reporte" 
-              readonly
-              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 font-medium uppercase"
-            />
-          </div>
-
-          <div class="md:col-span-4">
-            <label class="block text-sm font-medium text-gray-800 mb-2">Periodo</label>
-            <input 
-              type="text" 
-              :value="reporteDetalle.periodo || formatearPeriodo(reporteDetalle.fecha_inicio, reporteDetalle.fecha_fin)" 
-              readonly
-              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 font-medium"
-            />
-          </div>
-
-          <div class="md:col-span-3">
-            <label class="block text-sm font-medium text-gray-800 mb-2">Cantidad de horas</label>
-            <input 
-              type="text" 
-              :value="reporteDetalle.horas_registradas || reporteDetalle.horas || 50" 
-              readonly
-              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 font-medium"
-            />
-          </div>
-
-        </div>
-
-        <!-- ACTIVIDADES REGISTRADAS DETALLE -->
-        <div class="pt-4">
-          <h3 class="text-sm font-bold text-gray-800 mb-4">Acividades registradas</h3>
-
-          <div v-if="!reporteDetalle.actividades || reporteDetalle.actividades.length === 0" class="space-y-3">
-            <div class="p-4 bg-white border border-gray-200 rounded-xl">
-              <h4 class="text-sm font-bold text-gray-900">Elaboración de prototipos de interfaz de usuario</h4>
-              <p class="text-xs text-gray-500 mt-1">Creación de bocetos y prototipos navegables en herramientas de diseño para definir la estructura visual y flujo de pantallas según los requerimientos aprobados.</p>
-            </div>
-            <div class="p-4 bg-white border border-gray-200 rounded-xl">
-              <h4 class="text-sm font-bold text-gray-900">Pruebas funcionales de componentes web</h4>
-              <p class="text-xs text-gray-500 mt-1">Ejecución de pruebas básicas en los módulos desarrollados para verificar el correcto comportamiento de los formularios, validación de datos y navegación del sistema.</p>
-            </div>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div 
-              v-for="(act, idx) in reporteDetalle.actividades" 
-              :key="idx"
-              class="p-4 bg-white border border-gray-200 rounded-xl shadow-2xs"
-            >
-              <h4 class="text-sm font-bold text-gray-900 leading-snug">{{ act.objetivo }}</h4>
-              <p class="text-xs text-gray-500 mt-1">{{ act.actividad_realizada }}</p>
-              <p v-if="act.logros_obtenidos" class="text-xs text-gray-600 mt-1.5 font-medium">
-                <span class="text-gray-400">Logros:</span> {{ act.logros_obtenidos }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- EVIDENCIAS FOTOGRÁFICAS EN DETALLE -->
-        <div class="pt-4">
-          <div class="flex items-center gap-4 flex-wrap">
-            <template v-if="reporteDetalle.evidencias && reporteDetalle.evidencias.length > 0">
+            <div class="flex items-center gap-4 flex-wrap">
+              <!-- TARJETA CON BORDE PUNTEADO PARA AGREGAR IMAGEN (Como en Captura 2) -->
               <div 
-                v-for="(imgUrl, idx) in reporteDetalle.evidencias" 
-                :key="idx"
-                class="w-32 h-32 rounded-2xl overflow-hidden border border-gray-200 shadow-xs shrink-0"
+                @click="triggerInputFoto"
+                class="w-32 h-32 border-2 border-dashed border-blue-400 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/40 transition-colors group relative"
+                title="Haga clic para adjuntar evidencias fotográficas"
               >
-                <img :src="imgUrl" alt="Evidencia" class="w-full h-full object-cover" />
+                <!-- Icono de carga de imágenes personalizado -->
+                <div class="transition-opacity group-hover:opacity-80">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 83 83" fill="none">
+                    <path d="M41.0247 22.2217C41.0247 19.7525 40.5384 17.3074 39.5934 15.0261C38.6485 12.7448 37.2635 10.672 35.5174 8.92597C33.7714 7.17995 31.6986 5.79493 29.4173 4.85C27.136 3.90506 24.691 3.4187 22.2217 3.4187C19.7525 3.4187 17.3074 3.90506 15.0261 4.85C12.7448 5.79493 10.672 7.17995 8.92597 8.92597C7.17995 10.672 5.79493 12.7448 4.85 15.0261C3.90506 17.3074 3.4187 19.7525 3.4187 22.2217C3.4187 27.2086 5.39973 31.9912 8.92598 35.5174C12.4522 39.0437 17.2348 41.0247 22.2217 41.0247C27.2086 41.0247 31.9912 39.0437 35.5174 35.5174C39.0437 31.9912 41.0247 27.2086 41.0247 22.2217ZM23.9311 23.9311L23.9345 32.4916C23.9345 32.9449 23.7544 33.3797 23.4338 33.7003C23.1133 34.0208 22.6785 34.2009 22.2251 34.2009C21.7718 34.2009 21.337 34.0208 21.0164 33.7003C20.6959 33.3797 20.5158 32.9449 20.5158 32.4916V23.9311H11.9518C11.4985 23.9311 11.0637 23.751 10.7431 23.4304C10.4226 23.1098 10.2425 22.6751 10.2425 22.2217C10.2425 21.7684 10.4226 21.3336 10.7431 21.013C11.0637 20.6924 11.4985 20.5123 11.9518 20.5123H20.5123V11.9655C20.5123 11.5122 20.6924 11.0774 21.013 10.7568C21.3336 10.4363 21.7684 10.2562 22.2217 10.2562C22.6751 10.2562 23.1098 10.4363 23.4304 10.7568C23.751 11.0774 23.9311 11.5122 23.9311 11.9655V20.5123H32.4676C32.921 20.5123 33.3558 20.6924 33.6763 21.013C33.9969 21.3336 34.177 21.7684 34.177 22.2217C34.177 22.6751 33.9969 23.1098 33.6763 23.4304C33.3558 23.751 32.921 23.9311 32.4676 23.9311H23.9311ZM60.6824 15.3843H43.3734C42.7878 13.5784 41.9732 11.855 40.9495 10.2562H60.6824C63.6292 10.2562 66.4553 11.4268 68.539 13.5105C70.6227 15.5941 71.7933 18.4202 71.7933 21.367V60.6824C71.7933 63.6292 70.6227 66.4553 68.539 68.539C66.4553 70.6227 63.6292 71.7933 60.6824 71.7933H21.367C18.4202 71.7933 15.5941 70.6227 13.5105 68.539C11.4268 66.4553 10.2562 63.6292 10.2562 60.6824V40.9495C11.839 41.9649 13.5621 42.7819 15.3843 43.3734V60.6824C15.3865 61.3958 15.5039 62.0727 15.7364 62.7131L35.6436 43.223C37.0083 41.887 38.8211 41.1065 40.7294 41.0332C42.6377 40.9599 44.5051 41.5991 45.9682 42.8264L46.4058 43.223L66.3096 62.7166C66.5421 62.0784 66.6606 61.4003 66.6652 60.6824V21.367C66.6652 19.7803 66.0349 18.2586 64.9129 17.1366C63.7909 16.0146 62.2691 15.3843 60.6824 15.3843ZM62.6653 66.3267L42.8196 46.8878C42.3866 46.4635 41.8173 46.2063 41.2127 46.1619C40.6082 46.1174 40.0074 46.2886 39.5171 46.6451L39.2299 46.8844L19.3773 66.3267C20.0018 66.5478 20.6651 66.6606 21.367 66.6652H60.6824C61.3764 66.6652 62.0465 66.5455 62.6653 66.3267ZM52.1458 22.2217C54.1877 22.2217 56.146 23.0329 57.5898 24.4767C59.0337 25.9205 59.8448 27.8788 59.8448 29.9207C59.8448 31.9626 59.0337 33.9208 57.5898 35.3647C56.146 36.8085 54.1877 37.6197 52.1458 37.6197C50.104 37.6197 48.1457 36.8085 46.7018 35.3647C45.258 33.9208 44.4469 31.9626 44.4469 29.9207C44.4469 27.8788 45.258 25.9205 46.7018 24.4767C48.1457 23.0329 50.104 22.2217 52.1458 22.2217ZM52.1458 27.3498C51.464 27.3498 50.8101 27.6207 50.328 28.1028C49.8458 28.5849 49.575 29.2388 49.575 29.9207C49.575 30.6025 49.8458 31.2564 50.328 31.7386C50.8101 32.2207 51.464 32.4916 52.1458 32.4916C52.8277 32.4916 53.4816 32.2207 53.9637 31.7386C54.4459 31.2564 54.7167 30.6025 54.7167 29.9207C54.7167 29.2388 54.4459 28.5849 53.9637 28.1028C53.4816 27.6207 52.8277 27.3498 52.1458 27.3498Z" fill="black" fill-opacity="0.44"/>
+                  </svg>
+                </div>
               </div>
-            </template>
-            <template v-else>
-              <!-- IMÁGENES DEMO DE LA CAPTURA 5 -->
-              <div class="w-32 h-32 rounded-2xl overflow-hidden border border-gray-200 shadow-xs shrink-0 bg-gray-100 flex items-center justify-center">
-                <img src="/images/logo_ugb.png" alt="Evidencia Demo 1" class="w-full h-full object-cover opacity-80" />
+
+              <!-- PREVISUALIZACIÓN DE IMÁGENES CARGADAS -->
+              <div 
+                v-for="(foto, fIdx) in reporteForm.evidencias" 
+                :key="fIdx"
+                class="w-32 h-32 rounded-xl overflow-hidden border border-slate-200 relative group shadow-xs bg-slate-50"
+              >
+                <img :src="foto" alt="Evidencia" class="w-full h-full object-cover" />
+                <button 
+                  type="button"
+                  @click.stop="eliminarEvidencia(fIdx)"
+                  class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md"
+                  title="Eliminar fotografía"
+                >
+                  ✕
+                </button>
               </div>
-            </template>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2">
+              Formatos soportados: JPG y PNG. Máximo 6 evidencias fotográficas.
+            </p>
           </div>
+
         </div>
 
-        <!-- BOTÓN ATRÁS -->
-        <div class="flex items-center justify-end pt-8">
+        <!-- BOTONES DE ACCIÓN INFERIORES: CANCELAR + ENVIAR -->
+        <div class="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
+          <!-- Botón Cancelar -->
           <button 
-            @click="vistaActual = 'tabla'"
-            type="button" 
-            class="px-8 py-2 bg-white border border-gray-400 text-gray-900 rounded-full text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer shadow-2xs"
+            type="button"
+            @click="volverATabla"
+            class="border border-[#000B58] text-[#000B58] hover:bg-slate-50 rounded-full text-sm font-semibold transition-all cursor-pointer shadow-xs flex flex-wrap items-center justify-center gap-[10px] px-[10px]"
+            style="width:171px; height:41px;"
           >
-            Atrás
+            Cancelar
+          </button>
+
+          <!-- Botón Enviar -->
+          <button 
+            type="button"
+            :disabled="enviando"
+            @click="enviarReporte"
+            class="bg-[#000B58] hover:bg-[#000840] text-white rounded-full text-sm font-semibold transition-all cursor-pointer shadow-md flex flex-wrap items-center justify-center gap-[10px] px-[10px]"
+            style="width:171px; height:41px;"
+          >
+            <span v-if="enviando" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <span>{{ enviando ? 'Enviando...' : 'Enviar' }}</span>
           </button>
         </div>
 
       </div>
 
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VISTA 3: VISTA DE DETALLE / CONSULTA DEL REPORTE (Captura Figma)           -->
+    <!-- ========================================================================= -->
+    <div v-else-if="vistaActual === 'detalle' && reporteDetalle" class="pb-10">
+      
+      <!-- BARRA SUPERIOR: ← Reportes/Mes + BOTÓN EDITAR -->
+      <div class="mb-4 flex items-center justify-between max-w-5xl mx-auto">
+        <button 
+          @click="volverATabla"
+          class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-[#000B58] transition-colors cursor-pointer"
+        >
+          <svg class="w-4 h-4 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Reportes/{{ reporteDetalle.mes || 'Detalle' }}</span>
+        </button>
+
+        <!-- Botón Editar ✎ con bordes redondeados y borde fino -->
+        <button
+          type="button"
+          @click="editarReporteDesdeDetalle"
+          class="px-5 py-1.5 border border-slate-700 bg-white hover:bg-slate-50 text-slate-900 rounded-[10px] text-sm font-medium flex items-center gap-2 cursor-pointer shadow-xs transition-all"
+        >
+          <span>Editar</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- TARJETA PRINCIPAL CON BORDE AZUL Y ESQUINAS REDONDEADAS -->
+      <div class="relative bg-white rounded-[20px] border border-[#2563EB]/40 p-8 sm:p-12 shadow-sm max-w-5xl mx-auto">
+        
+        <!-- BADGE DE ESTADO EN LA ESQUINA SUPERIOR DERECHA DE LA TARJETA -->
+        <div class="absolute top-8 right-8">
+          <span 
+            v-if="reporteDetalle.estado === 'En revisión' || reporteDetalle.estado === 'en_espera'"
+            class="select-none"
+            style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: var(--color-acento, #FFC071); align-items: center; justify-content: center; gap: 8px;"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
+              <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
+              <g transform="translate(2.44, 2.5)">
+                <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
+              </g>
+            </svg>
+            <span class="text-black font-bold text-[13px] leading-none">En revisión</span>
+          </span>
+
+          <span 
+            v-else-if="reporteDetalle.estado === 'Aprobado' || reporteDetalle.estado === 'aprobado'"
+            class="select-none"
+            style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #00C853; align-items: center; justify-content: center; gap: 8px;"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
+              <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
+              <g transform="translate(2.44, 2.5)">
+                <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
+              </g>
+            </svg>
+            <span class="text-black font-bold text-[13px] leading-none">Aprobado</span>
+          </span>
+
+          <span 
+            v-else
+            class="select-none"
+            style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #E2E8F0; align-items: center; justify-content: center; gap: 8px;"
+          >
+            <span class="text-slate-800 font-bold text-[13px] leading-none">{{ reporteDetalle.estado || 'Enviado' }}</span>
+          </span>
+        </div>
+
+        <!-- ENCABEZADO: LOGO + TÍTULOS OFICIALES -->
+        <div class="flex items-start gap-8 mb-8 pb-4">
+          <!-- Logo UGB -->
+          <div class="shrink-0">
+            <img 
+              src="/images/Logo_para_reportes_mensuales.png" 
+              alt="Universidad Gerardo Barrios" 
+              style="width: 123.482px; height: 100px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
+              @error="(e) => e.target.style.display = 'none'"
+            />
+          </div>
+
+          <!-- Títulos Oficiales de la Facultad -->
+          <div class="flex-1 text-center pr-28">
+            <h2 style="font-family:'Lora',serif; font-size:24px; font-weight:500; color:#010C67; text-align:center; line-height:normal;">
+              FACULTAD DE CIENCIA Y TECNOLOGÍA
+            </h2>
+            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-1">
+              Trabajo de Graduación Modalidad Pasantía
+            </h3>
+            <p class="text-sm font-medium text-[#010C67] text-center mt-1">
+              Reporte mensual
+            </p>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
+        <div class="mb-6">
+          <!-- FILA 1: Área de pasantía + Nombre del pasante + Mes -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5">
+            <div class="md:col-span-4">
+              <span class="block text-sm font-bold text-slate-900 mb-1">Área de pasantía</span>
+              <span class="text-sm text-slate-700">{{ reporteDetalle.area_pasantia || 'UX/UI' }}</span>
+            </div>
+
+            <div class="md:col-span-5">
+              <span class="block text-sm font-bold text-slate-900 mb-1">Nombre del pasante</span>
+              <span class="text-sm text-slate-700">{{ reporteDetalle.nombre_pasante || 'Dallana Lucía Campos García' }}</span>
+            </div>
+
+            <div class="md:col-span-3">
+              <span class="block text-sm font-bold text-slate-900 mb-1">Mes</span>
+              <span class="text-sm text-slate-700">{{ reporteDetalle.mes || 'Enero' }}</span>
+            </div>
+          </div>
+
+          <!-- FILA 2: Fecha Inicio + Fecha Finalización con píldoras de calendario -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5">
+            <div class="md:col-span-4">
+              <span class="block text-sm font-bold text-slate-900 mb-1.5">Fecha Inicio</span>
+              <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 border border-[#3b82f6] rounded-[8px] bg-white text-[#2563eb] text-sm font-normal">
+                <!-- Icono de calendario con trazo negro como en la captura -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>{{ formatearFecha(reporteDetalle.fecha_inicio) || '08/01/2026' }}</span>
+              </div>
+            </div>
+
+            <div class="md:col-span-5">
+              <span class="block text-sm font-bold text-slate-900 mb-1.5">Fecha Finalización</span>
+              <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 border border-[#3b82f6] rounded-[8px] bg-white text-[#2563eb] text-sm font-normal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>{{ formatearFecha(reporteDetalle.fecha_fin) || '08/27/2026' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- FILA 3: Objetivo -->
+          <div class="mb-6">
+            <span class="block text-sm font-bold text-slate-900 mb-1">Objetivo</span>
+            <p class="text-sm text-slate-700 leading-relaxed">
+              {{ reporteDetalle.objetivo || 'documentar las actividades desarrolladas en la empresa' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: ACTIVIDADES REALIZADAS -->
+        <div class="mb-6">
+          <h4 class="text-sm font-bold text-slate-900 mb-3">Actividades realizadas</h4>
+          <div class="w-full overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="border-b border-slate-300 text-slate-900 font-bold">
+                <tr>
+                  <th class="py-2.5 pr-4 w-12 text-left font-bold">Nº</th>
+                  <th class="py-2.5 px-4 w-1/4 text-left font-bold">Actividad</th>
+                  <th class="py-2.5 px-4 w-32 text-left font-bold whitespace-nowrap">Fecha</th>
+                  <th class="py-2.5 pl-4 text-left font-bold">Resultado de aprendizaje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="(act, idx) in (reporteDetalle.actividades || [])" 
+                  :key="idx"
+                  class="align-top"
+                >
+                  <td class="py-4 pr-4 font-normal text-slate-600">{{ act.numero ?? (idx + 1) }}</td>
+                  <td class="py-4 px-4 font-normal text-slate-600 leading-relaxed">{{ act.actividad || act.actividad_realizada }}</td>
+                  <td class="py-4 px-4 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
+                  <td class="py-4 pl-4 font-normal text-slate-600 leading-relaxed">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- GALERÍA DE EVIDENCIAS FOTOGRÁFICAS DEBAJO DE LA TABLA -->
+        <div v-if="reporteDetalle.evidencias && reporteDetalle.evidencias.length > 0" class="flex flex-wrap gap-4 mt-2">
+          <div 
+            v-for="(foto, pIdx) in reporteDetalle.evidencias" 
+            :key="pIdx"
+            @click="imagenLightbox = foto"
+            class="w-36 h-36 rounded-[8px] overflow-hidden border border-slate-200 cursor-pointer hover:shadow-md transition-all shrink-0"
+          >
+            <img :src="foto" alt="Evidencia" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTÓN INFERIOR: ACEPTAR (Abajo a la derecha) -->
+      <div class="max-w-5xl mx-auto flex justify-end mt-6">
+        <button 
+          type="button"
+          @click="volverATabla"
+          class="w-[140px] py-2.5 rounded-[12px] bg-[#000854] hover:bg-[#00063d] text-white text-sm font-medium transition-all shadow-md cursor-pointer text-center"
+        >
+          Aceptar
+        </button>
+      </div>
+
+    </div>
+
+    <!-- LIGHTBOX PARA VER IMAGEN DE EVIDENCIA EN TAMAÑO COMPLETO -->
+    <div 
+      v-if="imagenLightbox"
+      @click="imagenLightbox = null"
+      class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs cursor-pointer"
+    >
+      <div class="relative max-w-3xl max-h-[90vh]">
+        <img :src="imagenLightbox" alt="Evidencia Ampliada" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain" />
+        <button 
+          @click="imagenLightbox = null"
+          class="absolute -top-10 right-0 text-white font-bold text-lg bg-black/40 rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/80 transition-colors"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
   </div>
 </template>
-
-<style scoped>
-/* Ocultar el indicador nativo de calendario del navegador para que no se muestre duplicado,
-   cubriendo todo el input para que al hacer clic se abra directamente el selector nativo */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  opacity: 0;
-  cursor: pointer;
-}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
 </style>

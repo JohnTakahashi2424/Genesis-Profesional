@@ -9,6 +9,13 @@ import {
   TermsModal 
 } from './common'
 
+const props = defineProps({
+  origen: {
+    type: String,
+    default: 'landing' // 'landing' | 'login'
+  }
+})
+
 const emit = defineEmits(['close', 'abrir-login', 'registro-exitoso'])
 
 // Estado del flujo
@@ -66,15 +73,39 @@ const puedeEnviarPaso2 = computed(() => {
 })
 
 // Validar coincidencia de contraseña reactivamente
-watch(() => form.value.confirmarContrasena, (val) => {
-  if (tocados.value.confirmarContrasena && val) {
-    if (val !== form.value.contrasena) {
-      errores.value.confirmarContrasena = 'Las contraseñas no coinciden'
+const validarCoincidenciaContrasenas = (forzar = false) => {
+  if (!form.value.confirmarContrasena) {
+    if (tocados.value.confirmarContrasena || forzar) {
+      errores.value.confirmarContrasena = 'Este campo es requerido'
     } else {
       errores.value.confirmarContrasena = ''
     }
+    return
   }
-})
+
+  // Si ya se desenfocó el campo, o se fuerza la validación, o ya alcanzó la longitud de la contraseña
+  if (
+    tocados.value.confirmarContrasena ||
+    forzar ||
+    form.value.confirmarContrasena.length >= form.value.contrasena.length
+  ) {
+    if (form.value.contrasena !== form.value.confirmarContrasena) {
+      errores.value.confirmarContrasena = 'Las contraseñas deben ser iguales'
+    } else {
+      errores.value.confirmarContrasena = ''
+    }
+  } else {
+    errores.value.confirmarContrasena = ''
+  }
+}
+
+// Observar cambios tanto en contraseña como en confirmar contraseña
+watch(
+  [() => form.value.contrasena, () => form.value.confirmarContrasena],
+  () => {
+    validarCoincidenciaContrasenas()
+  }
+)
 
 // Validar correo en tiempo real contra la base de datos (debounced 400ms)
 let debounceTimerCorreo = null
@@ -304,7 +335,12 @@ const regresarPaso = () => {
   if (estadoFlujo.value === 2) {
     estadoFlujo.value = 1
     errorGeneral.value = ''
+  } else if (props.origen === 'login') {
+    // Vino desde el link del login: regresar al login
+    emit('close')
+    emit('abrir-login')
   } else {
+    // Vino desde la landing: cerrar y volver a la landing
     emit('close')
   }
 }
@@ -313,6 +349,7 @@ const regresarPaso = () => {
 const enviarRegistro = async () => {
   tocados.value.contrasena = true
   tocados.value.confirmarContrasena = true
+  validarCoincidenciaContrasenas(true)
   errorGeneral.value = ''
 
   if (!puedeEnviarPaso2.value) return
@@ -568,7 +605,7 @@ const cerrarYIrALogin = () => {
           placeholder="••••••"
           maxlength="100"
           :error="errores.confirmarContrasena"
-          @blur="tocados.confirmarContrasena = true"
+          @blur="() => { tocados.confirmarContrasena = true; validarCoincidenciaContrasenas(true); }"
           @enter="enviarRegistro"
         />
 

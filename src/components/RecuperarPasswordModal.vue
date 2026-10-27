@@ -253,6 +253,22 @@ const handleCancelar = () => {
   emit('volver-login')
 }
 
+// Retroceder al paso anterior
+const retrocederPaso = () => {
+  if (paso.value === 2) {
+    paso.value = 1
+    errorPaso2.value = ''
+    digitos.value = ['', '', '', '', '', '']
+    if (timerInterval) clearInterval(timerInterval)
+  } else if (paso.value === 3) {
+    paso.value = 2
+    errorPaso3.value = ''
+    nuevaContrasena.value = ''
+    confirmarContrasena.value = ''
+    iniciarTemporizador(30)
+  }
+}
+
 // --- ACCIONES DEL PASO 3: Restablecer contraseña ---
 const handleCambiarContrasena = async () => {
   errorPaso3.value = ''
@@ -322,6 +338,20 @@ onUnmounted(() => {
         </svg>
       </button>
 
+      <!-- Flecha ← (Paso 1 vuelve al login, Pasos 2 y 3 retroceden al paso anterior) -->
+      <button
+        v-if="paso >= 1 && paso <= 3"
+        type="button"
+        @click="paso === 1 ? emit('volver-login') : retrocederPaso()"
+        class="absolute top-5 left-6 text-gray-700 hover:text-black p-1 rounded-full transition-colors cursor-pointer"
+        :title="paso === 1 ? 'Volver al inicio de sesión' : 'Volver al paso anterior'"
+        id="btn-back-recuperar"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12H19M9 8L5 12L9 16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="black"/>
+        </svg>
+      </button>
+
       <!-- ========================================== -->
       <!-- PASO 1: INGRESAR CORREO                    -->
       <!-- ========================================== -->
@@ -346,7 +376,7 @@ onUnmounted(() => {
               id="input-recuperar-correo"
               v-model="correo"
               type="email"
-              placeholder="usss000000@ugb.edu.sv"
+              placeholder="usss000@ugb.edu.sv"
               maxlength="100"
               :disabled="loading"
               @input="errorPaso1 = ''"
@@ -463,13 +493,10 @@ onUnmounted(() => {
       <!-- PASO 3: NUEVA CONTRASEÑA                   -->
       <!-- ========================================== -->
       <div v-else-if="paso === 3">
-        <div class="text-center mb-5">
-          <h2 class="text-[26px] font-bold text-gray-950 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
-            Nueva contraseña
+        <div class="text-center mb-5 mt-1">
+          <h2 class="text-[24px] font-bold text-gray-950 tracking-tight leading-snug" style="font-family: 'Lora', Georgia, serif;">
+            Escribe una nueva<br />contraseña:
           </h2>
-          <p class="text-[13px] font-medium text-gray-800 mt-1 font-sans">
-            Protege tu cuenta con una contraseña segura
-          </p>
         </div>
 
         <form @submit.prevent="handleCambiarContrasena" class="text-left" novalidate>
@@ -557,7 +584,7 @@ onUnmounted(() => {
                 : 'bg-[#888eb8] shadow-sm'"
               style="font-family: 'Lora', Georgia, serif;"
             >
-              <span>Cambiar</span>
+              <span>Siguiente</span>
             </button>
           </div>
 
