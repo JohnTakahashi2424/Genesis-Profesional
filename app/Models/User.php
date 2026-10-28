@@ -72,4 +72,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(HistorialProgreso::class, 'user_id', 'id');
     }
+
+    /**
+     * Relación con las notificaciones del usuario de la aplicación web.
+     */
+    public function notificaciones()
+    {
+        return $this->hasMany(Notificacion::class, 'user_id', 'id');
+    }
 }
