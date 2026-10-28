@@ -42,8 +42,8 @@ return new class extends Migration
                   ->constrained('users')
                   ->nullOnDelete();
 
-            // Nombre visible del remitente (Ej: "Jenny Flores" o "Sistema")
-            $table->string('remitente_nombre', 100)->default('Notificación');
+            // Nombre visible del remitente (Ej: "Jenny Flores" o "Notificaciones")
+            $table->string('remitente_nombre', 100)->default('Notificaciones');
 
             // ── Contenido ─────────────────────────────────────────────────────
             // Título corto visible en la columna "Título"

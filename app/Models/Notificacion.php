@@ -113,7 +113,7 @@ class Notificacion extends Model
     public function getFechaFormateadaAttribute(): string
     {
         $fecha = Carbon::parse($this->created_at)->locale('es');
-        $dia = $fecha->isoFormat('D [de] MMM. YYYY');
+        $dia = str_replace('..', '.', $fecha->isoFormat('D [de] MMM. YYYY'));
         $hora = $fecha->isoFormat('hh:mm:ss a');
 
         return "{$dia} - {$hora}";
@@ -136,7 +136,7 @@ class Notificacion extends Model
         string $mensaje,
         string $tipo = 'general',
         string $origenTipo = 'sistema',
-        ?string $remitenteNombre = 'Notificación',
+        ?string $remitenteNombre = 'Notificaciones',
         ?int $remitenteId = null,
         ?string $enlace = null
     ): self {
@@ -146,7 +146,7 @@ class Notificacion extends Model
             'mensaje'          => $mensaje,
             'tipo'             => $tipo,
             'origen_tipo'      => $origenTipo,
-            'remitente_nombre' => $remitenteNombre ?? 'Notificación',
+            'remitente_nombre' => $remitenteNombre ?? 'Notificaciones',
             'remitente_id'     => $remitenteId,
             'enlace'           => $enlace,
             'leido_at'         => null,

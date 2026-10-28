@@ -6,6 +6,7 @@ use App\Http\Controllers\PasantiaController;
 use App\Http\Controllers\CvController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\HistorialProgresoController;
+use App\Http\Controllers\NotificacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +72,15 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/', [HistorialProgresoController::class, 'index'])->name('api.historial.index');
         Route::post('/', [HistorialProgresoController::class, 'store'])->name('api.historial.store');
         Route::delete('/{id}', [HistorialProgresoController::class, 'destroy'])->name('api.historial.destroy');
+    });
+
+    // Rutas del Módulo de Notificaciones
+    Route::prefix('notificaciones')->group(function () {
+        Route::get('/', [NotificacionController::class, 'index'])->name('api.notificaciones.index');
+        Route::post('/', [NotificacionController::class, 'store'])->name('api.notificaciones.store');
+        Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');
+        Route::post('/marcar-todas-leidas', [NotificacionController::class, 'marcarTodasLeidas'])->name('api.notificaciones.marcar_todas');
+        Route::delete('/{id}', [NotificacionController::class, 'destroy'])->name('api.notificaciones.destroy');
     });
 });
 

@@ -215,8 +215,19 @@ class ReporteController extends Controller
                     accionUrl: '/reportes/' . $reporte->id,
                     progreso: $esEnvio ? 25 : 20
                 );
+
+                // 4. Crear Notificación de acción propia para el usuario
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: (int)$userId,
+                    titulo: $esEnvio ? 'Reporte enviado' : 'Reporte creado',
+                    mensaje: "El reporte del mes de {$validated['mes']} ha sido " . ($esEnvio ? 'enviado exitosamente.' : 'creado correctamente.'),
+                    tipo: 'reporte',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones',
+                    enlace: '/reportes/' . $reporte->id
+                );
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('No se pudo registrar en historial de progreso: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning('No se pudo registrar en historial o notificaciones: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -374,8 +385,27 @@ class ReporteController extends Controller
                 accionUrl: '/reportes/' . $reporte->id,
                 progreso: $estado === 'Aprobado' ? 50 : 30
             );
+
+            // Crear Notificación recibida para el pasante (ej. Observaciones o Aprobación)
+            $esObservado = $estado === 'Observado';
+            $remitenteNombre = $esObservado ? 'Jenny Flores' : 'Notificaciones';
+            $origenTipo = $esObservado ? 'usuario' : 'sistema';
+            $tituloNotif = $esObservado ? 'Observaciones' : ($estado === 'Aprobado' ? 'Reporte aprobado' : 'Proceso de pasantía');
+            $mensajeNotif = $esObservado
+                ? "Agregar 2 o 3 anexos más en el reporte del mes de {$reporte->mes}."
+                : "El proceso de pasantía ha cambiado: tu reporte de {$reporte->mes} fue {$estado}.";
+
+            \App\Models\Notificacion::crearNotificacion(
+                userId: (int)$reporte->user_id,
+                titulo: $tituloNotif,
+                mensaje: $mensajeNotif,
+                tipo: $esObservado ? 'observacion' : 'reporte',
+                origenTipo: $origenTipo,
+                remitenteNombre: $remitenteNombre,
+                enlace: '/reportes/' . $reporte->id
+            );
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial al cambiar estado: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial o notificacion al cambiar estado: ' . $e->getMessage());
         }
 
         return response()->json([
