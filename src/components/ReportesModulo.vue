@@ -4,6 +4,13 @@ import axios from 'axios'
 
 const emit = defineEmits(['volver'])
 
+const props = defineProps({
+  reporteInicialId: {
+    type: [Number, String],
+    default: null
+  }
+})
+
 // Estado del usuario activo
 const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 
@@ -505,8 +512,14 @@ const reportesMostrados = computed(() => {
   })
 })
 
-onMounted(() => {
-  cargarReportes()
+onMounted(async () => {
+  await cargarReportes()
+  const idParaAbrir = props.reporteInicialId || localStorage.getItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
+  if (idParaAbrir) {
+    localStorage.removeItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
+    const repExistente = reportes.value.find(r => String(r.id) === String(idParaAbrir))
+    await verDetalle(repExistente || { id: Number(idParaAbrir) })
+  }
 })
 </script>
 

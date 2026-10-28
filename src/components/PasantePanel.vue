@@ -290,7 +290,7 @@ const handleLogout = () => {
       <CvModulo v-if="itemActivo === 'cv'" @volver="navegarA('inicio')" />
       <ReportesModulo v-else-if="itemActivo === 'reportes'" @volver="navegarA('inicio')" />
       <PerfilModulo v-else-if="itemActivo === 'perfil'" @volver="navegarA('inicio')" />
-      <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" />
+      <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" @navegar="navegarA" />
       <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
       <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="navegarA('inicio')" />
 
