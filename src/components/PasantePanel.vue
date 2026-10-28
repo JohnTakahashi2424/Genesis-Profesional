@@ -8,6 +8,7 @@ import PerfilModulo from './PerfilModulo.vue'
 import HistorialModulo from './HistorialModulo.vue'
 import IaModulo from './IaModulo.vue'
 import ConfiguracionModulo from './ConfiguracionModulo.vue'
+import NotificacionesModulo from './NotificacionesModulo.vue'
 
 const emit = defineEmits(['logout'])
 
@@ -126,6 +127,7 @@ const mapPathToItem = (path) => {
   if (path.includes('/historial')) return 'historial'
   if (path.includes('/ia')) return 'ia'
   if (path.includes('/configuracion')) return 'configuracion'
+  if (path.includes('/notificaciones') || path.includes('/notificacion')) return 'notificaciones'
   if (path.includes('/cv')) return 'cv'
   return 'inicio'
 }
@@ -263,6 +265,19 @@ const handleLogout = () => {
             </svg>
             <span>Configuración</span>
           </button>
+
+          <!-- Notificaciones (Idéntico a la maqueta) -->
+          <button 
+            @click="navegarA('notificaciones')"
+            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            :class="itemActivo === 'notificaciones' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" class="shrink-0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span>Notificaciones</span>
+          </button>
         </nav>
       </div>
 
@@ -293,6 +308,7 @@ const handleLogout = () => {
       <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" @navegar="navegarA" />
       <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
       <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="navegarA('inicio')" />
+      <NotificacionesModulo v-else-if="itemActivo === 'notificaciones'" @volver="navegarA('inicio')" @navegar="navegarA" />
 
       <!-- VISTA PRINCIPAL (INICIO / DASHBOARD) -->
       <template v-else>
