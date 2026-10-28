@@ -64,4 +64,12 @@ class User extends Authenticatable
     {
         return $this->hasOne(Pasante::class, 'user_id', 'id');
     }
+
+    /**
+     * Relación con el historial de progreso del usuario web.
+     */
+    public function historialProgreso()
+    {
+        return $this->hasMany(HistorialProgreso::class, 'user_id', 'id');
+    }
 }
