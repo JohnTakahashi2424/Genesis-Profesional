@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-
 use App\Http\Controllers\PasantiaController;
+use App\Http\Controllers\CvController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\HistorialProgresoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,9 +40,6 @@ Route::prefix('auth')->group(function () {
     Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
-use App\Http\Controllers\CvController;
-use App\Http\Controllers\ReporteController;
-
 // Rutas protegidas mediante autenticación JWT
 Route::middleware('jwt.auth')->group(function () {
     // Cierre de sesión y destrucción de token
@@ -65,6 +64,13 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/{id}', [ReporteController::class, 'update'])->name('api.reportes.update');
         Route::delete('/{id}', [ReporteController::class, 'destroy'])->name('api.reportes.destroy');
         Route::patch('/{id}/estado', [ReporteController::class, 'cambiarEstado'])->name('api.reportes.cambiar_estado');
+    });
+
+    // Rutas del Módulo de Historial de Progreso
+    Route::prefix('historial-progreso')->group(function () {
+        Route::get('/', [HistorialProgresoController::class, 'index'])->name('api.historial.index');
+        Route::post('/', [HistorialProgresoController::class, 'store'])->name('api.historial.store');
+        Route::delete('/{id}', [HistorialProgresoController::class, 'destroy'])->name('api.historial.destroy');
     });
 });
 

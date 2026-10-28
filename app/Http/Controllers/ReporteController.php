@@ -202,6 +202,23 @@ class ReporteController extends Controller
                 ]);
             }
 
+            // 3. Registrar actividad en el Historial de Progreso del estudiante
+            try {
+                $esEnvio = ($validated['estado'] ?? '') === 'Enviado';
+                $titulo = $esEnvio ? 'Envío de reporte' : 'Creación de reporte';
+                \App\Models\HistorialProgreso::registrar(
+                    userId: (int)$userId,
+                    categoria: 'reportes',
+                    titulo: $titulo,
+                    descripcion: "{$titulo} del mes de {$validated['mes']}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: '/reportes/' . $reporte->id,
+                    progreso: $esEnvio ? 25 : 20
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo registrar en historial de progreso: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'exito' => true,
                 'mensaje' => 'Reporte mensual creado correctamente.',
@@ -334,6 +351,32 @@ class ReporteController extends Controller
         }
 
         $reporte->update(['estado' => $request->estado]);
+
+        // Registrar cambio de estado o aprobación en el Historial de Progreso
+        try {
+            $estado = $request->estado;
+            $categoria = match ($estado) {
+                'Aprobado' => 'reportes_aprobados',
+                'Observado' => 'reportes_rechazados',
+                default => 'reportes',
+            };
+            $titulo = match ($estado) {
+                'Aprobado' => 'Reporte aprobado',
+                'Observado' => 'Observaciones en reporte',
+                default => 'Cambio de estado de reporte',
+            };
+            \App\Models\HistorialProgreso::registrar(
+                userId: (int)$reporte->user_id,
+                categoria: $categoria,
+                titulo: $titulo,
+                descripcion: "Reporte del mes de {$reporte->mes} marcado como {$estado}",
+                accionTexto: 'Ver reporte',
+                accionUrl: '/reportes/' . $reporte->id,
+                progreso: $estado === 'Aprobado' ? 50 : 30
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial al cambiar estado: ' . $e->getMessage());
+        }
 
         return response()->json([
             'exito' => true,

@@ -104,45 +104,69 @@ class HistorialProgreso extends Model
         return match ($this->categoria) {
             'cv' => [
                 'etiqueta' => 'Actividad de creación / actualización de CV',
-                'border_class' => 'border-rose-400',
-                'bg_badge' => 'bg-rose-50 text-rose-700',
+                'border_class' => 'border-[#9E2A2B]',
+                'text_class' => 'text-[#9E2A2B]',
             ],
             'reportes' => [
                 'etiqueta' => 'Actividad de creación/envío y observaciones de reportes',
-                'border_class' => 'border-indigo-600',
-                'bg_badge' => 'bg-indigo-50 text-indigo-700',
+                'border_class' => 'border-[#1E3A8A]',
+                'text_class' => 'text-[#1E3A8A]',
             ],
             'anexos' => [
                 'etiqueta' => 'Actividad de anexos a reportes',
-                'border_class' => 'border-amber-500',
-                'bg_badge' => 'bg-amber-50 text-amber-700',
+                'border_class' => 'border-[#C2410C]',
+                'text_class' => 'text-[#C2410C]',
             ],
             'reportes_rechazados' => [
                 'etiqueta' => 'Actividad de reportes rechazados',
-                'border_class' => 'border-red-500',
-                'bg_badge' => 'bg-red-50 text-red-700',
+                'border_class' => 'border-[#DC2626]',
+                'text_class' => 'text-[#DC2626]',
             ],
             'reportes_aprobados' => [
                 'etiqueta' => 'Actividad de reportes aprobados',
-                'border_class' => 'border-emerald-500',
-                'bg_badge' => 'bg-emerald-50 text-emerald-700',
+                'border_class' => 'border-[#16A34A]',
+                'text_class' => 'text-[#16A34A]',
             ],
             'cambio_estado' => [
                 'etiqueta' => 'Actividad de cambio de estado',
-                'border_class' => 'border-sky-500',
-                'bg_badge' => 'bg-sky-50 text-sky-700',
+                'border_class' => 'border-[#0284C7]',
+                'text_class' => 'text-[#0284C7]',
             ],
             'perfil' => [
                 'etiqueta' => 'Actividad de actualización de perfil',
-                'border_class' => 'border-gray-400',
-                'bg_badge' => 'bg-gray-50 text-gray-700',
+                'border_class' => 'border-[#9CA3AF]',
+                'text_class' => 'text-[#6B7280]',
             ],
             default => [
                 'etiqueta' => 'Actividad general',
-                'border_class' => 'border-blue-500',
-                'bg_badge' => 'bg-blue-50 text-blue-700',
+                'border_class' => 'border-[#1E3A8A]',
+                'text_class' => 'text-[#1E3A8A]',
             ],
         };
     }
-}
 
+    /**
+     * Helper para registrar una nueva actividad de progreso fácilmente desde cualquier módulo.
+     */
+    public static function registrar(
+        int $userId,
+        string $categoria,
+        string $titulo,
+        ?string $descripcion = null,
+        ?string $accionTexto = 'Ver reporte',
+        ?string $accionUrl = null,
+        int $progreso = 0,
+        ?string $fechaExacta = null
+    ): self {
+        return self::create([
+            'user_id' => $userId,
+            'categoria' => $categoria,
+            'titulo' => $titulo,
+            'descripcion' => $descripcion,
+            'accion_texto' => $accionTexto,
+            'accion_url' => $accionUrl,
+            'progreso' => $progreso,
+            'fecha_exacta' => $fechaExacta ?? now(),
+        ]);
+    }
+}
