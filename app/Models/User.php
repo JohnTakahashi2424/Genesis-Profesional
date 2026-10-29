@@ -80,4 +80,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Notificacion::class, 'user_id', 'id');
     }
+
+    /**
+     * Relación con los informes finales creados por el usuario/pasante.
+     */
+    public function informesFinales()
+    {
+        return $this->hasMany(InformeFinal::class, 'user_id', 'id');
+    }
 }

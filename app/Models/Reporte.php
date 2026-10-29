@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Reporte extends Model
 {
@@ -95,5 +96,18 @@ class Reporte extends Model
     public function actividades(): HasMany
     {
         return $this->hasMany(ActividadReporte::class, 'reporte_id', 'id')->orderBy('numero', 'asc');
+    }
+
+    /**
+     * Relación muchos a muchos con los informes finales donde este reporte mensual está adjuntado.
+     */
+    public function informesFinales(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            InformeFinal::class,
+            'informe_final_reportes',
+            'reporte_id',
+            'informe_final_id'
+        )->withTimestamps();
     }
 }
