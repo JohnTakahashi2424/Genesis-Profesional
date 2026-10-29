@@ -7,6 +7,7 @@ use App\Http\Controllers\CvController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\HistorialProgresoController;
 use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\InformeFinalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +82,18 @@ Route::middleware('jwt.auth')->group(function () {
         Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');
         Route::post('/marcar-todas-leidas', [NotificacionController::class, 'marcarTodasLeidas'])->name('api.notificaciones.marcar_todas');
         Route::delete('/{id}', [NotificacionController::class, 'destroy'])->name('api.notificaciones.destroy');
+    });
+
+    // Rutas del Módulo de Informe Final (con presupuesto dinámico y reportes adjuntos)
+    Route::prefix('informes-finales')->group(function () {
+        Route::get('/', [InformeFinalController::class, 'index'])->name('api.informes_finales.index');
+        Route::get('/formulario-inicial', [InformeFinalController::class, 'formularioInicial'])->name('api.informes_finales.formulario_inicial');
+        Route::get('/{id}', [InformeFinalController::class, 'show'])->name('api.informes_finales.show');
+        Route::post('/', [InformeFinalController::class, 'store'])->name('api.informes_finales.store');
+        Route::put('/{id}', [InformeFinalController::class, 'update'])->name('api.informes_finales.update');
+        Route::post('/{id}', [InformeFinalController::class, 'update'])->name('api.informes_finales.update_post');
+        Route::delete('/{id}', [InformeFinalController::class, 'destroy'])->name('api.informes_finales.destroy');
+        Route::patch('/{id}/estado', [InformeFinalController::class, 'cambiarEstado'])->name('api.informes_finales.cambiar_estado');
     });
 });
 
