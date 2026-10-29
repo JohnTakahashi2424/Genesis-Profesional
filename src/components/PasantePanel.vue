@@ -15,6 +15,12 @@ const emit = defineEmits(['logout'])
 // Obtener datos del usuario desde localStorage o fallback
 const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 const itemActivo = ref('inicio')
+const reportesVistaInicial = ref('tabla')
+
+const abrirInformeFinal = () => {
+  reportesVistaInicial.value = 'informe_final'
+  navegarA('reportes')
+}
 
 // Extraer el primer nombre para el saludo del banner
 const primerNombre = computed(() => {
@@ -134,6 +140,9 @@ const mapPathToItem = (path) => {
 
 const navegarA = (item) => {
   itemActivo.value = item
+  if (item !== 'reportes') {
+    reportesVistaInicial.value = 'tabla'
+  }
   const currentPath = window.location.pathname
   let basePath = '/pasante'
 
@@ -207,7 +216,7 @@ const handleLogout = () => {
 
           <!-- Reportes -->
           <button 
-            @click="navegarA('reportes')"
+            @click="reportesVistaInicial = 'tabla'; navegarA('reportes')"
             class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'reportes' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
@@ -303,7 +312,12 @@ const handleLogout = () => {
       
       <!-- COMPONENTES DE MÓDULOS EN DESARROLLO -->
       <CvModulo v-if="itemActivo === 'cv'" @volver="navegarA('inicio')" />
-      <ReportesModulo v-else-if="itemActivo === 'reportes'" @volver="navegarA('inicio')" />
+      <ReportesModulo 
+        v-else-if="itemActivo === 'reportes'" 
+        :vista-inicial="reportesVistaInicial"
+        @volver="navegarA('inicio')" 
+        @navegar="navegarA" 
+      />
       <PerfilModulo v-else-if="itemActivo === 'perfil'" @volver="navegarA('inicio')" />
       <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" @navegar="navegarA" />
       <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
@@ -419,7 +433,7 @@ const handleLogout = () => {
             </div>
 
             <!-- Fase 4: Informe final -->
-            <div @click="navegarA('reportes')" class="flex flex-col items-center cursor-pointer group">
+            <div @click="abrirInformeFinal" class="flex flex-col items-center cursor-pointer group">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
                   <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 18.8269 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
@@ -492,6 +506,26 @@ const handleLogout = () => {
               <div>
                 <h3 class="text-sm font-semibold text-gray-900 leading-tight">Subir reporte</h3>
                 <p class="text-xs text-gray-500 mt-0.5">Entrega tus reportes de progreso mensuales o tu informe final.</p>
+              </div>
+            </div>
+
+            <!-- Informe Final de Pasantía (Acceso directo desde el panel principal) -->
+            <div @click="abrirInformeFinal" class="bg-white rounded-[12px] p-5 border border-gray-200/80 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="43" height="43" viewBox="0 0 43 43" fill="none">
+                  <g clip-path="url(#clip0_6048_420_inf_final)">
+                    <path d="M36.1687 0H4.01874C1.80843 0 0 1.80843 0 4.01874V38.8478C0 41.0581 1.80843 42.8666 4.01874 42.8666H36.1687C38.379 42.8666 40.1874 41.0581 40.1874 38.8478V4.01874C40.1874 1.80843 38.379 0 36.1687 0ZM34.8291 37.5082H5.35832V5.35832H34.8291V37.5082ZM10.7166 24.1124H29.4708V26.7916H10.7166V24.1124ZM10.7166 29.4708H29.4708V32.1499H10.7166V29.4708ZM13.3958 12.0562C13.396 11.5283 13.5001 11.0056 13.7023 10.5179C13.9045 10.0302 14.2008 9.58716 14.5742 9.21399C14.9476 8.84081 15.3909 8.54484 15.8787 8.34298C16.3665 8.14111 16.8893 8.0373 17.4172 8.03748C17.9451 8.03766 18.4679 8.14181 18.9555 8.344C19.4432 8.54619 19.8863 8.84246 20.2595 9.21588C20.6326 9.5893 20.9286 10.0326 21.1305 10.5204C21.3323 11.0082 21.4361 11.531 21.436 12.0589C21.4356 13.1251 21.0117 14.1475 20.2576 14.9011C19.5034 15.6548 18.4807 16.078 17.4145 16.0776C16.3483 16.0773 15.326 15.6534 14.5723 14.8992C13.8186 14.1451 13.3954 13.1224 13.3958 12.0562ZM20.0937 16.075H14.7354C12.5251 16.075 10.7166 17.2806 10.7166 18.7541V21.4333H24.1124V18.7541C24.1124 17.2806 22.304 16.075 20.0937 16.075Z" fill="#00589B"/>
+                  </g>
+                  <defs>
+                    <clipPath id="clip0_6048_420_inf_final">
+                      <rect width="42.8666" height="42.8666" fill="white"/>
+                    </clipPath>
+                  </defs>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900 leading-tight">Informe Final de Pasantía</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Genera tu informe final del proceso de pasantías</p>
               </div>
             </div>
 

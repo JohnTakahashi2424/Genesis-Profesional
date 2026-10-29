@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
+import InformeFinalFormulario from './InformeFinalFormulario.vue'
 
 const emit = defineEmits(['volver'])
 
@@ -8,14 +9,24 @@ const props = defineProps({
   reporteInicialId: {
     type: [Number, String],
     default: null
+  },
+  vistaInicial: {
+    type: String,
+    default: 'tabla'
   }
 })
 
 // Estado del usuario activo
 const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 
-// Vistas del módulo: 'tabla', 'formulario', 'detalle'
-const vistaActual = ref('tabla')
+// Vistas del módulo: 'tabla', 'formulario', 'detalle', 'informe_final'
+const vistaActual = ref(props.vistaInicial || 'tabla')
+
+watch(() => props.vistaInicial, (val) => {
+  if (val) {
+    vistaActual.value = val
+  }
+})
 
 // Lista de reportes por defecto calcada exactamente a la Imagen 4
 const reportesPorDefecto = [
@@ -253,6 +264,20 @@ const abrirNuevoReporte = async () => {
   dropdownMesAbierto.value = false
   await inicializarDatosFormulario()
   vistaActual.value = 'formulario'
+}
+
+const abrirInformeFinal = () => {
+  vistaActual.value = 'informe_final'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const handleInformeFinalGuardado = () => {
+  toastMensaje.value = 'El informe final ha sido enviado de manera exitosa y se encuentra en revisión.'
+  toastExitoVisible.value = true
+  cargarReportes()
+  setTimeout(() => {
+    toastExitoVisible.value = false
+  }, 4000)
 }
 
 const verDetalle = async (item) => {
@@ -1406,6 +1431,16 @@ onMounted(async () => {
         </button>
       </div>
 
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VISTA 4: FORMULARIO "INFORME FINAL" (Con presupuesto y reportes adjuntos)  -->
+    <!-- ========================================================================= -->
+    <div v-else-if="vistaActual === 'informe_final'">
+      <InformeFinalFormulario 
+        @volver="volverATabla" 
+        @guardado="handleInformeFinalGuardado" 
+      />
     </div>
 
     <!-- LIGHTBOX PARA VER IMAGEN DE EVIDENCIA EN TAMAÑO COMPLETO -->
