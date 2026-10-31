@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Reporte extends Model
 {
@@ -13,21 +14,93 @@ class Reporte extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'user_id',
         'pasante_id',
-        'nombre_reporte',
+        'area_pasantia',
+        'nombre_pasante',
+        'mes',
         'fecha_inicio',
         'fecha_fin',
-        'horas_registradas',
+        'objetivo',
         'estado',
         'evidencias',
     ];
 
     protected $casts = [
-        'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
-        'horas_registradas' => 'integer',
+        'fecha_inicio' => 'date:Y-m-d',
+        'fecha_fin' => 'date:Y-m-d',
         'evidencias' => 'array',
     ];
+
+    protected $appends = [
+        'periodo',
+        'actividades_desarrolladas',
+    ];
+
+    /**
+     * Obtener el mes del reporte derivado del periodo si existe fecha_inicio.
+     */
+    public function getMesAttribute($value): string
+    {
+        if ($this->fecha_inicio) {
+            $meses = [
+                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            ];
+            $mesNum = (int)$this->fecha_inicio->format('n');
+            if (isset($meses[$mesNum])) {
+                return $meses[$mesNum];
+            }
+        }
+
+        return $value ?: 'Reporte';
+    }
+
+    /**
+     * Formatear el periodo del reporte legible (Ej: "01 Febr – 27 Febr 2026").
+     */
+    public function getPeriodoAttribute(): ?string
+    {
+        if (!$this->fecha_inicio || !$this->fecha_fin) {
+            return null;
+        }
+
+        $mesesCortos = [
+            1 => 'Ener', 2 => 'Febr', 3 => 'Mar', 4 => 'Abr',
+            5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+            9 => 'Sept', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'
+        ];
+
+        $diaInicio = $this->fecha_inicio->format('d');
+        $mesInicio = $mesesCortos[(int)$this->fecha_inicio->format('n')] ?? $this->fecha_inicio->format('M');
+
+        $diaFin = $this->fecha_fin->format('d');
+        $mesFin = $mesesCortos[(int)$this->fecha_fin->format('n')] ?? $this->fecha_fin->format('M');
+        $anioFin = $this->fecha_fin->format('Y');
+
+        return "{$diaInicio} {$mesInicio} – {$diaFin} {$mesFin} {$anioFin}";
+    }
+
+    /**
+     * Obtener el número de actividades desarrolladas.
+     */
+    public function getActividadesDesarrolladasAttribute(): int
+    {
+        if ($this->relationLoaded('actividades')) {
+            return $this->actividades->count();
+        }
+
+        return $this->actividades()->count();
+    }
+
+    /**
+     * Relación directa con el usuario de la cuenta (User).
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 
     /**
      * Relación con el pasante que creó el reporte.
@@ -42,6 +115,19 @@ class Reporte extends Model
      */
     public function actividades(): HasMany
     {
-        return $this->hasMany(ActividadReporte::class, 'reporte_id', 'id');
+        return $this->hasMany(ActividadReporte::class, 'reporte_id', 'id')->orderBy('numero', 'asc');
+    }
+
+    /**
+     * Relación muchos a muchos con los informes finales donde este reporte mensual está adjuntado.
+     */
+    public function informesFinales(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            InformeFinal::class,
+            'informe_final_reportes',
+            'reporte_id',
+            'informe_final_id'
+        )->withTimestamps();
     }
 }

@@ -614,7 +614,7 @@ const eliminarCv = async (cvId) => {
               Este nombre te ayudará a identificarlo entre varios curriculums guardados
             </p>
           </div>
-
+
 
           <div class="flex items-center justify-between pt-2">
             <button 
@@ -669,7 +669,7 @@ const eliminarCv = async (cvId) => {
                 </div>
                 <div>
                   <h3 class="text-lg font-bold leading-tight" :style="{ fontFamily: formCv.diseno.fuente }">
-                    {{ formCv.perfil.nombre || 'Dallana Lucia Campoz Garcia' }}
+                    {{ formCv.perfil.nombre || '' }}
                   </h3>
                   <p v-if="formCv.perfil.educacion" class="text-xs opacity-90 font-sans mt-0.5">
                     {{ formCv.perfil.educacion }}
@@ -984,7 +984,7 @@ const eliminarCv = async (cvId) => {
                   <div class="w-12 h-12 rounded-full bg-white/30 mx-auto mb-2 flex items-center justify-center text-sm font-bold">
                     👤
                   </div>
-                  <h5 class="font-bold text-sm" :style="{ fontFamily: formCv.diseno.fuente }">DALLANA LUCIA CAMPOZ GARCIA</h5>
+                  <h5 class="font-bold text-sm" :style="{ fontFamily: formCv.diseno.fuente }">{{ formCv.perfil.nombre || 'NOMBRE COMPLETO' }}</h5>
                   <p v-if="formCv.perfil.educacion" class="text-[10px] opacity-80">{{ formCv.perfil.educacion }}</p>
                 </div>
                 <div class="p-4 space-y-2 text-gray-600">
@@ -1028,7 +1028,7 @@ const eliminarCv = async (cvId) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 41" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M17 0C19.2543 0 21.4163 1.00197 23.0104 2.78549C24.6045 4.56901 25.5 6.98798 25.5 9.51026C25.5 12.0325 24.6045 14.4515 23.0104 16.235C21.4163 18.0185 19.2543 19.0205 17 19.0205C14.7457 19.0205 12.5837 18.0185 10.9896 16.235C9.39553 14.4515 8.5 12.0325 8.5 9.51026C8.5 6.98798 9.39553 4.56901 10.9896 2.78549C12.5837 1.00197 14.7457 0 17 0ZM17 23.7756C26.3925 23.7756 34 28.0315 34 33.2859L30.0108 37.5486L23.6179 40.233L15.9821 41L7.28072 39.0826L0 35.2477V33.2859C0 28.0315 7.6075 23.7756 17 23.7756Z" fill="currentColor"/></svg>
                     <span>Nombre completo<span class="text-rose-500">*</span></span>
                   </label>
-                  <input v-model="formCv.perfil.nombre" type="text" placeholder="Dallana Lucia Campoz Garcia"
+                  <input v-model="formCv.perfil.nombre" type="text" placeholder="Nombre completo"
                     class="w-full px-4 py-2.5 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.nombre.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;" />

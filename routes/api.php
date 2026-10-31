@@ -2,8 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-
 use App\Http\Controllers\PasantiaController;
+use App\Http\Controllers\CvController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\HistorialProgresoController;
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\InformeFinalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,9 +42,6 @@ Route::prefix('auth')->group(function () {
     Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
-use App\Http\Controllers\CvController;
-use App\Http\Controllers\ReporteController;
-
 // Rutas protegidas mediante autenticación JWT
 Route::middleware('jwt.auth')->group(function () {
     // Cierre de sesión y destrucción de token
@@ -59,11 +60,40 @@ Route::middleware('jwt.auth')->group(function () {
     // Rutas del Módulo de Reportes e Informes
     Route::prefix('reportes')->group(function () {
         Route::get('/', [ReporteController::class, 'index'])->name('api.reportes.index');
+        Route::get('/formulario-inicial', [ReporteController::class, 'formularioInicial'])->name('api.reportes.formulario_inicial');
         Route::get('/{id}', [ReporteController::class, 'show'])->name('api.reportes.show');
         Route::post('/', [ReporteController::class, 'store'])->name('api.reportes.store');
         Route::put('/{id}', [ReporteController::class, 'update'])->name('api.reportes.update');
         Route::delete('/{id}', [ReporteController::class, 'destroy'])->name('api.reportes.destroy');
         Route::patch('/{id}/estado', [ReporteController::class, 'cambiarEstado'])->name('api.reportes.cambiar_estado');
+    });
+
+    // Rutas del Módulo de Historial de Progreso
+    Route::prefix('historial-progreso')->group(function () {
+        Route::get('/', [HistorialProgresoController::class, 'index'])->name('api.historial.index');
+        Route::post('/', [HistorialProgresoController::class, 'store'])->name('api.historial.store');
+        Route::delete('/{id}', [HistorialProgresoController::class, 'destroy'])->name('api.historial.destroy');
+    });
+
+    // Rutas del Módulo de Notificaciones
+    Route::prefix('notificaciones')->group(function () {
+        Route::get('/', [NotificacionController::class, 'index'])->name('api.notificaciones.index');
+        Route::post('/', [NotificacionController::class, 'store'])->name('api.notificaciones.store');
+        Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');
+        Route::post('/marcar-todas-leidas', [NotificacionController::class, 'marcarTodasLeidas'])->name('api.notificaciones.marcar_todas');
+        Route::delete('/{id}', [NotificacionController::class, 'destroy'])->name('api.notificaciones.destroy');
+    });
+
+    // Rutas del Módulo de Informe Final (con presupuesto dinámico y reportes adjuntos)
+    Route::prefix('informes-finales')->group(function () {
+        Route::get('/', [InformeFinalController::class, 'index'])->name('api.informes_finales.index');
+        Route::get('/formulario-inicial', [InformeFinalController::class, 'formularioInicial'])->name('api.informes_finales.formulario_inicial');
+        Route::get('/{id}', [InformeFinalController::class, 'show'])->name('api.informes_finales.show');
+        Route::post('/', [InformeFinalController::class, 'store'])->name('api.informes_finales.store');
+        Route::put('/{id}', [InformeFinalController::class, 'update'])->name('api.informes_finales.update');
+        Route::post('/{id}', [InformeFinalController::class, 'update'])->name('api.informes_finales.update_post');
+        Route::delete('/{id}', [InformeFinalController::class, 'destroy'])->name('api.informes_finales.destroy');
+        Route::patch('/{id}/estado', [InformeFinalController::class, 'cambiarEstado'])->name('api.informes_finales.cambiar_estado');
     });
 });
 
