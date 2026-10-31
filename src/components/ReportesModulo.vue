@@ -642,7 +642,7 @@ const cerrarToastExito = () => {
 
 // Filtro computado de reportes en caso de búsqueda local rápida
 const reportesMostrados = computed(() => {
-  let lista = reportes.value && reportes.value.length > 0 ? reportes.value : reportesPorDefecto
+  let lista = reportes.value && reportes.value.length > 0 ? reportes.value : []
 
   if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
     lista = lista.filter(item => {
