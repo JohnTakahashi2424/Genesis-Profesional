@@ -2,6 +2,39 @@
 
 use Illuminate\Support\Facades\Route;
 
+Route::get('/debug-db', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $dbName = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+        $userCount = \App\Models\User::count();
+        return response()->json([
+            'status' => 'connected',
+            'database' => $dbName,
+            'driver' => \Illuminate\Support\Facades\DB::connection()->getDriverName(),
+            'users' => $userCount,
+            'env_db_url' => env('DB_URL') ? 'set' : 'not_set',
+            'env_database_url' => env('DATABASE_URL') ? 'set' : 'not_set',
+            'env_db_conn' => env('DB_CONNECTION'),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 500);
+    }
+});
+
+Route::get('/debug-logs', function () {
+    $logFile = storage_path('logs/laravel.log');
+    if (file_exists($logFile)) {
+        $content = file_get_contents($logFile);
+        return response(substr($content, -8000), 200, ['Content-Type' => 'text/plain']);
+    }
+    return response('No log file found at ' . $logFile, 200);
+});
+
 // Ruta principal y SPA: sirve la interfaz de Génesis Profesional compilada
 Route::get('/', function () {
     $indexPath = base_path('dist/index.html');
