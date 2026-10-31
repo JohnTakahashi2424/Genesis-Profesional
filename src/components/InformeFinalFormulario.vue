@@ -13,10 +13,15 @@ const enviando = ref(false)
 const mensajeError = ref('')
 const exitoModal = ref(false)
 
-// Campos del formulario principal (calcados a las capturas)
+// Nombre del estudiante autenticado desde sesión
+const nombreInicial = usuario.value?.nombres
+  ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim()
+  : (usuario.value?.nombre || '')
+
+// Campos del formulario principal
 const form = ref({
-  nombre_pasante: 'Dallana Lucía Campos García',
-  institucion: 'Empresas CASS',
+  nombre_pasante: nombreInicial,
+  institucion: '',
   presentacion: '',
   generalidades: '',
   procedimiento_pasantia: '',
@@ -28,26 +33,9 @@ const form = ref({
 const intentoEnvio = ref(false)
 
 // ----------------------------------------------------
-// SECCIÓN 1: Reportes Mensuales para Adjuntar
+// SECCIÓN 1: Reportes Mensuales para Adjuntar (Cargados de la base de datos)
 // ----------------------------------------------------
-const reportesDisponibles = ref([
-  {
-    id: 1,
-    mes: 'Enero',
-    periodo: '01 Ene – 27 Ene 2026',
-    actividades_desarrolladas: 12,
-    estado: 'Aprobado',
-    seleccionado: true
-  },
-  {
-    id: 2,
-    mes: 'Febrero',
-    periodo: '01 Febr – 27 Febr 2026',
-    actividades_desarrolladas: 12,
-    estado: 'Aprobado',
-    seleccionado: true
-  }
-])
+const reportesDisponibles = ref([])
 
 const toggleReporte = (rep) => {
   rep.seleccionado = !rep.seleccionado
@@ -396,7 +384,7 @@ const finalizarEnvio = () => {
               v-model="form.nombre_pasante"
               type="text" 
               class="w-full px-3.5 py-2.5 rounded-lg border border-[#3b82f6] bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
-              placeholder="Dallana Lucía Campos García"
+              placeholder="Nombre del pasante"
             />
           </div>
 
@@ -410,7 +398,7 @@ const finalizarEnvio = () => {
               type="text" 
               class="w-full px-3.5 py-2.5 rounded-lg border border-[#3b82f6] bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
               :class="{ 'border-red-400': intentoEnvio && !form.institucion.trim() }"
-              placeholder="Empresas CASS"
+              placeholder="Institución donde se realizó la pasantía"
             />
           </div>
 
@@ -800,7 +788,7 @@ const finalizarEnvio = () => {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span>{{ enviando ? 'Enviando...' : 'Enviar' }}</span>
+        <span>Enviar</span>
       </button>
 
     </div>

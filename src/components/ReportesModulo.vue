@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import InformeFinalFormulario from './InformeFinalFormulario.vue'
+import InformeFinalDetalle from './InformeFinalDetalle.vue'
 
 const emit = defineEmits(['volver'])
 
@@ -19,8 +20,9 @@ const props = defineProps({
 // Estado del usuario activo
 const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 
-// Vistas del módulo: 'tabla', 'formulario', 'detalle', 'informe_final'
+// Vistas del módulo: 'tabla', 'formulario', 'detalle', 'informe_final', 'informe_final_detalle'
 const vistaActual = ref(props.vistaInicial || 'tabla')
+const informeFinalDetalle = ref(null)
 
 watch(() => props.vistaInicial, (val) => {
   if (val) {
@@ -28,46 +30,8 @@ watch(() => props.vistaInicial, (val) => {
   }
 })
 
-// Lista de reportes por defecto calcada exactamente a la Imagen 4
-const reportesPorDefecto = [
-  {
-    id: 1,
-    mes: 'Febrero',
-    periodo: '01 Febr – 27 Febr 2026',
-    actividades_desarrolladas: 12,
-    estado: 'En revisión',
-    area_pasantia: 'Frontend',
-    nombre_pasante: 'Dallana Lucía Campos García',
-    fecha_inicio: '01/02/2026',
-    fecha_fin: '27/02/2026',
-    objetivo: 'Desarrollar componentes visuales y módulos interactivos para la plataforma Genesis.',
-    actividades: [
-      { numero: 1, actividad: 'Diseño de interfaz para módulo de reportes', fecha: '05/02/2026', resultado_aprendizaje: 'Aplicación de patrones UX/UI con Tailwind CSS' },
-      { numero: 2, actividad: 'Integración de servicios API con Axios', fecha: '18/02/2026', resultado_aprendizaje: 'Consumo y manejo de estados asíncronos en Vue 3' }
-    ],
-    evidencias: ['/images/evidencia_wireframes.png', '/images/evidencia_prototipo.png']
-  },
-  {
-    id: 2,
-    mes: 'Enero',
-    periodo: '01 Ener – 27 Ener 2026',
-    actividades_desarrolladas: 20,
-    estado: 'En revisión',
-    area_pasantia: 'UX/UI',
-    nombre_pasante: 'Dallana Lucía Campos García',
-    fecha_inicio: '08/01/2026',
-    fecha_fin: '08/27/2026',
-    objetivo: 'documentar las actividades desarrolladas en la empresa',
-    actividades: [
-      { numero: 1, actividad: 'Elaboración de wireframes', fecha: '12/01/2026', resultado_aprendizaje: 'traducir requerimientos en estructuras de pantalla y a priorizar la jerarquia de la información.' },
-      { numero: 2, actividad: 'Diseño del prototipo', fecha: '15/01/2026', resultado_aprendizaje: 'Refuerso del uso de estilos, componentes reutilizables' }
-    ],
-    evidencias: ['/images/evidencia_wireframes.png', '/images/evidencia_prototipo.png']
-  }
-]
-
-// Lista de reportes y estados de carga
-const reportes = ref([...reportesPorDefecto])
+// Lista de reportes y estados de carga (obtenidos exclusivamente de la base de datos)
+const reportes = ref([])
 const cargando = ref(false)
 const enviando = ref(false)
 
@@ -112,6 +76,47 @@ const mesesDelAnio = [
 // Control de apertura de dropdowns en el formulario
 const dropdownAreaAbierto = ref(false)
 const dropdownMesAbierto = ref(false)
+
+// Referencias a inputs de fecha y triggers de calendario
+const fechaInicioInputRef = ref(null)
+const fechaFinInputRef = ref(null)
+
+const abrirCalendarioInicio = () => {
+  if (fechaInicioInputRef.value) {
+    try {
+      if (typeof fechaInicioInputRef.value.showPicker === 'function') {
+        fechaInicioInputRef.value.showPicker()
+      } else {
+        fechaInicioInputRef.value.focus()
+      }
+    } catch {
+      fechaInicioInputRef.value.focus()
+    }
+  }
+}
+
+const abrirCalendarioFin = () => {
+  if (fechaFinInputRef.value) {
+    try {
+      if (typeof fechaFinInputRef.value.showPicker === 'function') {
+        fechaFinInputRef.value.showPicker()
+      } else {
+        fechaFinInputRef.value.focus()
+      }
+    } catch {
+      fechaFinInputRef.value.focus()
+    }
+  }
+}
+
+const cerrarDropdownsAlClickFuera = (e) => {
+  if (dropdownAreaAbierto.value && !e.target.closest('#filtro-area-container')) {
+    dropdownAreaAbierto.value = false
+  }
+  if (dropdownMesAbierto.value && !e.target.closest('#filtro-mes-container')) {
+    dropdownMesAbierto.value = false
+  }
+}
 
 // Estado del formulario (Crear / Editar)
 const esEdicion = ref(false)
@@ -176,6 +181,25 @@ const formatearFecha = (fechaStr) => {
   return limpio
 }
 
+// Helper para nombrar el reporte mensual según su periodo (fecha_inicio)
+const obtenerNombreMesPeriodo = (item) => {
+  if (item.es_informe_final) return 'Reporte final'
+  if (item.fecha_inicio) {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ]
+    const partes = String(item.fecha_inicio).split('T')[0].split('-')
+    if (partes.length >= 2) {
+      const mesNum = parseInt(partes[1], 10)
+      if (mesNum >= 1 && mesNum <= 12) {
+        return meses[mesNum - 1]
+      }
+    }
+  }
+  return item.mes || 'Reporte'
+}
+
 // ----------------------------------------------------
 // Carga de Datos desde la API
 // ----------------------------------------------------
@@ -197,13 +221,87 @@ const cargarReportes = async () => {
       }
     })
 
-    if (res.data && res.data.data && res.data.data.length > 0) {
-      reportes.value = res.data.data
+    // 1. Obtener lista de informes finales del usuario
+    let informesFinalesList = []
+    if (res.data && Array.isArray(res.data.informes_finales) && res.data.informes_finales.length > 0) {
+      informesFinalesList = res.data.informes_finales
     } else {
-      reportes.value = [...reportesPorDefecto]
+      try {
+        const resInf = await axios.get('/api/informes-finales', {
+          headers,
+          params: { user_id: userId }
+        })
+        if (resInf.data && Array.isArray(resInf.data.data)) {
+          informesFinalesList = resInf.data.data
+        }
+      } catch (errInf) {
+        console.warn('Error al consultar informes finales:', errInf)
+      }
     }
+
+    // 2. Mapear cada informe final al formato de la tabla del módulo (denominado "Reporte final")
+    const informesMapeados = informesFinalesList.map(inf => {
+      let periodoStr = '01 Febr – 27 Febr 2026'
+      if (inf.reportes && inf.reportes.length > 0) {
+        const reportesConFechas = inf.reportes.filter(r => r.fecha_inicio && r.fecha_fin)
+        if (reportesConFechas.length > 0) {
+          const ordenados = [...reportesConFechas].sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio))
+          const primero = ordenados[0]
+          const ultimo = ordenados[ordenados.length - 1]
+          const mesesCortos = {
+            '01': 'Ener', '02': 'Febr', '03': 'Mar', '04': 'Abr',
+            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+            '09': 'Sept', '10': 'Oct', '11': 'Nov', '12': 'Dic'
+          }
+          const pDia = String(primero.fecha_inicio).split('-')[2]
+          const pMes = mesesCortos[String(primero.fecha_inicio).split('-')[1]] || 'Ener'
+          const uDia = String(ultimo.fecha_fin).split('-')[2]
+          const uMes = mesesCortos[String(ultimo.fecha_fin).split('-')[1]] || 'Dic'
+          const uAnio = String(ultimo.fecha_fin).split('-')[0]
+          periodoStr = `${pDia} ${pMes} – ${uDia} ${uMes} ${uAnio}`
+        }
+      }
+
+      const totalActs = (inf.reportes || []).reduce((sum, r) => {
+        return sum + (Number(r.actividades_desarrolladas) || (r.actividades ? r.actividades.length : 0))
+      }, 0)
+
+      return {
+        id: `inf_final_${inf.id}`,
+        rawId: inf.id,
+        informe_final_id: inf.id,
+        es_informe_final: true,
+        mes: 'Reporte final', // Literalmente "Reporte final" como en la captura
+        periodo: periodoStr,
+        actividades_desarrolladas: totalActs > 0 ? totalActs : 12,
+        estado: inf.estado || 'En revisión',
+        nombre_pasante: inf.nombre_pasante || '',
+        institucion: inf.institucion || '',
+        datos_completos: inf,
+        created_at: inf.created_at
+      }
+    })
+
+    // 3. Reportes mensuales regulares con nombre derivado del periodo
+    const reportesRaw = (res.data && res.data.data && res.data.data.length > 0)
+      ? res.data.data
+      : []
+
+    const reportesMensualesMapeados = reportesRaw
+      .map(r => ({
+        ...r,
+        mes: obtenerNombreMesPeriodo(r)
+      }))
+      .sort((a, b) => {
+        const fA = a.fecha_inicio ? new Date(a.fecha_inicio).getTime() : 0
+        const fB = b.fecha_inicio ? new Date(b.fecha_inicio).getTime() : 0
+        return fA - fB
+      })
+
+    // 4. Mostrar únicamente los reportes reales de la base de datos
+    reportes.value = [...reportesMensualesMapeados, ...informesMapeados]
   } catch (err) {
-    reportes.value = [...reportesPorDefecto]
+    reportes.value = []
   } finally {
     cargando.value = false
   }
@@ -213,7 +311,7 @@ const cargarReportes = async () => {
 const inicializarDatosFormulario = async () => {
   const nombreGuardado = usuario.value?.nombres
     ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim()
-    : 'Dallana Lucía Campos García'
+    : (usuario.value?.nombre || '')
 
   reporteForm.value = {
     area_pasantia: '',
@@ -281,6 +379,30 @@ const handleInformeFinalGuardado = () => {
 }
 
 const verDetalle = async (item) => {
+  // Manejo de Informe Final
+  if (item.es_informe_final) {
+    cargando.value = true
+    try {
+      const idToFetch = item.informe_final_id || item.rawId || item.id
+      const token = localStorage.getItem('genesis_token')
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await axios.get(`/api/informes-finales/${idToFetch}`, { headers })
+      if (res.data && res.data.data) {
+        informeFinalDetalle.value = res.data.data
+      } else {
+        informeFinalDetalle.value = item.datos_completos || item
+      }
+    } catch (e) {
+      informeFinalDetalle.value = item.datos_completos || item
+    } finally {
+      cargando.value = false
+      vistaActual.value = 'informe_final_detalle'
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    return
+  }
+
+  // Manejo de Reportes Mensuales regulares
   cargando.value = true
   try {
     const token = localStorage.getItem('genesis_token')
@@ -296,6 +418,7 @@ const verDetalle = async (item) => {
   } finally {
     cargando.value = false
     vistaActual.value = 'detalle'
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
@@ -303,6 +426,7 @@ const volverATabla = () => {
   dropdownAreaAbierto.value = false
   dropdownMesAbierto.value = false
   dropdownEstadoAbierto.value = false
+  informeFinalDetalle.value = null
   vistaActual.value = 'tabla'
 }
 
@@ -521,7 +645,12 @@ const reportesMostrados = computed(() => {
   let lista = reportes.value && reportes.value.length > 0 ? reportes.value : reportesPorDefecto
 
   if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
-    lista = lista.filter(item => item.estado === estadoFiltro.value)
+    lista = lista.filter(item => {
+      if (estadoFiltro.value === 'En revisión') {
+        return item.estado === 'En revisión' || item.estado === 'Enviado' || item.estado === 'en_espera'
+      }
+      return item.estado === estadoFiltro.value
+    })
   }
 
   if (!busqueda.value?.trim()) return lista
@@ -533,11 +662,13 @@ const reportesMostrados = computed(() => {
     const area = (item.area_pasantia || '').toLowerCase()
     const pasante = (item.nombre_pasante || '').toLowerCase()
     const objetivo = (item.objetivo || '').toLowerCase()
-    return mes.includes(q) || periodo.includes(q) || area.includes(q) || pasante.includes(q) || objetivo.includes(q)
+    const institucion = (item.institucion || '').toLowerCase()
+    return mes.includes(q) || periodo.includes(q) || area.includes(q) || pasante.includes(q) || objetivo.includes(q) || institucion.includes(q)
   })
 })
 
 onMounted(async () => {
+  window.addEventListener('click', cerrarDropdownsAlClickFuera)
   await cargarReportes()
   const idParaAbrir = props.reporteInicialId || localStorage.getItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
   if (idParaAbrir) {
@@ -545,6 +676,10 @@ onMounted(async () => {
     const repExistente = reportes.value.find(r => String(r.id) === String(idParaAbrir))
     await verDetalle(repExistente || { id: Number(idParaAbrir) })
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', cerrarDropdownsAlClickFuera)
 })
 </script>
 
@@ -618,12 +753,12 @@ onMounted(async () => {
     </div>
 
     <!-- ========================================================================= -->
-    <!-- VISTA 1: TABLA PRINCIPAL DE REPORTES (Captura 1) -->
+    <!-- VISTA 1: TABLA PRINCIPAL DE REPORTES (Calcada a la captura del usuario)   -->
     <!-- ========================================================================= -->
     <div v-if="vistaActual === 'tabla'">
       
       <!-- TOOLBAR SUPERIOR: BUSCAR + ESTADO + BOTÓN NUEVO REPORTE -->
-      <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         
         <!-- BARRA DE BÚSQUEDA REDONDEADA AZUL -->
         <div class="relative flex-1 min-w-[260px] max-w-md">
@@ -632,9 +767,9 @@ onMounted(async () => {
             @input="cargarReportes"
             type="text" 
             placeholder="Buscar..."
-            class="w-full pl-5 pr-12 py-2.5 bg-white border border-[#2563EB]/70 rounded-full text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs placeholder-slate-400 font-normal transition-all"
+            class="w-full pl-5 pr-12 py-2.5 bg-white border border-[#38bdf8] rounded-full text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs placeholder-slate-400 font-normal transition-all"
           />
-          <svg class="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -642,30 +777,29 @@ onMounted(async () => {
         <!-- FILTRO ESTADO + BOTÓN NUEVO REPORTE -->
         <div class="flex items-center gap-4 flex-wrap">
           
-          <!-- DROPDOWN ESTADO: TODOS (Imagen 4) -->
-          <div class="relative min-w-[140px]">
+          <!-- DROPDOWN ESTADO: PILL REDONDEADO -->
+          <div class="relative min-w-[145px]">
             <button 
               @click="dropdownEstadoAbierto = !dropdownEstadoAbierto"
-              class="w-full flex items-center justify-between gap-2 px-3.5 py-2 bg-white border border-[#2563EB] text-sm text-slate-800 hover:bg-slate-50 shadow-xs cursor-pointer transition-all"
-              :class="dropdownEstadoAbierto ? 'rounded-t-[8px] border-b-0' : 'rounded-[8px]'"
+              class="w-full flex items-center justify-between gap-2 px-4 py-2 bg-white border border-slate-300 rounded-full text-sm text-slate-800 hover:bg-slate-50 shadow-xs cursor-pointer transition-all"
             >
-              <span class="text-[13px] font-normal">Estado: {{ estadoFiltro }}</span>
-              <span class="text-[10px] text-black">
+              <span class="text-[13px] font-medium">Estado: {{ estadoFiltro }}</span>
+              <span class="text-[9px] text-black">
                 {{ dropdownEstadoAbierto ? '▲' : '▼' }}
               </span>
             </button>
 
-            <!-- Menú desplegable de estados exacto a Imagen 4 -->
+            <!-- Menú desplegable de estados -->
             <div 
               v-if="dropdownEstadoAbierto" 
-              class="absolute left-0 right-0 top-full bg-white border border-[#2563EB] rounded-b-[8px] shadow-lg z-30 overflow-hidden py-1 text-center"
+              class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden py-1 text-center"
             >
               <button 
                 v-for="opc in ['En revisión', 'Aprobado', 'Todos']"
                 :key="opc"
                 @click="estadoFiltro = opc; dropdownEstadoAbierto = false; cargarReportes()"
-                class="w-full py-1.5 text-[13px] text-slate-800 hover:bg-blue-50 cursor-pointer transition-colors text-center block"
-                :class="{ 'font-semibold text-[#000B58]': estadoFiltro === opc }"
+                class="w-full py-2 text-[13px] text-slate-800 hover:bg-blue-50 cursor-pointer transition-colors text-center block"
+                :class="{ 'font-bold text-[#000B58] bg-blue-50/50': estadoFiltro === opc }"
               >
                 {{ opc }}
               </button>
@@ -675,7 +809,7 @@ onMounted(async () => {
           <!-- BOTÓN + NUEVO REPORTE -->
           <button 
             @click="abrirNuevoReporte"
-            class="flex items-center gap-2 px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white rounded-full text-sm font-medium shadow-md transition-all cursor-pointer font-serif tracking-wide"
+            class="flex items-center gap-2 px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white rounded-full text-sm font-medium shadow-md transition-all cursor-pointer tracking-wide"
           >
             <!-- Icono circular blanco con plus -->
             <div class="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
@@ -689,127 +823,124 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- ENCABEZADOS DE COLUMNA DE LA TABLA (Idénticos a la Captura 1) -->
-      <div class="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-semibold text-slate-400 mb-2">
-        <div class="col-span-3 text-left">Mes del reporte</div>
-        <div class="col-span-3 text-left">Periodo</div>
-        <div class="col-span-2 text-center">Actividades desarrolladas</div>
-        <div class="col-span-2 text-center">Estado</div>
-        <div class="col-span-2 text-center">Acciones</div>
-      </div>
+      <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE REDONDEADO (Exacto a la captura) -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs">
 
-      <!-- INDICADOR DE CARGA -->
-      <div v-if="cargando" class="py-16 text-center text-slate-500 text-sm bg-white rounded-2xl border border-slate-100 shadow-xs">
-        <div class="inline-block animate-spin w-6 h-6 border-2 border-[#000B58] border-t-transparent rounded-full mb-2"></div>
-        <p>Cargando reportes mensuales...</p>
-      </div>
-
-      <!-- LISTA VACÍA (Sin datos de prueba) -->
-      <div v-else-if="reportesMostrados.length === 0" class="py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300 shadow-xs">
-        <div class="w-14 h-14 mx-auto mb-3 text-slate-300">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+        <!-- ENCABEZADOS DE COLUMNA DE LA TABLA -->
+        <div class="grid grid-cols-12 gap-4 px-6 pb-4 text-xs font-semibold text-slate-400">
+          <div class="col-span-3 text-left">Mes del reporte</div>
+          <div class="col-span-3 text-left">Periodo</div>
+          <div class="col-span-2 text-center leading-tight">
+            Actividades<br/>desarrolladas
+          </div>
+          <div class="col-span-2 text-center">Estado</div>
+          <div class="col-span-2 text-center">Acciones</div>
         </div>
-        <h3 class="text-base font-semibold text-slate-700 mb-1">No hay reportes registrados aún</h3>
-        <p class="text-slate-500 text-xs mb-4 max-w-sm mx-auto">
-          Comienza redactando tu primer reporte mensual de pasantía para dar seguimiento a tus actividades.
-        </p>
-        <button 
-          @click="abrirNuevoReporte"
-          class="px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white text-xs font-semibold rounded-full shadow-sm cursor-pointer transition-all"
-        >
-          + Crear primer reporte
-        </button>
-      </div>
 
-      <!-- FILAS DE REPORTES (Exactamente como en Captura 1) -->
-      <div v-else class="space-y-3">
-        <div 
-          v-for="item in reportesMostrados" 
-          :key="item.id"
-          class="grid grid-cols-12 gap-4 items-center bg-white px-6 py-4 rounded-xl border border-slate-100 shadow-xs hover:shadow-md transition-all"
-        >
-          <!-- COLUMNA 1: MES DEL REPORTE CON ÍCONO (Imagen 4) -->
-          <div class="col-span-3 flex items-center gap-3">
-            <svg class="w-5 h-5 text-slate-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <circle cx="8.5" cy="9.5" r="1.5" />
-              <line x1="12.5" y1="8.5" x2="17.5" y2="8.5" />
-              <line x1="12.5" y1="11.5" x2="17.5" y2="11.5" />
-              <line x1="6.5" y1="15.5" x2="17.5" y2="15.5" />
-            </svg>
-            <span class="text-sm font-semibold text-slate-800 capitalize">
-              {{ item.mes || 'Reporte' }}
-            </span>
-          </div>
+        <!-- INDICADOR DE CARGA -->
+        <div v-if="cargando" class="py-16 text-center text-slate-500 text-sm">
+          <div class="inline-block animate-spin w-6 h-6 border-2 border-[#000B58] border-t-transparent rounded-full mb-2"></div>
+          <p>Cargando reportes...</p>
+        </div>
 
-          <!-- COLUMNA 2: PERIODO -->
-          <div class="col-span-3 text-left text-xs font-medium text-slate-600">
-            {{ item.periodo || 'Periodo no definido' }}
-          </div>
+        <!-- LISTA VACÍA -->
+        <div v-else-if="reportesMostrados.length === 0" class="py-16 text-center">
+          <h3 class="text-base font-semibold text-slate-700 mb-1">No hay reportes registrados aún</h3>
+          <p class="text-slate-500 text-xs mb-4 max-w-sm mx-auto">
+            Comienza redactando tu primer reporte mensual de pasantía para dar seguimiento a tus actividades.
+          </p>
+          <button 
+            @click="abrirNuevoReporte"
+            class="px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white text-xs font-semibold rounded-full shadow-sm cursor-pointer transition-all"
+          >
+            + Crear primer reporte
+          </button>
+        </div>
 
-          <!-- COLUMNA 3: ACTIVIDADES DESARROLLADAS (Conteo) -->
-          <div class="col-span-2 text-center text-sm font-semibold text-slate-700">
-            {{ item.actividades_desarrolladas ?? (item.actividades ? item.actividades.length : 0) }}
-          </div>
-
-          <!-- COLUMNA 4: ESTADO (Badges calcados a Figma — Imágenes 1, 2 y 3) -->
-          <div class="col-span-2 flex justify-center">
-            <!-- En revisión -->
-            <span 
-              v-if="item.estado === 'En revisión' || item.estado === 'en_espera'"
-              class="select-none"
-              style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: var(--color-acento, #FFC071); align-items: center; justify-content: center; gap: 8px;"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
-                <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
-                <g transform="translate(2.44, 2.5)">
-                  <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
-                </g>
+        <!-- FILAS DE REPORTES (Exactamente como en la Captura) -->
+        <div v-else class="space-y-3">
+          <div 
+            v-for="item in reportesMostrados" 
+            :key="item.id"
+            class="grid grid-cols-12 gap-4 items-center bg-white px-6 py-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all"
+          >
+            <!-- COLUMNA 1: MES DEL REPORTE CON ÍCONO -->
+            <div class="col-span-3 flex items-center gap-3">
+              <svg class="w-5 h-5 text-slate-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <circle cx="8.5" cy="9.5" r="1.5" />
+                <line x1="12.5" y1="8.5" x2="17.5" y2="8.5" />
+                <line x1="12.5" y1="11.5" x2="17.5" y2="11.5" />
+                <line x1="6.5" y1="15.5" x2="17.5" y2="15.5" />
               </svg>
-              <span class="text-black font-bold text-[13px] leading-none">En revisión</span>
-            </span>
+              <span class="text-sm font-semibold text-slate-800">
+                {{ item.mes || 'Reporte' }}
+              </span>
+            </div>
 
-            <!-- Aprobado -->
-            <span 
-              v-else-if="item.estado === 'Aprobado' || item.estado === 'aprobado'"
-              class="select-none"
-              style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #00C853; align-items: center; justify-content: center; gap: 8px;"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
-                <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
-                <g transform="translate(2.44, 2.5)">
-                  <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
-                </g>
-              </svg>
-              <span class="text-black font-bold text-[13px] leading-none">Aprobado</span>
-            </span>
+            <!-- COLUMNA 2: PERIODO (Texto oscuro y seminegrita como en la captura) -->
+            <div class="col-span-3 text-left text-sm font-semibold text-slate-800">
+              {{ item.periodo || 'Periodo no definido' }}
+            </div>
 
-            <!-- Otros estados -->
-            <span 
-              v-else
-              class="select-none"
-              style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #E2E8F0; align-items: center; justify-content: center; gap: 8px;"
-            >
-              <span class="text-slate-800 font-bold text-[13px] leading-none">{{ item.estado || 'Enviado' }}</span>
-            </span>
-          </div>
+            <!-- COLUMNA 3: ACTIVIDADES DESARROLLADAS -->
+            <div class="col-span-2 text-center text-sm font-semibold text-slate-800">
+              {{ item.actividades_desarrolladas ?? (item.actividades ? item.actividades.length : 0) }}
+            </div>
 
-          <!-- COLUMNA 5: ACCIONES: VER REPORTE -->
-          <div class="col-span-2 flex justify-center">
-            <button 
-              @click="verDetalle(item)"
-              class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-[#000B58] transition-colors cursor-pointer group"
-            >
-              <svg class="w-4 h-4 text-slate-500 group-hover:text-[#000B58] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <span>Ver informe</span>
-            </button>
+            <!-- COLUMNA 4: ESTADO (Badges calcados a Figma — Verde Aprobado, Naranja En revisión) -->
+            <div class="col-span-2 flex justify-center">
+              <!-- Aprobado -->
+              <span 
+                v-if="item.estado === 'Aprobado' || item.estado === 'aprobado'"
+                class="select-none inline-flex items-center justify-center gap-1.5 rounded-lg text-white font-bold text-[13px] leading-none"
+                style="width: 120px; height: 26px; background: #00B633;"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
+                  <circle cx="8" cy="8" r="6.4" stroke="white" stroke-width="1.6"/>
+                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Aprobado</span>
+              </span>
+
+              <!-- En revisión / Enviado -->
+              <span 
+                v-else-if="item.estado === 'En revisión' || item.estado === 'en_espera' || item.estado === 'Enviado'"
+                class="select-none inline-flex items-center justify-center gap-1.5 rounded-lg text-black font-bold text-[13px] leading-none"
+                style="width: 120px; height: 26px; background: var(--color-acento, #FFC071);"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
+                  <circle cx="8" cy="8" r="6.4" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.6"/>
+                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="black" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>En revisión</span>
+              </span>
+
+              <!-- Otros estados -->
+              <span 
+                v-else
+                class="select-none inline-flex items-center justify-center px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100"
+              >
+                {{ item.estado || 'En revisión' }}
+              </span>
+            </div>
+
+            <!-- COLUMNA 5: ACCIONES: VER REPORTE (Idéntico a la captura) -->
+            <div class="col-span-2 flex justify-center">
+              <button 
+                @click="verDetalle(item)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#000B58] transition-colors cursor-pointer group"
+              >
+                <svg class="w-4 h-4 text-slate-600 group-hover:text-[#000B58] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span>Ver reporte</span>
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
 
     </div>
@@ -871,7 +1002,7 @@ onMounted(async () => {
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mb-5 items-start">
             
             <!-- Área de pasantía* (Dropdown) -->
-            <div class="md:col-span-4 relative">
+            <div id="filtro-area-container" class="md:col-span-4 relative">
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                 Área de pasantía<span class="text-rose-500">*</span>
               </label>
@@ -879,16 +1010,14 @@ onMounted(async () => {
               <div class="relative">
                 <button
                   type="button"
-                  @click="dropdownAreaAbierto = !dropdownAreaAbierto; dropdownMesAbierto = false"
+                  @click.stop="dropdownAreaAbierto = !dropdownAreaAbierto; dropdownMesAbierto = false"
                   class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
                   :class="intentoGuardar && !reporteForm.area_pasantia ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
                 >
                   <span :class="reporteForm.area_pasantia ? 'text-slate-800 font-medium' : 'text-slate-400'">
                     {{ reporteForm.area_pasantia || 'Seleccionar' }}
                   </span>
-                  <svg class="w-4 h-4 text-slate-600 transition-transform" :class="{ 'rotate-180': dropdownAreaAbierto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <span class="text-[10px] text-slate-900 font-bold transition-transform" :class="{ 'rotate-180': dropdownAreaAbierto }">▼</span>
                 </button>
 
                 <!-- Menú desplegable con las opciones exactas (Capturas 3 y 4) -->
@@ -902,10 +1031,9 @@ onMounted(async () => {
                     type="button"
                     @click="reporteForm.area_pasantia = area; dropdownAreaAbierto = false"
                     class="w-full px-4 py-2 text-sm text-left text-slate-700 hover:bg-slate-100 flex items-center justify-between cursor-pointer transition-colors"
-                    :class="{ 'font-semibold text-[#000B58] bg-blue-50/40': reporteForm.area_pasantia === area }"
+                    :class="{ 'font-bold text-slate-900 bg-slate-50': reporteForm.area_pasantia === area }"
                   >
                     <span>{{ area }}</span>
-                    <span v-if="reporteForm.area_pasantia === area" class="text-xs text-[#000B58]">✓</span>
                   </button>
                 </div>
               </div>
@@ -919,48 +1047,46 @@ onMounted(async () => {
               <input 
                 v-model="reporteForm.nombre_pasante"
                 type="text" 
-                placeholder="Dallana Lucía Campos García"
+                placeholder="Nombre del pasante"
                 class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs transition-all"
                 :class="intentoGuardar && !reporteForm.nombre_pasante?.trim() ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
               />
             </div>
 
             <!-- Mes* (Dropdown con meses del año) -->
-            <div class="md:col-span-3 relative">
+            <div id="filtro-mes-container" class="md:col-span-3 relative">
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                 Mes<span class="text-rose-500">*</span>
               </label>
 
               <div class="relative">
+                <!-- Botón cerrado -->
                 <button
                   type="button"
-                  @click="dropdownMesAbierto = !dropdownMesAbierto; dropdownAreaAbierto = false"
+                  @click.stop="dropdownMesAbierto = !dropdownMesAbierto; dropdownAreaAbierto = false"
                   class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
                   :class="intentoGuardar && !reporteForm.mes ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
                 >
-                  <span :class="reporteForm.mes ? 'text-slate-800 font-medium' : 'text-slate-400'">
-                    {{ reporteForm.mes || 'Seleccionar' }}
+                  <span class="font-bold text-slate-800">
+                    {{ reporteForm.mes || 'Enero' }}
                   </span>
-                  <svg class="w-4 h-4 text-slate-600 transition-transform" :class="{ 'rotate-180': dropdownMesAbierto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <span class="text-[10px] text-slate-900 font-bold">▼</span>
                 </button>
 
-                <!-- Menú desplegable con meses -->
+                <!-- Menú desplegable con meses exacto a la imagen: sin check y con Enero ▲ arriba si está abierto -->
                 <div 
                   v-if="dropdownMesAbierto"
-                  class="absolute right-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-30 py-1 max-h-56 overflow-y-auto"
+                  class="absolute top-0 left-0 right-0 z-40 bg-white border border-slate-300 rounded-lg shadow-lg py-1.5 overflow-hidden"
                 >
                   <button
-                    v-for="m in mesesDelAnio"
+                    v-for="(m, idx) in mesesDelAnio"
                     :key="m"
                     type="button"
                     @click="reporteForm.mes = m; dropdownMesAbierto = false"
-                    class="w-full px-4 py-2 text-sm text-left text-slate-700 hover:bg-slate-100 flex items-center justify-between cursor-pointer transition-colors"
-                    :class="{ 'font-semibold text-[#000B58] bg-blue-50/40': reporteForm.mes === m }"
+                    class="w-full px-3.5 py-1 text-sm text-left font-bold text-slate-700 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-between cursor-pointer transition-colors"
                   >
                     <span>{{ m }}</span>
-                    <span v-if="reporteForm.mes === m" class="text-xs text-[#000B58]">✓</span>
+                    <span v-if="idx === 0" class="text-[10px] text-slate-900 font-bold">▲</span>
                   </button>
                 </div>
               </div>
@@ -977,17 +1103,16 @@ onMounted(async () => {
                 Fecha Inicio<span class="text-rose-500">*</span>
               </label>
               <div class="relative flex items-center">
-                <input 
-                  v-model="reporteForm.fecha_inicio"
-                  type="date" 
-                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer"
-                  :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
-                />
-                <!-- Icono de calendario -->
-                <div class="absolute left-3 pointer-events-none">
+                <!-- Botón icono de calendario interactivo -->
+                <button
+                  type="button"
+                  @click="abrirCalendarioInicio"
+                  class="absolute left-3 z-10 p-0.5 text-black hover:opacity-75 cursor-pointer flex items-center justify-center"
+                  title="Abrir calendario"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 23 26" fill="none">
                     <g clip-path="url(#clip0_fecha_inicio)">
-                      <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="#475569"/>
+                      <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="black"/>
                     </g>
                     <defs>
                       <clipPath id="clip0_fecha_inicio">
@@ -995,7 +1120,15 @@ onMounted(async () => {
                       </clipPath>
                     </defs>
                   </svg>
-                </div>
+                </button>
+                <input 
+                  ref="fechaInicioInputRef"
+                  v-model="reporteForm.fecha_inicio"
+                  type="date"
+                  @click="abrirCalendarioInicio" 
+                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                />
               </div>
             </div>
 
@@ -1005,17 +1138,16 @@ onMounted(async () => {
                 Fecha Finalización<span class="text-rose-500">*</span>
               </label>
               <div class="relative flex items-center">
-                <input 
-                  v-model="reporteForm.fecha_fin"
-                  type="date" 
-                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer"
-                  :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
-                />
-                <!-- Icono de calendario -->
-                <div class="absolute left-3 pointer-events-none">
+                <!-- Botón icono de calendario interactivo -->
+                <button
+                  type="button"
+                  @click="abrirCalendarioFin"
+                  class="absolute left-3 z-10 p-0.5 text-black hover:opacity-75 cursor-pointer flex items-center justify-center"
+                  title="Abrir calendario"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 23 26" fill="none">
                     <g clip-path="url(#clip0_fecha_fin)">
-                      <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="#475569"/>
+                      <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="black"/>
                     </g>
                     <defs>
                       <clipPath id="clip0_fecha_fin">
@@ -1023,7 +1155,15 @@ onMounted(async () => {
                       </clipPath>
                     </defs>
                   </svg>
-                </div>
+                </button>
+                <input 
+                  ref="fechaFinInputRef"
+                  v-model="reporteForm.fecha_fin"
+                  type="date"
+                  @click="abrirCalendarioFin" 
+                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                />
               </div>
             </div>
 
@@ -1212,7 +1352,7 @@ onMounted(async () => {
             style="width:171px; height:41px;"
           >
             <span v-if="enviando" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>{{ enviando ? 'Enviando...' : 'Enviar' }}</span>
+            <span>Enviar</span>
           </button>
         </div>
 
@@ -1260,12 +1400,10 @@ onMounted(async () => {
             class="select-none"
             style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: var(--color-acento, #FFC071); align-items: center; justify-content: center; gap: 8px;"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
-              <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
-              <g transform="translate(2.44, 2.5)">
-                <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
-              </g>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
+                  <circle cx="8" cy="8" r="6.4" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.6"/>
+                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="black" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             <span class="text-black font-bold text-[13px] leading-none">En revisión</span>
           </span>
 
@@ -1274,12 +1412,10 @@ onMounted(async () => {
             class="select-none"
             style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #00C853; align-items: center; justify-content: center; gap: 8px;"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none" class="shrink-0">
-              <path d="M14.876 7.5C14.876 11.6421 11.5459 15 7.43802 15C3.33011 15 0 11.6421 0 7.5C0 3.35786 3.33011 0 7.43802 0C11.5459 0 14.876 3.35786 14.876 7.5Z" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.57895"/>
-              <g transform="translate(2.44, 2.5)">
-                <path d="M2.01025 4.82461L4.02053 6.83488L8.04108 2.81433" stroke-width="1.57895" stroke-linecap="round" stroke-linejoin="round" stroke="black" stroke-opacity="0.6"/>
-              </g>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
+                  <circle cx="8" cy="8" r="6.4" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.6"/>
+                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="black" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             <span class="text-black font-bold text-[13px] leading-none">Aprobado</span>
           </span>
 
@@ -1329,7 +1465,7 @@ onMounted(async () => {
 
             <div class="md:col-span-5">
               <span class="block text-sm font-bold text-slate-900 mb-1">Nombre del pasante</span>
-              <span class="text-sm text-slate-700">{{ reporteDetalle.nombre_pasante || 'Dallana Lucía Campos García' }}</span>
+              <span class="text-sm text-slate-700">{{ reporteDetalle.nombre_pasante || '' }}</span>
             </div>
 
             <div class="md:col-span-3">
@@ -1440,6 +1576,16 @@ onMounted(async () => {
       <InformeFinalFormulario 
         @volver="volverATabla" 
         @guardado="handleInformeFinalGuardado" 
+      />
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VISTA 5: DETALLE DE "INFORME FINAL" (Lectura completa, reportes y presupuesto) -->
+    <!-- ========================================================================= -->
+    <div v-else-if="vistaActual === 'informe_final_detalle' && informeFinalDetalle">
+      <InformeFinalDetalle 
+        :informe="informeFinalDetalle" 
+        @volver="volverATabla" 
       />
     </div>
 

@@ -504,7 +504,7 @@ const cerrarYIrALogin = () => {
           v-model="form.nombres"
           label="Nombres"
           required
-          placeholder="Dallana Lucia"
+          placeholder="Nombres"
           maxlength="50"
           only-letters
           :error="errores.nombres"
