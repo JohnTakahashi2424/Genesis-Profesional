@@ -74,6 +74,60 @@ class HistorialProgresoController extends Controller
 
         $items = $query->get();
 
+        // Si no existen actividades pero el usuario tiene reportes registrados en la BD, sincronizar actividades reales
+        if ($items->isEmpty() && empty($categoria)) {
+            $reportesReales = \App\Models\Reporte::where('user_id', (int)$userId)
+                ->orderBy('created_at')
+                ->get();
+
+            if ($reportesReales->isNotEmpty()) {
+                $progreso = 0;
+                foreach ($reportesReales as $rep) {
+                    if ($rep->estado === 'Aprobado') {
+                        $progreso = min(100, $progreso + 15);
+                    }
+                    HistorialProgreso::create([
+                        'user_id' => $rep->user_id,
+                        'categoria' => 'reportes',
+                        'titulo' => 'Creación de reporte',
+                        'descripcion' => "Creación de reporte del mes de {$rep->mes}",
+                        'fecha_exacta' => $rep->created_at ?? now(),
+                        'accion_texto' => 'Ver reporte',
+                        'accion_url' => '/reportes/' . $rep->id,
+                        'progreso' => $progreso,
+                    ]);
+
+                    HistorialProgreso::create([
+                        'user_id' => $rep->user_id,
+                        'categoria' => 'reportes',
+                        'titulo' => 'Envío de reporte',
+                        'descripcion' => "Envío de reporte del mes de {$rep->mes}",
+                        'fecha_exacta' => $rep->created_at ? $rep->created_at->addMinutes(5) : now(),
+                        'accion_texto' => 'Ver reporte',
+                        'accion_url' => '/reportes/' . $rep->id,
+                        'progreso' => $progreso,
+                    ]);
+
+                    if ($rep->estado === 'Aprobado') {
+                        HistorialProgreso::create([
+                            'user_id' => $rep->user_id,
+                            'categoria' => 'reportes_aprobados',
+                            'titulo' => 'Reporte aprobado',
+                            'descripcion' => "Reporte del mes de {$rep->mes} marcado como Aprobado",
+                            'fecha_exacta' => $rep->updated_at ? $rep->updated_at->addHours(1) : now(),
+                            'accion_texto' => 'ver reporte',
+                            'accion_url' => '/reportes/' . $rep->id,
+                            'progreso' => $progreso,
+                        ]);
+                    }
+                }
+
+                $items = HistorialProgreso::paraUsuario((int)$userId)
+                    ->orderByDesc('fecha_exacta')
+                    ->get();
+            }
+        }
+
         return response()->json([
             'exito' => true,
             'total' => $items->count(),
@@ -193,17 +247,17 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-03-01 08:16:03',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 22,
+                'progreso'     => 15,
             ],
             [
                 'user_id'      => $userId,
                 'categoria'    => 'reportes',
                 'titulo'       => 'Creación de reporte',
                 'descripcion'  => 'Creación de reporte del mes de febrero',
-                'fecha_exacta' => '2026-03-01 06:00:03',
+                'fecha_exacta' => '2026-03-01 08:00:03',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 20,
+                'progreso'     => 15,
             ],
             [
                 'user_id'      => $userId,
@@ -213,7 +267,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-01-20 11:49:03',
                 'accion_texto' => 'Ver perfil',
                 'accion_url'   => '/perfil',
-                'progreso'     => 18,
+                'progreso'     => 15,
             ],
             [
                 'user_id'      => $userId,
@@ -233,27 +287,17 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-01-20 08:11:08',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 10,
+                'progreso'     => 0,
             ],
             [
                 'user_id'      => $userId,
                 'categoria'    => 'reportes',
                 'titulo'       => 'Creación de reporte',
-                'descripcion'  => 'Creacion de reporte del mes de enero',
+                'descripcion'  => 'Creación de reporte del mes de enero',
                 'fecha_exacta' => '2026-01-20 06:16:03',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 10,
-            ],
-            [
-                'user_id'      => $userId,
-                'categoria'    => 'cv',
-                'titulo'       => 'Actualización de cv',
-                'descripcion'  => 'Actualización de datos personales en el cv',
-                'fecha_exacta' => '2026-01-18 08:16:03',
-                'accion_texto' => 'Ver perfil',
-                'accion_url'   => '/cv',
-                'progreso'     => 5,
+                'progreso'     => 0,
             ],
         ];
 

@@ -71,11 +71,13 @@ class HistorialProgreso extends Model
      */
     public function getFechaAgrupadaAttribute(): string
     {
-        if (!$this->fecha_exacta) {
+        $fecha = $this->fecha_exacta ?? $this->created_at;
+        if (!$fecha) {
             return '';
         }
 
-        return Carbon::parse($this->fecha_exacta)
+        return Carbon::parse($fecha)
+            ->setTimezone(config('app.timezone', 'America/El_Salvador'))
             ->locale('es')
             ->isoFormat('DD [de] MMMM [de] YYYY');
     }
@@ -85,15 +87,18 @@ class HistorialProgreso extends Model
      */
     public function getFechaHoraFormateadaAttribute(): string
     {
-        if (!$this->fecha_exacta) {
+        $fecha = $this->fecha_exacta ?? $this->created_at;
+        if (!$fecha) {
             return '';
         }
 
-        $carbon = Carbon::parse($this->fecha_exacta)->locale('es');
-        $fecha = $carbon->isoFormat('DD [de] MMMM [de] YYYY');
+        $carbon = Carbon::parse($fecha)
+            ->setTimezone(config('app.timezone', 'America/El_Salvador'))
+            ->locale('es');
+        $f = $carbon->isoFormat('DD [de] MMMM [de] YYYY');
         $hora = $carbon->isoFormat('hh:mm:ss a');
 
-        return "{$fecha} - {$hora}";
+        return "{$f} - {$hora}";
     }
 
     /**
@@ -143,6 +148,53 @@ class HistorialProgreso extends Model
                 'text_class' => 'text-[#1E3A8A]',
             ],
         };
+    }
+
+    /**
+     * Calcula el porcentaje acumulado de progreso según los reportes aprobados.
+     * La pasantía dura de 6 a 7 meses:
+     * - Por defecto (sin reportes aprobados): 0%
+     * - Cada reporte aprobado incrementa la barra (ej: 14%-15% por mes).
+     * - Al aprobarse el informe final o completar los meses: 100%.
+     */
+    public static function calcularProgresoActual(int $userId, bool $incluirNuevoAprobado = false): int
+    {
+        $reportesAprobados = \App\Models\Reporte::where('user_id', $userId)
+            ->where('estado', 'Aprobado')
+            ->count();
+
+        if ($incluirNuevoAprobado) {
+            $reportesAprobados++;
+        }
+
+        // Si ya hay informe final aprobado, 100%
+        try {
+            if (class_exists(\App\Models\InformeFinal::class)) {
+                $informesFinalesAprobados = \App\Models\InformeFinal::where('user_id', $userId)
+                    ->where('estado', 'Aprobado')
+                    ->count();
+
+                if ($informesFinalesAprobados > 0) {
+                    return 100;
+                }
+            }
+        } catch (\Throwable $th) {
+            // Silencioso
+        }
+
+        // Escala progresiva para 6 a 7 meses de pasantía
+        $escala = [
+            0 => 0,
+            1 => 15,
+            2 => 30,
+            3 => 45,
+            4 => 60,
+            5 => 75,
+            6 => 88,
+            7 => 95,
+        ];
+
+        return $escala[min($reportesAprobados, 7)] ?? min(100, $reportesAprobados * 14);
     }
 
     /**

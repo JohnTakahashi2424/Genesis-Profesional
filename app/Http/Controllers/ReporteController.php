@@ -86,9 +86,27 @@ class ReporteController extends Controller
 
         $reportes = $query->get();
 
+        // Obtener los informes finales del usuario/pasante para reflejarlos en el módulo
+        $informesQuery = \App\Models\InformeFinal::with(['reportes', 'presupuestoItems'])
+            ->withCount('reportes')
+            ->orderByDesc('created_at');
+
+        if ($userId) {
+            $informesQuery->where('user_id', $userId);
+        } elseif ($pasanteId) {
+            $informesQuery->where('pasante_id', $pasanteId);
+        }
+
+        if ($request->filled('estado') && $request->query('estado') !== 'Todos') {
+            $informesQuery->where('estado', $request->query('estado'));
+        }
+
+        $informesFinales = $informesQuery->get();
+
         return response()->json([
             'exito' => true,
-            'data' => $reportes
+            'data' => $reportes,
+            'informes_finales' => $informesFinales,
         ]);
     }
 
@@ -206,6 +224,8 @@ class ReporteController extends Controller
             try {
                 $esEnvio = ($validated['estado'] ?? '') === 'Enviado';
                 $titulo = $esEnvio ? 'Envío de reporte' : 'Creación de reporte';
+                // El progreso arrastra el acumulado de reportes aprobados previos (o 0 si es el primero)
+                $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual((int)$userId);
                 \App\Models\HistorialProgreso::registrar(
                     userId: (int)$userId,
                     categoria: 'reportes',
@@ -213,7 +233,7 @@ class ReporteController extends Controller
                     descripcion: "{$titulo} del mes de {$validated['mes']}",
                     accionTexto: 'Ver reporte',
                     accionUrl: '/reportes/' . $reporte->id,
-                    progreso: $esEnvio ? 25 : 20
+                    progreso: $progresoActual
                 );
 
                 // 4. Crear Notificación de acción propia para el usuario
@@ -376,6 +396,7 @@ class ReporteController extends Controller
                 'Observado' => 'Observaciones en reporte',
                 default => 'Cambio de estado de reporte',
             };
+            $progresoCalculado = \App\Models\HistorialProgreso::calcularProgresoActual((int)$reporte->user_id, $estado === 'Aprobado');
             \App\Models\HistorialProgreso::registrar(
                 userId: (int)$reporte->user_id,
                 categoria: $categoria,
@@ -383,7 +404,7 @@ class ReporteController extends Controller
                 descripcion: "Reporte del mes de {$reporte->mes} marcado como {$estado}",
                 accionTexto: 'Ver reporte',
                 accionUrl: '/reportes/' . $reporte->id,
-                progreso: $estado === 'Aprobado' ? 50 : 30
+                progreso: $progresoCalculado
             );
 
             // Crear Notificación recibida para el pasante (ej. Observaciones o Aprobación)

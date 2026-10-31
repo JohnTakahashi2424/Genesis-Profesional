@@ -39,8 +39,8 @@ class InformeFinalController extends Controller
         $user = $userId ? User::with('estudiante')->find($userId) : null;
         $pasante = $userId ? Pasante::where('user_id', $userId)->first() : null;
 
-        $nombreCompleto = $user ? trim("{$user->nombres} {$user->apellidos}") : 'Dallana Lucía Campos García';
-        $institucionSugerida = $pasante->institucion ?? $pasante->empresa ?? 'Empresas CASS';
+        $nombreCompleto = $user ? trim("{$user->nombres} {$user->apellidos}") : '';
+        $institucionSugerida = $pasante->institucion ?? $pasante->empresa ?? '';
 
         // Obtener los reportes mensuales creados por este pasante
         $reportesQuery = Reporte::with('actividades')->withCount('actividades')->orderBy('created_at', 'asc');

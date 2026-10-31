@@ -38,6 +38,26 @@ class Reporte extends Model
     ];
 
     /**
+     * Obtener el mes del reporte derivado del periodo si existe fecha_inicio.
+     */
+    public function getMesAttribute($value): string
+    {
+        if ($this->fecha_inicio) {
+            $meses = [
+                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            ];
+            $mesNum = (int)$this->fecha_inicio->format('n');
+            if (isset($meses[$mesNum])) {
+                return $meses[$mesNum];
+            }
+        }
+
+        return $value ?: 'Reporte';
+    }
+
+    /**
      * Formatear el periodo del reporte legible (Ej: "01 Febr – 27 Febr 2026").
      */
     public function getPeriodoAttribute(): ?string

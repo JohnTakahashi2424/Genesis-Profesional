@@ -112,7 +112,9 @@ class Notificacion extends Model
      */
     public function getFechaFormateadaAttribute(): string
     {
-        $fecha = Carbon::parse($this->created_at)->locale('es');
+        $fecha = Carbon::parse($this->created_at)
+            ->setTimezone(config('app.timezone', 'America/El_Salvador'))
+            ->locale('es');
         $dia = str_replace('..', '.', $fecha->isoFormat('D [de] MMM. YYYY'));
         $hora = $fecha->isoFormat('hh:mm:ss a');
 
