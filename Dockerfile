@@ -36,3 +36,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE 8080
 
 ENTRYPOINT ["docker-entrypoint.sh"]
+
