@@ -143,14 +143,12 @@ watch(() => form.value.correo, (nuevoCorreo) => {
       if (res && res.disponible) {
         errores.value.correo = ''
       } else {
-        const msg = res?.mensaje || 'Correo institucional ya registrado'
-        errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+        errores.value.correo = res?.mensaje || 'El correo institucional no está disponible para registro.'
       }
     } catch (err) {
       if (err.response && err.response.data) {
         const datos = err.response.data
-        const msg = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional ya registrado'
-        errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+        errores.value.correo = datos.mensaje || datos.message || datos.errores?.correo?.[0] || 'Error al verificar el correo.'
       }
     }
   }, 400)
@@ -312,15 +310,13 @@ const continuarAPaso2 = async () => {
       errores.value.correo = ''
       estadoFlujo.value = 2
     } else {
-      const msg = res?.mensaje || 'Correo institucional ya registrado'
-      errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+      errores.value.correo = res?.mensaje || 'El correo institucional no está disponible para registro.'
       document.getElementById('input-correo')?.focus()
     }
   } catch (err) {
     if (err.response && err.response.data) {
       const datos = err.response.data
-      const msg = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional ya registrado'
-      errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+      errores.value.correo = datos.mensaje || datos.message || datos.errores?.correo?.[0] || 'Error al verificar el correo.'
     } else {
       errores.value.correo = 'No se pudo conectar con el servidor para verificar el correo'
     }

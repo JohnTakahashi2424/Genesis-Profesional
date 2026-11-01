@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Http\Requests\RegistroRequest;
@@ -131,7 +132,7 @@ class AuthController extends Controller
             ->first();
 
         $personal = null;
-        if (!$estudiante) {
+        if (!$estudiante && Schema::hasTable('personal_administrativo')) {
             $personal = DB::table('personal_administrativo')
                 ->where('correo_institucional', $correo)
                 ->first();
@@ -246,7 +247,7 @@ class AuthController extends Controller
             ->first();
 
         $personal = null;
-        if (!$estudiante) {
+        if (!$estudiante && Schema::hasTable('personal_administrativo')) {
             $personal = DB::table('personal_administrativo')
                 ->where('correo_institucional', $correo)
                 ->first();
