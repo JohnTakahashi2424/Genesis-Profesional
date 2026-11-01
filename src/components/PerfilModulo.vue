@@ -65,6 +65,70 @@ const formatTexto = (val) => {
 
 const imgError = ref(false)
 
+// Estado del Portafolio (independiente del CV, asociado al usuario en la BD)
+const linkPortafolio = ref('')
+const modalPortafolioAbierto = ref(false)
+const inputLinkPortafolio = ref('')
+const guardandoPortafolio = ref(false)
+const errorPortafolio = ref('')
+
+const cargarPortafolio = async () => {
+  try {
+    const userId = usuario.value?.id || usuario.value?.user_id || 0
+    if (!userId) return
+    const token = localStorage.getItem('genesis_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await axios.get(`/api/portafolio/obtener/${userId}`, { headers })
+    if (res.data && res.data.status === 'success') {
+      linkPortafolio.value = res.data.link_portafolio || ''
+    }
+  } catch (err) {
+    console.warn('Error al cargar portafolio:', err)
+  }
+}
+
+const abrirModalPortafolio = () => {
+  inputLinkPortafolio.value = linkPortafolio.value || ''
+  errorPortafolio.value = ''
+  modalPortafolioAbierto.value = true
+}
+
+const cerrarModalPortafolio = () => {
+  if (guardandoPortafolio.value) return
+  modalPortafolioAbierto.value = false
+  errorPortafolio.value = ''
+}
+
+const handleGuardarPortafolio = async () => {
+  const userId = usuario.value?.id || usuario.value?.user_id || 0
+  if (!userId) {
+    errorPortafolio.value = 'No se encontró el ID de usuario activo.'
+    return
+  }
+
+  guardandoPortafolio.value = true
+  errorPortafolio.value = ''
+  try {
+    const token = localStorage.getItem('genesis_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await axios.post('/api/portafolio/guardar', {
+      usuario_id: userId,
+      link_portafolio: inputLinkPortafolio.value.trim()
+    }, { headers })
+
+    if (res.data && res.data.status === 'success') {
+      linkPortafolio.value = res.data.link_portafolio || ''
+      modalPortafolioAbierto.value = false
+    } else {
+      errorPortafolio.value = res.data?.mensaje || 'Error al guardar.'
+    }
+  } catch (err) {
+    errorPortafolio.value = err.response?.data?.mensaje || 'Error al conectar con el servidor.'
+  } finally {
+    guardandoPortafolio.value = false
+  }
+}
+
 // Cargar CV mas reciente del usuario
 const cargarCvPerfil = async () => {
   cargando.value = true
@@ -115,6 +179,7 @@ const cargarCvPerfil = async () => {
 
 onMounted(() => {
   cargarCvPerfil()
+  cargarPortafolio()
 })
 
 const handleGuardadoExitoso = async () => {
@@ -204,26 +269,62 @@ const handleGuardadoExitoso = async () => {
             </span>
             <span class="text-gray-900">{{ perfilData.telefono }}</span>
           </p>
-        </div>
 
-        <div class="space-y-3">
-          <div v-if="perfilData.educacion">
-            <p class="font-bold text-[#010C67] flex items-center gap-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-4 h-4 text-[#010C67] shrink-0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-              </svg>
-              <span>Educación:</span>
-            </p>
-            <p class="text-gray-900 whitespace-pre-line mt-0.5">{{ perfilData.educacion }}</p>
-          </div>
-
-          <div>
+          <!-- Idiomas (columna izquierda según diseño) -->
+          <div v-if="perfilData.idiomas" class="pt-2">
             <p class="font-bold text-[#010C67] flex items-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" fill="none" class="w-4 h-4 text-[#010C67] shrink-0"><g clip-path="url(#clip0_2016_494_p)"><path d="M30.5226 0.175559C30.6635 0.269819 30.7791 0.397321 30.859 0.546808C30.939 0.696295 30.9809 0.863171 30.9811 1.0327V16.5232C30.9811 16.7295 30.9193 16.931 30.8037 17.1018C30.6881 17.2726 30.524 17.4049 30.3326 17.4816L30.3264 17.4837L30.314 17.4899L30.2665 17.5084C29.995 17.6165 29.7217 17.7198 29.4465 17.8183C28.9013 18.0145 28.1433 18.2788 27.2841 18.5411C25.5987 19.0616 23.4032 19.6213 21.6868 19.6213C19.9374 19.6213 18.4896 19.043 17.2297 18.537L17.1718 18.5164C15.8624 17.9897 14.747 17.5559 13.4252 17.5559C11.9794 17.5559 10.042 18.031 8.39179 18.5411C7.65303 18.7718 6.9209 19.0232 6.19626 19.295V32.0138C6.19626 32.2877 6.08746 32.5503 5.89379 32.744C5.70012 32.9377 5.43745 33.0465 5.16356 33.0465C4.88967 33.0465 4.627 32.9377 4.43333 32.744C4.23966 32.5503 4.13086 32.2877 4.13086 32.0138V1.0327C4.13086 0.758813 4.23966 0.496141 4.43333 0.302472C4.627 0.108802 4.88967 0 5.16356 0C5.43745 0 5.70012 0.108802 5.89379 0.302472C6.08746 0.496141 6.19626 0.758813 6.19626 1.0327V1.61515C6.66305 1.45198 7.22071 1.26403 7.82793 1.07814C9.51331 0.56179 11.7109 0 13.4252 0C15.1601 0 16.5729 0.572117 17.8059 1.07195L17.8947 1.10912C19.1794 1.62754 20.2989 2.06541 21.6868 2.06541C23.1326 2.06541 25.0699 1.59036 26.7202 1.08021C27.6604 0.785826 28.5897 0.457905 29.5064 0.097074L29.5457 0.0826162L29.5539 0.0784854H29.556" fill="currentColor"/></g><defs><clipPath id="clip0_2016_494_p"><rect width="33.0465" height="33.0465" fill="white"/></clipPath></defs></svg>
               <span>Idiomas:</span>
             </p>
             <p class="text-gray-900 whitespace-pre-line mt-0.5">{{ perfilData.idiomas }}</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Link del portafolio (Captura 1) -->
+          <div>
+            <p class="font-bold text-[#010C67] flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-[#010C67] shrink-0">
+                <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+              </svg>
+              <span>Link del portafolio</span>
+              <!-- Botón del lápiz para abrir el modal -->
+              <button
+                type="button"
+                @click="abrirModalPortafolio"
+                title="Editar link del portafolio"
+                class="text-gray-700 hover:text-[#010C67] transition-colors p-0.5 cursor-pointer ml-1 inline-flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                </svg>
+              </button>
+            </p>
+            <p class="mt-0.5">
+              <a
+                v-if="linkPortafolio"
+                :href="linkPortafolio.startsWith('http') ? linkPortafolio : 'https://' + linkPortafolio"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-900 hover:underline hover:text-[#010C67] break-all block"
+              >
+                {{ linkPortafolio }}
+              </a>
+              <span v-else class="text-gray-400 italic text-xs">
+                No especificado
+              </span>
+            </p>
+          </div>
+
+          <!-- Educación -->
+          <div v-if="perfilData.educacion">
+            <p class="font-bold text-[#010C67] flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-[#010C67] shrink-0">
+                <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+              </svg>
+              <span>Educación:</span>
+            </p>
+            <p class="text-gray-900 whitespace-pre-line mt-0.5">{{ perfilData.educacion }}</p>
           </div>
         </div>
       </div>
@@ -319,6 +420,69 @@ const handleGuardadoExitoso = async () => {
         </p>
       </div>
 
+    </div>
+
+    <!-- Modal: Editar Link del Portafolio (Captura 2) -->
+    <div
+      v-if="modalPortafolioAbierto"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px] p-4"
+      @click.self="cerrarModalPortafolio"
+    >
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[420px] p-6 relative border border-gray-100 text-left">
+        <!-- Botón cerrar (X) -->
+        <button
+          type="button"
+          @click="cerrarModalPortafolio"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <!-- Título del Modal -->
+        <h3 class="text-base font-normal text-gray-800 mb-4">
+          Link del portafolio
+        </h3>
+
+        <!-- Input de texto -->
+        <div class="mb-5">
+          <input
+            v-model="inputLinkPortafolio"
+            type="text"
+            placeholder="https://portafolio/ejemplo.com"
+            @keydown.enter="handleGuardarPortafolio"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-800 focus:outline-none focus:border-[#010c67] focus:ring-1 focus:ring-[#010c67] transition-all"
+            :disabled="guardandoPortafolio"
+            autofocus
+          />
+          <p v-if="errorPortafolio" class="text-xs text-red-500 mt-1">
+            {{ errorPortafolio }}
+          </p>
+        </div>
+
+        <!-- Botones Cancelar y Guardar (Centrados) -->
+        <div class="flex items-center justify-center gap-4">
+          <button
+            type="button"
+            @click="cerrarModalPortafolio"
+            :disabled="guardandoPortafolio"
+            class="px-5 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-sm font-medium transition-all cursor-pointer shadow-xs"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            @click="handleGuardarPortafolio"
+            :disabled="guardandoPortafolio"
+            class="px-6 py-1.5 rounded-md bg-[#010c67] hover:bg-[#00084d] text-white text-sm font-medium transition-all cursor-pointer shadow-xs flex items-center gap-2"
+          >
+            <span v-if="guardandoPortafolio" class="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            <span>Guardar</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
