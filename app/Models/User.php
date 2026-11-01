@@ -64,4 +64,28 @@ class User extends Authenticatable
     {
         return $this->hasOne(Pasante::class, 'user_id', 'id');
     }
+
+    /**
+     * Relación con el historial de progreso del usuario web.
+     */
+    public function historialProgreso()
+    {
+        return $this->hasMany(HistorialProgreso::class, 'user_id', 'id');
+    }
+
+    /**
+     * Relación con las notificaciones del usuario de la aplicación web.
+     */
+    public function notificaciones()
+    {
+        return $this->hasMany(Notificacion::class, 'user_id', 'id');
+    }
+
+    /**
+     * Relación con los informes finales creados por el usuario/pasante.
+     */
+    public function informesFinales()
+    {
+        return $this->hasMany(InformeFinal::class, 'user_id', 'id');
+    }
 }

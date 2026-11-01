@@ -98,15 +98,23 @@ const prevAlcanceSlide = () => { alcanceSlideIndex.value = 0 }
   <div class="web-informativa">
     <!-- Header / Barra de Navegación -->
     <header v-if="!ocultarNavbar" class="navbar-ugb">
-      <a href="#" @click.prevent="cambiarTab('inicio')" class="navbar-brand-ugb">
+      <div class="navbar-brand-ugb">
         <img 
           src="/images/LOGO_WEB_INF.png" 
           alt="Logo UGB" 
           class="logo-img"
         />
-      </a>
+      </div>
 
       <nav class="navbar-links">
+        <button 
+          type="button"
+          @click="cambiarTab('inicio')" 
+          class="nav-item-ugb" 
+          :class="{ 'active-tab': activeTab === 'inicio' }"
+        >
+          Inicio
+        </button>
         <button 
           type="button"
           @click="cambiarTab('empresas')" 

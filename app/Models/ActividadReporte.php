@@ -13,14 +13,15 @@ class ActividadReporte extends Model
 
     protected $fillable = [
         'reporte_id',
-        'fecha_actividad',
-        'objetivo',
-        'actividad_realizada',
-        'logros_obtenidos',
+        'numero',
+        'actividad',
+        'fecha',
+        'resultado_aprendizaje',
     ];
 
     protected $casts = [
-        'fecha_actividad' => 'date',
+        'numero' => 'integer',
+        'fecha' => 'date:Y-m-d',
     ];
 
     /**

@@ -13,6 +13,7 @@ const tabLandingActual = ref('inicio')
 const mostrarRegistro = ref(false)
 const mostrarLogin = ref(false)
 const mostrarRecuperar = ref(false)
+const origenRegistro = ref('landing') // 'landing' | 'login'
 
 const sincronizarRuta = () => {
   const path = window.location.pathname.toLowerCase()
@@ -98,7 +99,8 @@ const handleLogin = () => {
   }
 }
 
-const handleRegistro = () => {
+const handleRegistro = (origen = 'landing') => {
+  origenRegistro.value = origen
   mostrarLogin.value = false
   mostrarRecuperar.value = false
   mostrarRegistro.value = true
@@ -188,6 +190,7 @@ const handleLogout = async () => {
       <!-- Modal de Registro -->
       <RegistroModal 
         v-if="mostrarRegistro"
+        :origen="origenRegistro"
         @close="cerrarModales"
         @abrir-login="handleLogin"
         @registro-exitoso="handleRegistroExitoso"
@@ -197,7 +200,7 @@ const handleLogout = async () => {
       <LoginModal
         v-if="mostrarLogin"
         @close="cerrarModales"
-        @abrir-registro="handleRegistro"
+        @abrir-registro="handleRegistro('login')"
         @olvide-contrasena="handleRecuperar"
         @login-exitoso="handleLoginExitoso"
       />

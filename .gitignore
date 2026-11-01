@@ -8,6 +8,7 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+/public/assets/
 /vendor/
 composer.phar
 .phpunit.result.cache
@@ -23,3 +24,6 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Netlify
+.netlify

@@ -62,4 +62,12 @@ class Pasante extends Model
     {
         return $this->hasMany(Reporte::class, 'pasante_id', 'id');
     }
+
+    /**
+     * Relación con los informes finales creados por el pasante.
+     */
+    public function informesFinales(): HasMany
+    {
+        return $this->hasMany(InformeFinal::class, 'pasante_id', 'id');
+    }
 }

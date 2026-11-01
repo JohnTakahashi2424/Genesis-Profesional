@@ -11,7 +11,7 @@ use App\Models\CurriculumVitae;
 class CvController extends Controller
 {
     /**
-     * Guardar un NUEVO CV para un usuario (permite múltiples CVs por usuario).
+     * Guardar un NUEVO CV para un usuario (permite mÃºltiples CVs por usuario).
      */
     public function guardar(Request $request)
     {
@@ -41,7 +41,7 @@ class CvController extends Controller
         // Decodificar el PDF de base64 (removiendo cualquier prefijo de URI de datos de forma segura)
         $pdfData = base64_decode(preg_replace('#^data:.*?base64,#i', '', $request->pdf_base64));
 
-        // Nombre del archivo basado en el título del CV
+        // Nombre del archivo basado en el tÃ­tulo del CV
         $tituloCv   = $request->titulo_cv ?? ('CV_' . ($usuario->nombres ?? 'Usuario'));
         $nombreArchivo = str_replace(' ', '_', $tituloCv) . '_' . $usuarioId . '_' . time() . '.pdf';
 
@@ -135,7 +135,7 @@ class CvController extends Controller
         ];
 
         if ($cv) {
-            // Eliminar foto física anterior si cambió y existía en public storage
+            // Eliminar foto fÃ­sica anterior si cambiÃ³ y existÃ­a en public storage
             if ($cv->foto_url && $cv->foto_url !== $fotoUrl && str_contains($cv->foto_url, '/storage/')) {
                 $oldFotoPath = str_replace('/storage/', '', $cv->foto_url);
                 if (Storage::disk('public')->exists($oldFotoPath)) {
@@ -150,14 +150,42 @@ class CvController extends Controller
 
             $cv->update($data);
         } else {
-            // Crear el registro único de CV para este usuario
+            // Crear el registro Ãºnico de CV para este usuario
             $cv = CurriculumVitae::create($data);
         }
 
-        // Mantener únicamente este registro para el usuario en la base de datos (elimina posibles duplicados antiguos)
+        // Mantener Ãºnicamente este registro para el usuario en la base de datos (elimina posibles duplicados antiguos)
         CurriculumVitae::where('usuario_id', $usuarioId)
             ->where('id', '!=', $cv->id)
             ->delete();
+
+                // Registrar en el Historial de Progreso del estudiante
+        try {
+            $esNuevo = !$cvId;
+            \App\Models\HistorialProgreso::registrar(
+                userId: (int)$usuarioId,
+                categoria: 'cv',
+                titulo: $esNuevo ? 'Creación de cv' : 'Actualización de cv',
+                descripcion: $esNuevo ? 'Creación y registro de nuevo curriculum vitae' : 'Actualización de datos personales en el cv',
+                accionTexto: 'Ver perfil',
+                accionUrl: '/cv',
+                progreso: 15
+            );
+
+            if (!empty($fotoInput)) {
+                \App\Models\HistorialProgreso::registrar(
+                    userId: (int)$usuarioId,
+                    categoria: 'perfil',
+                    titulo: 'Actualización de fotografía',
+                    descripcion: 'actualización de fotografía en el perfil',
+                    accionTexto: 'Ver perfil',
+                    accionUrl: '/perfil',
+                    progreso: 18
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial de CV: ' . $e->getMessage());
+        }
 
         return response()->json([
             'mensaje'        => 'CV guardado correctamente.',
@@ -191,7 +219,7 @@ class CvController extends Controller
         }
 
         if ($cvs->isEmpty()) {
-            return response()->json(['mensaje' => 'Este usuario aún no tiene CV.', 'tiene_cv' => false, 'cvs' => []], 200);
+            return response()->json(['mensaje' => 'Este usuario aÃºn no tiene CV.', 'tiene_cv' => false, 'cvs' => []], 200);
         }
 
         $cvs->transform(function ($item) {
@@ -219,14 +247,14 @@ class CvController extends Controller
     }
 
     /**
-     * Eliminar un CV específico por su ID de forma segura.
+     * Eliminar un CV especÃ­fico por su ID de forma segura.
      */
     public function eliminar(Request $request, $cvId)
     {
         $cv = CurriculumVitae::find($cvId);
 
         if (!$cv) {
-            return response()->json(['mensaje' => 'No se encontró el CV.'], 404);
+            return response()->json(['mensaje' => 'No se encontrÃ³ el CV.'], 404);
         }
 
         // Desvincular de postulaciones si la tabla existe
@@ -234,13 +262,13 @@ class CvController extends Controller
             DB::table('postulaciones')->where('cv_id', $cvId)->update(['cv_id' => null]);
         }
 
-        // Eliminar archivo físico de forma segura (previene fallos en entornos con permisos especiales o OneDrive)
+        // Eliminar archivo fÃ­sico de forma segura (previene fallos en entornos con permisos especiales o OneDrive)
         try {
             if ($cv->ruta_archivo) {
                 Storage::disk('public')->delete($cv->ruta_archivo);
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("No se pudo eliminar el archivo físico del CV {$cvId}: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning("No se pudo eliminar el archivo fÃ­sico del CV {$cvId}: " . $e->getMessage());
         }
 
         $cv->delete();
