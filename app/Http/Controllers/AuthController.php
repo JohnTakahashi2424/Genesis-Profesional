@@ -339,6 +339,11 @@ class AuthController extends Controller
             'tiempo_expiracion_segundos' => 90
         ];
 
+        if (!$envio['exito']) {
+            $respuesta['codigo_simulado'] = $registroCodigo->codigo;
+            $respuesta['aviso_envio'] = 'Aviso: el proveedor SMTP rechazó el envío (IP dinámica de Render no autorizada en Brevo: 525 5.7.1). Código: ' . $registroCodigo->codigo;
+        }
+
         return response()->json($respuesta, 200);
     }
 

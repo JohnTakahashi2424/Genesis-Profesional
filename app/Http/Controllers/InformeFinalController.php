@@ -43,11 +43,74 @@ class InformeFinalController extends Controller
         $institucionSugerida = $pasante->institucion ?? $pasante->empresa ?? '';
 
         // Obtener los reportes mensuales creados por este pasante
-        $reportesQuery = Reporte::with('actividades')->withCount('actividades')->orderBy('created_at', 'asc');
+        $reportesQuery = Reporte::with('actividades')->withCount('actividades');
         if ($userId) {
             $reportesQuery->where('user_id', $userId);
         }
         $reportesDisponibles = $reportesQuery->get();
+
+        // Ordenar del mes mayor al menor (ej: Diciembre -> Noviembre -> Octubre -> Septiembre -> Agosto)
+        $mesesNum = [
+            'enero' => 1, 'ene' => 1, 'ener' => 1,
+            'febrero' => 2, 'feb' => 2, 'febr' => 2,
+            'marzo' => 3, 'mar' => 3,
+            'abril' => 4, 'abr' => 4,
+            'mayo' => 5, 'may' => 5,
+            'junio' => 6, 'jun' => 6,
+            'julio' => 7, 'jul' => 7,
+            'agosto' => 8, 'ago' => 8, 'agost' => 8,
+            'septiembre' => 9, 'sep' => 9, 'sept' => 9, 'setiembre' => 9,
+            'octubre' => 10, 'oct' => 10,
+            'noviembre' => 11, 'nov' => 11,
+            'diciembre' => 12, 'dic' => 12,
+        ];
+
+        $reportesDisponibles = $reportesDisponibles->sort(function ($a, $b) use ($mesesNum) {
+            $anioA = 2026;
+            $mesA = 0;
+            if ($a->fecha_inicio) {
+                $p = explode('-', explode('T', (string)$a->fecha_inicio)[0]);
+                if (count($p) >= 2) {
+                    $anioA = (int)$p[0];
+                    $mesA = (int)$p[1];
+                }
+            }
+            if (!$mesA && $a->mes) {
+                $m = strtolower(trim((string)$a->mes));
+                foreach ($mesesNum as $k => $v) {
+                    if (str_starts_with($m, $k)) { $mesA = $v; break; }
+                }
+            }
+            if (preg_match('/\b(20\d{2})\b/', (string)$a->periodo, $mA)) {
+                $anioA = (int)$mA[1];
+            }
+            $scoreA = ($anioA * 100) + $mesA;
+
+            $anioB = 2026;
+            $mesB = 0;
+            if ($b->fecha_inicio) {
+                $p = explode('-', explode('T', (string)$b->fecha_inicio)[0]);
+                if (count($p) >= 2) {
+                    $anioB = (int)$p[0];
+                    $mesB = (int)$p[1];
+                }
+            }
+            if (!$mesB && $b->mes) {
+                $m = strtolower(trim((string)$b->mes));
+                foreach ($mesesNum as $k => $v) {
+                    if (str_starts_with($m, $k)) { $mesB = $v; break; }
+                }
+            }
+            if (preg_match('/\b(20\d{2})\b/', (string)$b->periodo, $mB)) {
+                $anioB = (int)$mB[1];
+            }
+            $scoreB = ($anioB * 100) + $mesB;
+
+            if ($scoreB !== $scoreA) {
+                return $scoreB <=> $scoreA;
+            }
+            return $b->id <=> $a->id;
+        })->values();
 
         // Si la base de datos aún no tiene reportes para este usuario, preparar sugerencias
         $reportesFormateados = $reportesDisponibles->map(function ($rep) {

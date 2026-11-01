@@ -178,8 +178,8 @@ const handleLogout = () => {
 
 <template>
   <div class="flex min-h-screen bg-[#f4f5f7] font-sans antialiased text-gray-900 select-none">
-     <!-- SIDEBAR NAVEGACIÓN (IZQUIERDA) — Con sombra permanente idéntica a la imagen 2 -->
-    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[4px_0_24px_rgba(0,0,0,0.22),2px_0_10px_rgba(0,0,0,0.12)] relative z-20 flex flex-col justify-between shrink-0 select-none min-h-screen">
+     <!-- SIDEBAR NAVEGACIÓN (IZQUIERDA) — Con línea de sombra definida -->
+    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[3px_0_0px_0px_rgba(0,0,0,0.08)] relative z-20 flex flex-col justify-between shrink-0 select-none min-h-screen">
       <div>
         <!-- Logo UGB Centrado -->
         <div class="pt-8 pb-6 flex justify-center">
@@ -379,7 +379,7 @@ const handleLogout = () => {
                 @error="imgErrorPasante = true"
               />
               <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.67-5.33-4-8-4z"/>
               </svg>
             </div>
           </div>
