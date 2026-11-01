@@ -371,7 +371,7 @@ const generarPdfDoc = async () => {
   try {
     const el = container.firstElementChild
     const canvas = await html2canvas(el, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       allowTaint: true,
       logging: false,
@@ -382,21 +382,21 @@ const generarPdfDoc = async () => {
 
     document.body.removeChild(container)
 
-    const imgData = canvas.toDataURL('image/png')
+    const imgData = canvas.toDataURL('image/jpeg', 0.85)
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pageW = 210
     const pageH = 297
     const imgH = (canvas.height * pageW) / canvas.width
 
     if (imgH <= pageH) {
-      pdf.addImage(imgData, 'PNG', 0, 0, pageW, imgH)
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH)
     } else {
       // Múltiples páginas si el contenido excede A4
       let posY = 0
       let remaining = imgH
       while (remaining > 0) {
         const sliceH = Math.min(remaining, pageH)
-        pdf.addImage(imgData, 'PNG', 0, -posY, pageW, imgH)
+        pdf.addImage(imgData, 'JPEG', 0, -posY, pageW, imgH)
         remaining -= sliceH
         posY += sliceH
         if (remaining > 0) pdf.addPage()
@@ -462,8 +462,19 @@ const guardarCvFinal = async () => {
       diseno: formCv.value.diseno
     }
 
+    // Verificar que el payload no exceda el límite del proxy (8MB)
+    const payloadSize = new Blob([JSON.stringify(payload)]).size
+    if (payloadSize > 7 * 1024 * 1024) {
+      console.warn('Payload CV demasiado grande:', (payloadSize / (1024 * 1024)).toFixed(2), 'MB')
+      mensajeError.value = 'El archivo PDF generado es demasiado grande. Intente con una foto de menor resolución.'
+      cargandoGuardar.value = false
+      return
+    }
+
     const res = await axios.post('/api/cv/guardar', payload, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      maxContentLength: 8 * 1024 * 1024,
+      maxBodyLength: 8 * 1024 * 1024
     })
 
     if (res.data) {
