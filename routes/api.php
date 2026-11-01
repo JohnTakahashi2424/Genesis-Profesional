@@ -8,6 +8,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\HistorialProgresoController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InformeFinalController;
+use App\Http\Controllers\PortafolioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,12 @@ Route::middleware('jwt.auth')->group(function () {
 
     // Rutas de Pasantías
     Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+
+    // Rutas del Módulo de Portafolio / Perfil
+    Route::prefix('portafolio')->group(function () {
+        Route::get('/obtener/{usuarioId}', [PortafolioController::class, 'obtener'])->name('api.portafolio.obtener');
+        Route::post('/guardar', [PortafolioController::class, 'guardar'])->name('api.portafolio.guardar');
+    });
 
     // Rutas del Módulo de Curriculum Vitae (CV)
     Route::prefix('cv')->group(function () {
