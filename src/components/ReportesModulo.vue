@@ -1154,7 +1154,14 @@ onUnmounted(() => {
                   </button>
                 </div>
               </div>
-              <p v-if="intentoGuardar && !reporteForm.area_pasantia" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoGuardar && !reporteForm.area_pasantia" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
             <!-- Nombre del pasante* -->
@@ -1169,7 +1176,14 @@ onUnmounted(() => {
                 class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs transition-all"
                 :class="intentoGuardar && !reporteForm.nombre_pasante?.trim() ? 'border-rose-500' : 'border-slate-300'"
               />
-              <p v-if="intentoGuardar && !reporteForm.nombre_pasante?.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoGuardar && !reporteForm.nombre_pasante?.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
             <!-- Mes* (Dropdown con meses del año) -->
@@ -1209,7 +1223,14 @@ onUnmounted(() => {
                   </button>
                 </div>
               </div>
-              <p v-if="intentoGuardar && !reporteForm.mes" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoGuardar && !reporteForm.mes" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
           </div>
@@ -1253,7 +1274,14 @@ onUnmounted(() => {
                   :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-500' : 'border-slate-300'"
                 />
               </div>
-              <p v-if="intentoGuardar && !reporteForm.fecha_inicio" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoGuardar && !reporteForm.fecha_inicio" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
             <!-- Fecha Finalización* -->
@@ -1292,7 +1320,14 @@ onUnmounted(() => {
                   :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-500' : 'border-slate-300'"
                 />
               </div>
-              <p v-if="intentoGuardar && !reporteForm.fecha_fin" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoGuardar && !reporteForm.fecha_fin" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
           </div>
@@ -1309,7 +1344,14 @@ onUnmounted(() => {
               class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs"
               :class="intentoGuardar && !reporteForm.objetivo?.trim() ? 'border-rose-500' : 'border-slate-300'"
             />
-            <p v-if="intentoGuardar && !reporteForm.objetivo?.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+            <p v-if="intentoGuardar && !reporteForm.objetivo?.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span>Este campo es obligatorio.</span>
+            </p>
           </div>
 
         </div>
