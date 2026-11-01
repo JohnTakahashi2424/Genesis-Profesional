@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import InformeFinalFormulario from './InformeFinalFormulario.vue'
 import InformeFinalDetalle from './InformeFinalDetalle.vue'
+import { subirImagenBase64 } from '../services/firebase'
 
 const emit = defineEmits(['volver'])
 
@@ -534,28 +535,15 @@ const enviarReporte = async () => {
   feedbackMensaje.value = ''
 
   // Validaciones obligatorias de Información General
-  if (!reporteForm.value.area_pasantia?.trim()) {
-    mostrarFeedback('Por favor seleccione el área de pasantía.')
-    return
-  }
-  if (!reporteForm.value.nombre_pasante?.trim()) {
-    mostrarFeedback('El nombre del pasante es requerido.')
-    return
-  }
-  if (!reporteForm.value.mes?.trim()) {
-    mostrarFeedback('Por favor seleccione el mes del reporte.')
-    return
-  }
-  if (!reporteForm.value.fecha_inicio) {
-    mostrarFeedback('La fecha de inicio es requerida.')
-    return
-  }
-  if (!reporteForm.value.fecha_fin) {
-    mostrarFeedback('La fecha de finalización es requerida.')
-    return
-  }
-  if (!reporteForm.value.objetivo?.trim()) {
-    mostrarFeedback('El objetivo del reporte es requerido.')
+  // Solo se marcan los bordes en rojo y se muestra el mensaje en línea sin notificaciones adicionales
+  if (
+    !reporteForm.value.area_pasantia?.trim() ||
+    !reporteForm.value.nombre_pasante?.trim() ||
+    !reporteForm.value.mes?.trim() ||
+    !reporteForm.value.fecha_inicio ||
+    !reporteForm.value.fecha_fin ||
+    !reporteForm.value.objetivo?.trim()
+  ) {
     return
   }
 
@@ -565,7 +553,6 @@ const enviarReporte = async () => {
   )
 
   if (actividadesValidas.length === 0) {
-    mostrarFeedback('Debe registrar al menos una actividad realizada con su fecha y resultado.')
     return
   }
 
@@ -573,7 +560,6 @@ const enviarReporte = async () => {
   for (let i = 0; i < actividadesValidas.length; i++) {
     const act = actividadesValidas[i]
     if (!act.actividad?.trim() || !act.fecha || !act.resultado_aprendizaje?.trim()) {
-      mostrarFeedback(`Por favor complete todos los campos de la actividad Nº ${i + 1} (actividad, fecha y resultado).`)
       return
     }
   }
@@ -585,6 +571,26 @@ const enviarReporte = async () => {
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
     if (userId) headers['X-User-Id'] = userId
+
+    // Subir evidencias a Firebase Storage para almacenamiento permanente en la nube
+    let evidenciasCloud = []
+    if (Array.isArray(reporteForm.value.evidencias) && reporteForm.value.evidencias.length > 0) {
+      evidenciasCloud = await Promise.all(
+        reporteForm.value.evidencias.map(async (ev, idx) => {
+          if (ev && typeof ev === 'string' && ev.startsWith('data:')) {
+            try {
+              const ext = ev.includes('image/png') ? 'png' : 'jpeg'
+              const ruta = `reportes/evidencias/${userId || 1}/evidencia_${Date.now()}_${idx}.${ext}`
+              return await subirImagenBase64(ev, ruta)
+            } catch (err) {
+              console.warn('Error al subir evidencia a Firebase:', err)
+              return ev
+            }
+          }
+          return ev
+        })
+      )
+    }
 
     const payload = {
       user_id: userId,
@@ -601,7 +607,7 @@ const enviarReporte = async () => {
         fecha: a.fecha,
         resultado_aprendizaje: a.resultado_aprendizaje.trim()
       })),
-      evidencias: reporteForm.value.evidencias
+      evidencias: evidenciasCloud
     }
 
     if (esEdicion.value && reporteIdEditando.value) {
@@ -642,7 +648,7 @@ const cerrarToastExito = () => {
 
 // Filtro computado de reportes en caso de búsqueda local rápida
 const reportesMostrados = computed(() => {
-  let lista = reportes.value && reportes.value.length > 0 ? reportes.value : reportesPorDefecto
+  let lista = reportes.value && reportes.value.length > 0 ? reportes.value : []
 
   if (estadoFiltro.value && estadoFiltro.value !== 'Todos') {
     lista = lista.filter(item => {
@@ -1003,8 +1009,11 @@ onUnmounted(() => {
             
             <!-- Área de pasantía* (Dropdown) -->
             <div id="filtro-area-container" class="md:col-span-4 relative">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                Área de pasantía<span class="text-rose-500">*</span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-black shrink-0">
+                  <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+                </svg>
+                <span>Área de pasantía<span class="text-rose-500">*</span></span>
               </label>
               
               <div class="relative">
@@ -1012,7 +1021,7 @@ onUnmounted(() => {
                   type="button"
                   @click.stop="dropdownAreaAbierto = !dropdownAreaAbierto; dropdownMesAbierto = false"
                   class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
-                  :class="intentoGuardar && !reporteForm.area_pasantia ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                  :class="intentoGuardar && !reporteForm.area_pasantia ? 'border-rose-500' : 'border-slate-300'"
                 >
                   <span :class="reporteForm.area_pasantia ? 'text-slate-800 font-medium' : 'text-slate-400'">
                     {{ reporteForm.area_pasantia || 'Seleccionar' }}
@@ -1037,26 +1046,34 @@ onUnmounted(() => {
                   </button>
                 </div>
               </div>
+              <p v-if="intentoGuardar && !reporteForm.area_pasantia" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
             </div>
 
             <!-- Nombre del pasante* -->
             <div class="md:col-span-5">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                Nombre del pasante<span class="text-rose-500">*</span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 41" fill="none" class="w-4 h-4 text-black shrink-0">
+                  <path d="M17 0C19.2543 0 21.4163 1.00197 23.0104 2.78549C24.6045 4.56901 25.5 6.98798 25.5 9.51026C25.5 12.0325 24.6045 14.4515 23.0104 16.235C21.4163 18.0185 19.2543 19.0205 17 19.0205C14.7457 19.0205 12.5837 18.0185 10.9896 16.235C9.39553 14.4515 8.5 12.0325 8.5 9.51026C8.5 6.98798 9.39553 4.56901 10.9896 2.78549C12.5837 1.00197 14.7457 0 17 0ZM17 23.7756C26.3925 23.7756 34 28.0315 34 33.2859L30.0108 37.5486L23.6179 40.233L15.9821 41L7.28072 39.0826L0 35.2477V33.2859C0 28.0315 7.6075 23.7756 17 23.7756Z" fill="currentColor"/>
+                </svg>
+                <span>Nombre del pasante<span class="text-rose-500">*</span></span>
               </label>
               <input 
                 v-model="reporteForm.nombre_pasante"
                 type="text" 
                 placeholder="Nombre del pasante"
                 class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs transition-all"
-                :class="intentoGuardar && !reporteForm.nombre_pasante?.trim() ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                :class="intentoGuardar && !reporteForm.nombre_pasante?.trim() ? 'border-rose-500' : 'border-slate-300'"
               />
+              <p v-if="intentoGuardar && !reporteForm.nombre_pasante?.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
             </div>
 
             <!-- Mes* (Dropdown con meses del año) -->
             <div id="filtro-mes-container" class="md:col-span-3 relative">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                Mes<span class="text-rose-500">*</span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 26" fill="none" class="w-4 h-4 text-black shrink-0">
+                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
+                </svg>
+                <span>Mes<span class="text-rose-500">*</span></span>
               </label>
 
               <div class="relative">
@@ -1065,7 +1082,7 @@ onUnmounted(() => {
                   type="button"
                   @click.stop="dropdownMesAbierto = !dropdownMesAbierto; dropdownAreaAbierto = false"
                   class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
-                  :class="intentoGuardar && !reporteForm.mes ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                  :class="intentoGuardar && !reporteForm.mes ? 'border-rose-500' : 'border-slate-300'"
                 >
                   <span class="font-bold text-slate-800">
                     {{ reporteForm.mes || 'Enero' }}
@@ -1090,6 +1107,7 @@ onUnmounted(() => {
                   </button>
                 </div>
               </div>
+              <p v-if="intentoGuardar && !reporteForm.mes" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
             </div>
 
           </div>
@@ -1099,8 +1117,11 @@ onUnmounted(() => {
             
             <!-- Fecha Inicio* -->
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                Fecha Inicio<span class="text-rose-500">*</span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 26" fill="none" class="w-4 h-4 text-black shrink-0">
+                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
+                </svg>
+                <span>Fecha Inicio<span class="text-rose-500">*</span></span>
               </label>
               <div class="relative flex items-center">
                 <!-- Botón icono de calendario interactivo -->
@@ -1127,15 +1148,19 @@ onUnmounted(() => {
                   type="date"
                   @click="abrirCalendarioInicio" 
                   class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                  :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                  :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-500' : 'border-slate-300'"
                 />
               </div>
+              <p v-if="intentoGuardar && !reporteForm.fecha_inicio" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
             </div>
 
             <!-- Fecha Finalización* -->
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                Fecha Finalización<span class="text-rose-500">*</span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 26" fill="none" class="w-4 h-4 text-black shrink-0">
+                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
+                </svg>
+                <span>Fecha Finalización<span class="text-rose-500">*</span></span>
               </label>
               <div class="relative flex items-center">
                 <!-- Botón icono de calendario interactivo -->
@@ -1162,25 +1187,30 @@ onUnmounted(() => {
                   type="date"
                   @click="abrirCalendarioFin" 
                   class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                  :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+                  :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-500' : 'border-slate-300'"
                 />
               </div>
+              <p v-if="intentoGuardar && !reporteForm.fecha_fin" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
             </div>
 
           </div>
 
           <!-- FILA 3: Objetivo* -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-              Objetivo<span class="text-rose-500">*</span>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5" fill="none" class="w-4 h-4 text-black shrink-0">
+                <path d="M1 2.30965C1 2.657 1.13798 2.99011 1.38359 3.23572C1.6292 3.48133 1.96231 3.61931 2.30965 3.61931C2.657 3.61931 2.99011 3.48133 3.23572 3.23572C3.48133 2.99011 3.61931 2.657 3.61931 2.30965C3.61931 1.96231 3.48133 1.6292 3.23572 1.38359C2.99011 1.13798 2.657 1 2.30965 1C1.96231 1 1.6292 1.13798 1.38359 1.38359C1.13798 1.6292 1 1.96231 1 2.30965Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Objetivo<span class="text-rose-500">*</span></span>
             </label>
             <input 
               v-model="reporteForm.objetivo"
               type="text" 
               placeholder="documentar las actividades desarrolladas en la empresa"
               class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs"
-              :class="intentoGuardar && !reporteForm.objetivo?.trim() ? 'border-rose-400 ring-1 ring-rose-400' : 'border-slate-300'"
+              :class="intentoGuardar && !reporteForm.objetivo?.trim() ? 'border-rose-500' : 'border-slate-300'"
             />
+            <p v-if="intentoGuardar && !reporteForm.objetivo?.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
           </div>
 
         </div>

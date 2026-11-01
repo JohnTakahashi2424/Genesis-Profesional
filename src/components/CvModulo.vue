@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { subirImagenBase64 } from '../services/firebase'
 
 const props = defineProps({
   cvInicial: {
@@ -87,15 +88,22 @@ const formCv = ref({
   }
 })
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('genesis_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 // Cargar CVs del usuario desde la API
 const cargarCvs = async () => {
   cargando.value = true
   try {
-    const userId = usuario.value.id || usuario.value.user_id
+    const u = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+    const userId = usuario.value.id || usuario.value.user_id || u.id || 1
     if (!userId) return
 
     const res = await axios.get(`/api/cv/obtener/${userId}`, {
-      params: { correo: usuario.value.correo || usuario.value.email }
+      params: { correo: usuario.value.correo || usuario.value.email || u.correo },
+      headers: getAuthHeaders()
     })
     if (res.data && res.data.cvs) {
       cvs.value = res.data.cvs
@@ -428,8 +436,23 @@ const guardarCvFinal = async () => {
     const doc = await generarPdfDoc()
     const pdfBase64 = doc.output('datauristring')
 
+    const u = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+    const usuarioId = usuario.value.id || usuario.value.user_id || u.id || 1
+
+    // Si la foto es un Data URL base64, subirla directamente a Firebase Storage
+    if (formCv.value.perfil.fotoUrl && formCv.value.perfil.fotoUrl.startsWith('data:')) {
+      try {
+        const ext = formCv.value.perfil.fotoUrl.includes('image/webp') ? 'webp' : 'png'
+        const rutaFirebase = `cv_fotos/${usuarioId}/foto_${Date.now()}.${ext}`
+        const urlFotoCloud = await subirImagenBase64(formCv.value.perfil.fotoUrl, rutaFirebase)
+        formCv.value.perfil.fotoUrl = urlFotoCloud
+      } catch (fbErr) {
+        console.warn('Advertencia al subir foto a Firebase Storage:', fbErr)
+      }
+    }
+
     const payload = {
-      usuario_id: usuario.value.id || 1,
+      usuario_id: usuarioId,
       pdf_base64: pdfBase64,
       titulo_cv: formCv.value.tituloCv,
       cv_id: formCv.value.id,
@@ -439,7 +462,9 @@ const guardarCvFinal = async () => {
       diseno: formCv.value.diseno
     }
 
-    const res = await axios.post('/api/cv/guardar', payload)
+    const res = await axios.post('/api/cv/guardar', payload, {
+      headers: getAuthHeaders()
+    })
 
     if (res.data) {
       mensajeExito.value = '¡Currículum vitae guardado exitosamente!'
@@ -465,7 +490,7 @@ const guardarCvFinal = async () => {
 const eliminarCv = async (cvId) => {
   if (!confirm('¿Está seguro de eliminar este currículum vitae?')) return
   try {
-    await axios.delete(`/api/cv/eliminar/${cvId}`)
+    await axios.delete(`/api/cv/eliminar/${cvId}`, { headers: getAuthHeaders() })
     await cargarCvs()
   } catch (err) {
     alert('No se pudo eliminar el CV.')
@@ -1135,7 +1160,7 @@ const eliminarCv = async (cvId) => {
 
             <div>
               <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 39 39" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M35.6383 21.8333V29.1586C35.6383 30.4474 35.1263 31.6835 34.2149 32.5949C33.3035 33.5063 32.0674 34.0183 30.7785 34.0183H8.09952C6.81063 34.0183 5.57453 33.5063 4.66314 32.5949C3.75176 31.6835 3.23975 30.4474 3.23975 29.1586V21.8333L4.13556 22.282C8.88345 24.6733 14.1257 25.9187 19.4418 25.9181C24.7579 25.9176 29.9999 24.6711 34.7473 22.2787L35.6383 21.8333ZM22.6789 3.23975C23.9677 3.23975 25.2039 3.75176 26.1152 4.66314C27.0266 5.57453 27.5386 6.81063 27.5386 8.09952V9.71945H30.7785C32.0674 9.71945 33.3035 10.2315 34.2149 11.1428C35.1263 12.0542 35.6383 13.2903 35.6383 14.5792V18.2111L33.2942 19.3839C29.1003 21.4981 24.4781 22.6244 19.7817 22.6767C15.0853 22.7289 10.4393 21.7056 6.19935 19.6852L5.15126 19.1669L3.23975 18.2111V14.5792C3.23975 13.2903 3.75176 12.0542 6.81063 9.71945 8.09952 9.71945H11.3394V8.09952C11.3394 6.81063 11.8514 5.57453 12.7628 4.66314C13.6742 3.75176 14.9103 3.23975 16.1992 3.23975H22.6789ZM19.439 16.1992C19.0094 16.1992 18.5973 16.3698 18.2935 16.6736C17.9897 16.9774 17.8191 17.3894 17.8191 17.8191C17.818 18.0318 17.8589 18.2427 17.9393 18.4396C18.0197 18.6366 18.1381 18.8157 18.2878 18.9669C18.4375 19.1181 18.6155 19.2383 18.8116 19.3207C19.0077 19.4031 19.2182 19.446 19.4309 19.4471C19.6436 19.4482 19.8545 19.4073 20.0514 19.3269C20.2484 19.2465 20.4276 19.128 20.5787 18.9784C20.7299 18.8287 20.8501 18.6507 20.9325 18.4546C21.0149 18.2584 21.0579 18.048 21.0589 17.8353C21.0589 16.9249 20.3332 16.1992 19.439 16.1992ZM22.6789 6.4796H16.1992C15.7695 6.4796 15.3575 6.65027 15.0537 6.95406C14.7499 7.25786 14.5792 7.66989 14.5792 8.09952V9.71945H24.2988V8.09952C24.2988 7.66989 24.1281 7.25786 23.8243 6.95406C23.5205 6.65027 23.1085 6.4796 22.6789 6.4796Z" fill="currentColor"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-black shrink-0"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
                 <span>Conocimientos<span class="text-rose-500">*</span></span>
               </label>
               <textarea 

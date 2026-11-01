@@ -13,6 +13,7 @@ const loading = ref(false)
 const errorPaso1 = ref('')
 const errorPaso2 = ref('')
 const errorPaso3 = ref('')
+const avisoPrueba = ref('')
 
 // Paso 1: Correo
 const correo = ref('')
@@ -137,6 +138,12 @@ const handleEnviarCodigo = async () => {
     correoEnmascarado.value = res.correo_enmascarado || enmascarar(correoLimpio)
     paso.value = 2
     iniciarTemporizador(res.tiempo_expiracion_segundos || 90)
+    if (res.codigo_simulado) {
+      avisoPrueba.value = 'Código de verificación: ' + res.codigo_simulado
+      console.info('Código de recuperación:', res.codigo_simulado)
+    } else {
+      avisoPrueba.value = ''
+    }
 
     // Enfocar automáticamente primera casilla en paso 2
     nextTick(() => {
@@ -210,6 +217,12 @@ const handleReenviarCodigo = async () => {
     const res = await authService.enviarCodigo(correo.value.trim().toLowerCase())
     iniciarTemporizador(res.tiempo_expiracion_segundos || 90)
     digitos.value = ['', '', '', '', '', '']
+    if (res.codigo_simulado) {
+      avisoPrueba.value = 'Código de verificación: ' + res.codigo_simulado
+      console.info('Código de recuperación:', res.codigo_simulado)
+    } else {
+      avisoPrueba.value = ''
+    }
     nextTick(() => {
       const primerInput = document.getElementById('digito-0')
       if (primerInput) primerInput.focus()
@@ -437,6 +450,11 @@ onUnmounted(() => {
             class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#ebebeb] border rounded-[10px] text-gray-900 focus:bg-white focus:border-[#010c67] focus:outline-none transition-all shadow-sm disabled:opacity-60"
             :class="errorPaso2 ? 'border-red-500 bg-red-50/20' : 'border-gray-500'"
           />
+        </div>
+
+        <!-- Aviso de código en pruebas -->
+        <div v-if="avisoPrueba" class="mb-3 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-xs font-semibold text-center">
+          {{ avisoPrueba }}
         </div>
 
         <!-- Mensaje de error paso 2 -->
