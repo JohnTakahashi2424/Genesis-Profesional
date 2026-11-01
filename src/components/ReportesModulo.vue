@@ -82,31 +82,53 @@ const dropdownMesAbierto = ref(false)
 const fechaInicioInputRef = ref(null)
 const fechaFinInputRef = ref(null)
 
-const abrirCalendarioInicio = () => {
-  if (fechaInicioInputRef.value) {
-    try {
-      if (typeof fechaInicioInputRef.value.showPicker === 'function') {
-        fechaInicioInputRef.value.showPicker()
-      } else {
-        fechaInicioInputRef.value.focus()
-      }
-    } catch {
-      fechaInicioInputRef.value.focus()
+const abrirCalendarioInicio = (e) => {
+  if (e) {
+    e.preventDefault?.()
+    e.stopPropagation?.()
+  }
+  const el = fechaInicioInputRef.value
+  if (!el) return
+  try {
+    el.focus()
+    if (typeof el.showPicker === 'function') {
+      el.showPicker()
     }
+  } catch (err) {
+    try {
+      el.focus()
+    } catch {}
   }
 }
 
-const abrirCalendarioFin = () => {
-  if (fechaFinInputRef.value) {
-    try {
-      if (typeof fechaFinInputRef.value.showPicker === 'function') {
-        fechaFinInputRef.value.showPicker()
-      } else {
-        fechaFinInputRef.value.focus()
-      }
-    } catch {
-      fechaFinInputRef.value.focus()
+const abrirCalendarioFin = (e) => {
+  if (e) {
+    e.preventDefault?.()
+    e.stopPropagation?.()
+  }
+  const el = fechaFinInputRef.value
+  if (!el) return
+  try {
+    el.focus()
+    if (typeof el.showPicker === 'function') {
+      el.showPicker()
     }
+  } catch (err) {
+    try {
+      el.focus()
+    } catch {}
+  }
+}
+
+// Desplegar el selector nativo de fecha al interactuar con cualquier casilla de fecha
+const desplegarPicker = (event) => {
+  const el = event?.target
+  if (el) {
+    try {
+      if (typeof el.showPicker === 'function') {
+        el.showPicker()
+      }
+    } catch {}
   }
 }
 
@@ -1098,11 +1120,8 @@ onUnmounted(() => {
             
             <!-- Área de pasantía* (Dropdown) -->
             <div id="filtro-area-container" class="md:col-span-4 relative">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-black shrink-0">
-                  <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
-                </svg>
-                <span>Área de pasantía<span class="text-rose-500">*</span></span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Área de pasantía<span class="text-rose-500">*</span>
               </label>
               
               <div class="relative">
@@ -1140,11 +1159,8 @@ onUnmounted(() => {
 
             <!-- Nombre del pasante* -->
             <div class="md:col-span-5">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 41" fill="none" class="w-4 h-4 text-black shrink-0">
-                  <path d="M17 0C19.2543 0 21.4163 1.00197 23.0104 2.78549C24.6045 4.56901 25.5 6.98798 25.5 9.51026C25.5 12.0325 24.6045 14.4515 23.0104 16.235C21.4163 18.0185 19.2543 19.0205 17 19.0205C14.7457 19.0205 12.5837 18.0185 10.9896 16.235C9.39553 14.4515 8.5 12.0325 8.5 9.51026C8.5 6.98798 9.39553 4.56901 10.9896 2.78549C12.5837 1.00197 14.7457 0 17 0ZM17 23.7756C26.3925 23.7756 34 28.0315 34 33.2859L30.0108 37.5486L23.6179 40.233L15.9821 41L7.28072 39.0826L0 35.2477V33.2859C0 28.0315 7.6075 23.7756 17 23.7756Z" fill="currentColor"/>
-                </svg>
-                <span>Nombre del pasante<span class="text-rose-500">*</span></span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Nombre del pasante<span class="text-rose-500">*</span>
               </label>
               <input 
                 v-model="reporteForm.nombre_pasante"
@@ -1158,11 +1174,8 @@ onUnmounted(() => {
 
             <!-- Mes* (Dropdown con meses del año) -->
             <div id="filtro-mes-container" class="md:col-span-3 relative">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 26" fill="none" class="w-4 h-4 text-black shrink-0">
-                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
-                </svg>
-                <span>Mes<span class="text-rose-500">*</span></span>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Mes<span class="text-rose-500">*</span>
               </label>
 
               <div class="relative">
@@ -1206,18 +1219,18 @@ onUnmounted(() => {
             
             <!-- Fecha Inicio* -->
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 26" fill="none" class="w-4 h-4 text-black shrink-0">
-                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
-                </svg>
-                <span>Fecha Inicio<span class="text-rose-500">*</span></span>
+              <label 
+                @click="abrirCalendarioInicio"
+                class="block text-xs font-semibold text-slate-700 mb-1.5 cursor-pointer"
+              >
+                Fecha Inicio<span class="text-rose-500">*</span>
               </label>
               <div class="relative flex items-center">
                 <!-- Botón icono de calendario interactivo -->
                 <button
                   type="button"
                   @click="abrirCalendarioInicio"
-                  class="absolute left-3 z-10 p-0.5 text-black hover:opacity-75 cursor-pointer flex items-center justify-center"
+                  class="absolute left-3 z-20 p-0.5 text-black hover:opacity-75 cursor-pointer flex items-center justify-center pointer-events-auto"
                   title="Abrir calendario"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 23 26" fill="none">
@@ -1235,8 +1248,8 @@ onUnmounted(() => {
                   ref="fechaInicioInputRef"
                   v-model="reporteForm.fecha_inicio"
                   type="date"
-                  @click="abrirCalendarioInicio" 
-                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  @click="desplegarPicker($event)" 
+                  class="input-fecha-con-icono-izq w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer"
                   :class="intentoGuardar && !reporteForm.fecha_inicio ? 'border-rose-500' : 'border-slate-300'"
                 />
               </div>
@@ -1245,18 +1258,18 @@ onUnmounted(() => {
 
             <!-- Fecha Finalización* -->
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 26" fill="none" class="w-4 h-4 text-black shrink-0">
-                  <path d="M7.71875 1.21875C7.71875 0.543359 7.17539 0 6.5 0C5.82461 0 5.28125 0.543359 5.28125 1.21875V3.25H3.25C1.45742 3.25 0 4.70742 0 6.5V22.75C0 24.5426 1.45742 26 3.25 26H19.5C21.2926 26 22.75 24.5426 22.75 22.75V6.5C22.75 4.70742 21.2926 3.25 19.5 3.25H17.4688V1.21875C17.4688 0.543359 16.9254 0 16.25 0C15.5746 0 15.0312 0.543359 15.0312 1.21875V3.25H7.71875V1.21875ZM2.4375 9.75H6.5V12.5938H2.4375V9.75ZM2.4375 15.0312H6.5V18.2812H2.4375V15.0312ZM8.9375 15.0312H13.8125V18.2812H8.9375V15.0312ZM16.25 15.0312H20.3125V18.2812H16.25V15.0312ZM20.3125 12.5938H16.25V9.75H20.3125V12.5938ZM20.3125 20.7188V22.75C20.3125 23.1969 19.9469 23.5625 19.5 23.5625H16.25V20.7188H20.3125ZM13.8125 20.7188V23.5625H8.9375V20.7188H13.8125ZM6.5 20.7188V23.5625H3.25C2.80312 23.5625 2.4375 23.1969 2.4375 22.75V20.7188H6.5ZM13.8125 12.5938H8.9375V9.75H13.8125V12.5938Z" fill="currentColor"/>
-                </svg>
-                <span>Fecha Finalización<span class="text-rose-500">*</span></span>
+              <label 
+                @click="abrirCalendarioFin"
+                class="block text-xs font-semibold text-slate-700 mb-1.5 cursor-pointer"
+              >
+                Fecha Finalización<span class="text-rose-500">*</span>
               </label>
               <div class="relative flex items-center">
                 <!-- Botón icono de calendario interactivo -->
                 <button
                   type="button"
                   @click="abrirCalendarioFin"
-                  class="absolute left-3 z-10 p-0.5 text-black hover:opacity-75 cursor-pointer flex items-center justify-center"
+                  class="absolute left-3 z-20 p-0.5 text-black hover:opacity-75 cursor-pointer flex items-center justify-center pointer-events-auto"
                   title="Abrir calendario"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 23 26" fill="none">
@@ -1274,8 +1287,8 @@ onUnmounted(() => {
                   ref="fechaFinInputRef"
                   v-model="reporteForm.fecha_fin"
                   type="date"
-                  @click="abrirCalendarioFin" 
-                  class="w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  @click="desplegarPicker($event)" 
+                  class="input-fecha-con-icono-izq w-full pl-10 pr-3.5 py-2.5 bg-white border rounded-lg text-sm text-[#00589B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs cursor-pointer"
                   :class="intentoGuardar && !reporteForm.fecha_fin ? 'border-rose-500' : 'border-slate-300'"
                 />
               </div>
@@ -1286,11 +1299,8 @@ onUnmounted(() => {
 
           <!-- FILA 3: Objetivo* -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5" fill="none" class="w-4 h-4 text-black shrink-0">
-                <path d="M1 2.30965C1 2.657 1.13798 2.99011 1.38359 3.23572C1.6292 3.48133 1.96231 3.61931 2.30965 3.61931C2.657 3.61931 2.99011 3.48133 3.23572 3.23572C3.48133 2.99011 3.61931 2.657 3.61931 2.30965C3.61931 1.96231 3.48133 1.6292 3.23572 1.38359C2.99011 1.13798 2.657 1 2.30965 1C1.96231 1 1.6292 1.13798 1.38359 1.38359C1.13798 1.6292 1 1.96231 1 2.30965Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>Objetivo<span class="text-rose-500">*</span></span>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+              Objetivo<span class="text-rose-500">*</span>
             </label>
             <input 
               v-model="reporteForm.objetivo"
@@ -1347,7 +1357,9 @@ onUnmounted(() => {
                   v-model="act.fecha"
                   type="date" 
                   placeholder="dd/mm/aaaa"
-                  class="w-full px-2.5 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-700 text-center focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all cursor-pointer"
+                  @click="desplegarPicker($event)"
+                  @focus="desplegarPicker($event)"
+                  class="input-fecha-sin-icono w-full px-2.5 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-700 text-center focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all cursor-pointer"
                 />
               </div>
 
@@ -1729,4 +1741,23 @@ onUnmounted(() => {
 </template>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
+
+/* Ocultar el icono nativo de calendario y expandir el área interactiva sobre toda la casilla */
+.input-fecha-sin-icono,
+.input-fecha-con-icono-izq {
+  position: relative;
+}
+
+.input-fecha-sin-icono::-webkit-calendar-picker-indicator,
+.input-fecha-con-icono-izq::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
 </style>
