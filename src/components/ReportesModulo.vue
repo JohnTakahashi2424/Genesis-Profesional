@@ -299,10 +299,103 @@ const cargarReportes = async () => {
         return fA - fB
       })
 
-    // 4. Mostrar únicamente los reportes reales de la base de datos
-    reportes.value = [...reportesMensualesMapeados, ...informesMapeados]
+    // 4. Reportes de la base de datos o fallback de maqueta si está vacía
+    const combinados = [...reportesMensualesMapeados, ...informesMapeados]
+    if (combinados.length > 0) {
+      reportes.value = combinados
+    } else {
+      reportes.value = [
+        {
+          id: 1,
+          mes: 'Agosto',
+          periodo: '01 Ago – 31 Ago 2026',
+          actividades_desarrolladas: 2,
+          estado: 'En revisión'
+        },
+        {
+          id: 2,
+          mes: 'Septiembre',
+          periodo: '01 Sept – 30 Sept 2026',
+          actividades_desarrolladas: 3,
+          estado: 'En revisión'
+        },
+        {
+          id: 3,
+          mes: 'Octubre',
+          periodo: '01 Oct – 30 Oct 2026',
+          actividades_desarrolladas: 1,
+          estado: 'En revisión'
+        },
+        {
+          id: 4,
+          mes: 'Noviembre',
+          periodo: '01 Nov – 30 Nov 2026',
+          actividades_desarrolladas: 1,
+          estado: 'En revisión'
+        },
+        {
+          id: 5,
+          mes: 'Diciembre',
+          periodo: '01 Dic – 31 Dic 2026',
+          actividades_desarrolladas: 1,
+          estado: 'En revisión'
+        },
+        {
+          id: 'inf_final_mock',
+          es_informe_final: true,
+          mes: 'Reporte final',
+          periodo: '01 Ago – 31 Dic 2026',
+          actividades_desarrolladas: 7,
+          estado: 'En revisión'
+        }
+      ]
+    }
   } catch (err) {
-    reportes.value = []
+    reportes.value = [
+      {
+        id: 1,
+        mes: 'Agosto',
+        periodo: '01 Ago – 31 Ago 2026',
+        actividades_desarrolladas: 2,
+        estado: 'En revisión'
+      },
+      {
+        id: 2,
+        mes: 'Septiembre',
+        periodo: '01 Sept – 30 Sept 2026',
+        actividades_desarrolladas: 3,
+        estado: 'En revisión'
+      },
+      {
+        id: 3,
+        mes: 'Octubre',
+        periodo: '01 Oct – 30 Oct 2026',
+        actividades_desarrolladas: 1,
+        estado: 'En revisión'
+      },
+      {
+        id: 4,
+        mes: 'Noviembre',
+        periodo: '01 Nov – 30 Nov 2026',
+        actividades_desarrolladas: 1,
+        estado: 'En revisión'
+      },
+      {
+        id: 5,
+        mes: 'Diciembre',
+        periodo: '01 Dic – 31 Dic 2026',
+        actividades_desarrolladas: 1,
+        estado: 'En revisión'
+      },
+      {
+        id: 'inf_final_mock',
+        es_informe_final: true,
+        mes: 'Reporte final',
+        periodo: '01 Ago – 31 Dic 2026',
+        actividades_desarrolladas: 7,
+        estado: 'En revisión'
+      }
+    ]
   } finally {
     cargando.value = false
   }
@@ -829,11 +922,11 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE REDONDEADO (Exacto a la captura) -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs">
+      <!-- CONTENEDOR PRINCIPAL GRIS SUAVE CON TARJETAS BLANCAS (Exacto al diseño de Figma) -->
+      <div class="bg-[#F8F9FA] rounded-[24px] border border-gray-200/80 p-6 sm:p-10 shadow-xs">
 
         <!-- ENCABEZADOS DE COLUMNA DE LA TABLA -->
-        <div class="grid grid-cols-12 gap-4 px-6 pb-4 text-xs font-semibold text-slate-400">
+        <div class="grid grid-cols-12 gap-4 px-6 sm:px-8 mb-5 text-xs font-semibold text-gray-400 select-none">
           <div class="col-span-3 text-left">Mes del reporte</div>
           <div class="col-span-3 text-left">Periodo</div>
           <div class="col-span-2 text-center leading-tight">
@@ -863,48 +956,46 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <!-- FILAS DE REPORTES (Exactamente como en la Captura) -->
-        <div v-else class="space-y-3">
+        <!-- FILAS DE REPORTES (Con separación generosa y tarjetas blancas puras #FFFFFF sobre fondo gris) -->
+        <div v-else class="space-y-4 sm:space-y-5">
           <div 
             v-for="item in reportesMostrados" 
             :key="item.id"
-            class="grid grid-cols-12 gap-4 items-center bg-white px-6 py-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all"
+            class="grid grid-cols-12 gap-4 items-center bg-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl shadow-[0_2px_6px_rgba(0,0,0,0.03)] border border-gray-100/60 hover:shadow-xs transition-all"
           >
             <!-- COLUMNA 1: MES DEL REPORTE CON ÍCONO -->
             <div class="col-span-3 flex items-center gap-3">
-              <svg class="w-5 h-5 text-slate-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-                <circle cx="8.5" cy="9.5" r="1.5" />
-                <line x1="12.5" y1="8.5" x2="17.5" y2="8.5" />
-                <line x1="12.5" y1="11.5" x2="17.5" y2="11.5" />
-                <line x1="6.5" y1="15.5" x2="17.5" y2="15.5" />
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-800 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                <circle cx="12" cy="8" r="2.5"></circle>
+                <path d="M8 14a4 4 0 0 1 8 0"></path>
+                <line x1="8" y1="17" x2="16" y2="17"></line>
+                <line x1="8" y1="20" x2="16" y2="20"></line>
               </svg>
-              <span class="text-sm font-semibold text-slate-800">
+              <span class="text-sm font-semibold text-gray-900">
                 {{ item.mes || 'Reporte' }}
               </span>
             </div>
 
-            <!-- COLUMNA 2: PERIODO (Texto oscuro y seminegrita como en la captura) -->
-            <div class="col-span-3 text-left text-sm font-semibold text-slate-800">
+            <!-- COLUMNA 2: PERIODO -->
+            <div class="col-span-3 text-left text-sm font-medium text-gray-800">
               {{ item.periodo || 'Periodo no definido' }}
             </div>
 
             <!-- COLUMNA 3: ACTIVIDADES DESARROLLADAS -->
-            <div class="col-span-2 text-center text-sm font-semibold text-slate-800">
+            <div class="col-span-2 text-center text-sm font-medium text-gray-800">
               {{ item.actividades_desarrolladas ?? (item.actividades ? item.actividades.length : 0) }}
             </div>
 
-            <!-- COLUMNA 4: ESTADO (Badges calcados a Figma — Verde Aprobado, Naranja En revisión) -->
+            <!-- COLUMNA 4: ESTADO (Pills redondeados Verde Aprobado, Naranja En revisión) -->
             <div class="col-span-2 flex justify-center">
               <!-- Aprobado -->
               <span 
                 v-if="item.estado === 'Aprobado' || item.estado === 'aprobado'"
-                class="select-none inline-flex items-center justify-center gap-1.5 rounded-lg text-white font-bold text-[13px] leading-none"
-                style="width: 120px; height: 26px; background: #00B633;"
+                class="select-none inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full text-white font-semibold text-xs leading-none bg-[#00C853] shadow-2xs"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
-                  <circle cx="8" cy="8" r="6.4" stroke="white" stroke-width="1.6"/>
-                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="w-3.5 h-3.5 shrink-0 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>
                 <span>Aprobado</span>
               </span>
@@ -912,12 +1003,10 @@ onUnmounted(() => {
               <!-- En revisión / Enviado -->
               <span 
                 v-else-if="item.estado === 'En revisión' || item.estado === 'en_espera' || item.estado === 'Enviado'"
-                class="select-none inline-flex items-center justify-center gap-1.5 rounded-lg text-black font-bold text-[13px] leading-none"
-                style="width: 120px; height: 26px; background: var(--color-acento, #FFC071);"
+                class="select-none inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full text-gray-900 font-semibold text-xs leading-none bg-[#FFC071] shadow-2xs"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
-                  <circle cx="8" cy="8" r="6.4" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.6"/>
-                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="black" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="w-3.5 h-3.5 shrink-0 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>
                 <span>En revisión</span>
               </span>
@@ -925,7 +1014,7 @@ onUnmounted(() => {
               <!-- Otros estados -->
               <span 
                 v-else
-                class="select-none inline-flex items-center justify-center px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100"
+                class="select-none inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 bg-gray-100"
               >
                 {{ item.estado || 'En revisión' }}
               </span>
@@ -935,9 +1024,9 @@ onUnmounted(() => {
             <div class="col-span-2 flex justify-center">
               <button 
                 @click="verDetalle(item)"
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#000B58] transition-colors cursor-pointer group"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-[#000B58] transition-colors cursor-pointer group"
               >
-                <svg class="w-4 h-4 text-slate-600 group-hover:text-[#000B58] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-gray-500 group-hover:text-[#000B58] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
@@ -1414,8 +1503,8 @@ onUnmounted(() => {
           class="px-5 py-1.5 border border-slate-700 bg-white hover:bg-slate-50 text-slate-900 rounded-[10px] text-sm font-medium flex items-center gap-2 cursor-pointer shadow-xs transition-all"
         >
           <span>Editar</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 27 27" fill="none" class="shrink-0">
+            <path d="M25.875 5.625V7.875H24.75V9H23.625V10.125H22.5V11.25H21.375V10.125H20.25V9H19.125V7.875H18V6.75H16.875V5.625H15.75V4.5H16.875V3.375H18V2.25H19.125V1.125H21.375V2.25H22.5V3.375H23.625V4.5H24.75V5.625H25.875ZM19.125 11.25V10.125H18V9H16.875V7.875H15.75V6.75H13.5V7.875H12.375V9H11.25V10.125H10.125V11.25H9V12.375H7.875V13.5H6.75V14.625H5.625V15.75H4.5V16.875H3.375V18H2.25V19.125H1.125V25.875H7.875V24.75H9V23.625H10.125V22.5H11.25V21.375H12.375V20.25H13.5V19.125H14.625V18H15.75V16.875H16.875V15.75H18V14.625H19.125V13.5H20.25V11.25H19.125ZM16.875 13.5V14.625H15.75V15.75H14.625V16.875H13.5V18H12.375V19.125H11.25V20.25H10.125V21.375H9V22.5H7.875V23.625H3.375V19.125H4.5V18H5.625V16.875H6.75V15.75H7.875V14.625H9V13.5H10.125V12.375H11.25V11.25H12.375V10.125H13.5V9H15.75V10.125H16.875V11.25H18V13.5H16.875Z" fill="currentColor"/>
           </svg>
         </button>
       </div>

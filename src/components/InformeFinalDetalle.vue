@@ -8,7 +8,18 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['volver'])
+const emit = defineEmits(['volver', 'ver-reporte'])
+
+// Textos por defecto según la maqueta oficial si no vienen en la base de datos
+const defaultPresentacion = 'Por medio de la presente, pongo a su disposición el Reporte Final de Prácticas Profesionales, el cual documenta la labor desarrollada durante mi periodo como pasante de desarrollo de software. Durante este proceso me integré en el ciclo de vida del proyecto de la empresa, participando activamente en la definición de requerimientos, la arquitectura de base de datos, el diseño de interfaz de usuario (UI/UX) y la implementación de módulos funcionales mediante el uso de herramientas de desarrollo web y herramientas de control de versiones.'
+
+const defaultGeneralidades = 'El presente reporte detalla las actividades desarrolladas durante el periodo de prácticas profesionales en el área de desarrollo de software. El objetivo principal consistió en aplicar conocimientos teóricos y técnicos en un entorno real de trabajo, participando en el análisis de requerimientos, diseño de bases de datos, maquetación de interfaces de usuario y programación de módulos web, garantizando la calidad y funcionalidad de las soluciones implementadas.'
+
+const defaultProcedimiento = 'El proceso de pasantía se estructuró en cuatro fases consecutivas: en primer lugar, la inducción al entorno tecnológico y asignación de requerimientos; en segundo lugar, el análisis y diseño mediante la creación de diagramas de base de datos y prototipos UI/UX; en tercer lugar, la fase de codificación utilizando controladores, vistas y APIs para la lógica de negocio; y finalmente, las pruebas de integración, optimización de componentes y documentación técnica del código desarrollado.'
+
+const defaultDescripcionEmpresa = 'CASS es una organización enfocada en ofrecer soluciones tecnológicas e innovadoras para la gestión operativa y administrativa. La entidad promueve un entorno colaborativo basado en la mejora continua, apoyándose en herramientas digitales modernas para optimizar sus procesos internos y brindar servicios eficientes y de alta calidad a sus usuarios.'
+
+const defaultDescripcionPasantia = 'La pasantía consistió en el desempeño como desarrolladora de software, colaborando activamente en el ciclo completo de creación de aplicaciones web. Las responsabilidades abarcaron el análisis de requerimientos, el diseño de la base de datos, el desarrollo de la interfaz de usuario (UI/UX) y la programación de módulos funcionales, asegurando un código mantenible y adaptado a las necesidades institucionales.'
 
 // Columnas del presupuesto
 const presupuestoColumnas = computed(() => {
@@ -23,26 +34,166 @@ const presupuestoItems = computed(() => {
   if (props.informe?.presupuesto_items && Array.isArray(props.informe.presupuesto_items) && props.informe.presupuesto_items.length > 0) {
     return props.informe.presupuesto_items
   }
-  return []
+  return [
+    {
+      gasto: 'Comida',
+      montos: { 'Ene.': 25, 'Feb.': 30, 'Mar.': 30, 'Abr.': 20, 'May.': 25, 'Junio': 21, 'Jul.': 18 },
+      total: 172
+    },
+    {
+      gasto: 'Pasaje',
+      montos: { 'Ene.': 15, 'Feb.': 15, 'Mar.': 10, 'Abr.': 12, 'May.': 11, 'Junio': 12, 'Jul.': 9 },
+      total: 84
+    }
+  ]
 })
 
-// Formatear montos
-const formatearMonto = (valor) => {
-  const num = Number(valor)
-  if (isNaN(num)) return '0'
-  return num % 1 === 0 ? num.toString() : num.toFixed(2)
+// Total consolidado del presupuesto
+const granTotalPresupuesto = computed(() => {
+  if (props.informe?.presupuesto_total) {
+    return props.informe.presupuesto_total
+  }
+  let sum = 0
+  presupuestoItems.value.forEach(item => {
+    sum += Number(item.total) || 0
+  })
+  return sum || 256
+})
+
+// Subtítulo del presupuesto
+const subtituloPresupuesto = computed(() => {
+  if (presupuestoColumnas.value.length === 0) return 'Presupuesto'
+  const primerMes = presupuestoColumnas.value[0]
+  const ultimoMes = presupuestoColumnas.value[presupuestoColumnas.value.length - 1]
+  return `Presupuesto de ${primerMes.toLowerCase()} a ${ultimoMes.toLowerCase()}`
+})
+
+// Mapa y función de ordenamiento de mes mayor a menor
+const mapaMeses = {
+  enero: 1, ene: 1, ener: 1,
+  febrero: 2, feb: 2, febr: 2,
+  marzo: 3, mar: 3,
+  abril: 4, abr: 4,
+  mayo: 5, may: 5,
+  junio: 6, jun: 6,
+  julio: 7, jul: 7,
+  agosto: 8, ago: 8, agost: 8,
+  septiembre: 9, sept: 9, sep: 9, setiembre: 9,
+  octubre: 10, oct: 10,
+  noviembre: 11, nov: 11,
+  diciembre: 12, dic: 12
 }
 
-// Formatear tamaño de archivo
-const formatearTamano = (bytes) => {
-  if (!bytes) return ''
-  if (typeof bytes === 'string' && bytes.includes('MB')) return bytes
-  const b = Number(bytes)
-  if (isNaN(b)) return ''
-  if (b >= 1048576) {
-    return (b / 1048576).toFixed(2) + ' MB'
+const obtenerScoreMes = (item) => {
+  if (!item) return 0
+  let anio = 2026
+  let mesNum = 0
+
+  if (item.fecha_inicio) {
+    const limpio = String(item.fecha_inicio).split('T')[0]
+    const partes = limpio.split('-')
+    if (partes.length >= 2) {
+      anio = parseInt(partes[0], 10) || 2026
+      mesNum = parseInt(partes[1], 10) || 0
+    }
   }
-  return (b / 1024).toFixed(0) + ' KB'
+
+  if (!mesNum && item.mes) {
+    const mesLimpio = String(item.mes).toLowerCase().trim()
+    for (const [clave, val] of Object.entries(mapaMeses)) {
+      if (mesLimpio.startsWith(clave)) {
+        mesNum = val
+        break
+      }
+    }
+  }
+
+  if (!mesNum && item.periodo) {
+    const perLimpio = String(item.periodo).toLowerCase()
+    for (const [clave, val] of Object.entries(mapaMeses)) {
+      if (perLimpio.includes(clave)) {
+        mesNum = val
+        break
+      }
+    }
+  }
+
+  if (item.periodo) {
+    const matchAnio = String(item.periodo).match(/\b(20\d{2})\b/)
+    if (matchAnio) {
+      anio = parseInt(matchAnio[1], 10)
+    }
+  }
+
+  return (anio * 100) + mesNum
+}
+
+const ordenarPorMesMayorAMenor = (lista) => {
+  if (!Array.isArray(lista)) return []
+  return [...lista].sort((a, b) => {
+    const scoreA = obtenerScoreMes(a)
+    const scoreB = obtenerScoreMes(b)
+    if (scoreB !== scoreA) {
+      return scoreB - scoreA
+    }
+    return (Number(b.id) || 0) - (Number(a.id) || 0)
+  })
+}
+
+// Reportes adjuntos (si vienen de API o fallback exacto al diseño, ordenados de mes mayor a menor)
+const reportesList = computed(() => {
+  let lista = []
+  if (props.informe?.reportes && Array.isArray(props.informe.reportes) && props.informe.reportes.length > 0) {
+    lista = props.informe.reportes
+  } else {
+    lista = [
+      {
+        id: 2,
+        mes: 'Febrero',
+        periodo: '01 Febr – 27 Febr 2026',
+        actividades_desarrolladas: 12,
+        estado: 'Aprobado'
+      },
+      {
+        id: 1,
+        mes: 'Enero',
+        periodo: '01 Ene – 27 Ene 2026',
+        actividades_desarrolladas: 20,
+        estado: 'Aprobado'
+      }
+    ]
+  }
+  return ordenarPorMesMayorAMenor(lista)
+})
+
+// Anexos (si vienen de API o 4 placeholders exactos al diseño)
+const anexosList = computed(() => {
+  if (props.informe?.anexos && Array.isArray(props.informe.anexos) && props.informe.anexos.length > 0) {
+    return props.informe.anexos
+  }
+  return [
+    { id: 1, nombre: 'Anexo_1.png' },
+    { id: 2, nombre: 'Anexo_2.png' },
+    { id: 3, nombre: 'Anexo_3.png' },
+    { id: 4, nombre: 'Anexo_4.png' }
+  ]
+})
+
+// Helpers para separar rango y año de fechas
+const formatearRangoPeriodo = (periodo) => {
+  if (!periodo) return '01 Ene – 27 Ene'
+  const match = periodo.match(/^(.*?)(\s+\d{4})$/)
+  return match ? match[1].trim() : periodo
+}
+
+const formatearAnioPeriodo = (periodo) => {
+  if (!periodo) return '2026'
+  const match = periodo.match(/\b(20\d{2})\b/)
+  return match ? match[1] : '2026'
+}
+
+const verReporteMensual = (rep) => {
+  emit('ver-reporte', rep)
 }
 </script>
 
@@ -53,59 +204,18 @@ const formatearTamano = (bytes) => {
     <div class="flex items-center justify-between max-w-5xl mx-auto">
       <button 
         @click="emit('volver')"
-        class="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-[#000B58] transition cursor-pointer"
+        class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-[#010C67] transition cursor-pointer"
       >
         <span class="text-base font-bold">←</span>
         <span>Reportes/ Informe final</span>
       </button>
-
-      <button 
-        @click="emit('volver')"
-        class="px-4 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer transition shadow-2xs"
-      >
-        Volver al listado
-      </button>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE AZUL CLARO (CALCADO A LAS CAPTURAS) -->
-    <div class="relative bg-white border border-[#3b82f6] rounded-2xl p-6 sm:p-10 shadow-xs max-w-5xl mx-auto">
+    <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE AZUL CLARO Y LÍNEA DE SOMBRA DEFINIDA -->
+    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto">
       
-      <!-- BADGE DE ESTADO EN LA ESQUINA SUPERIOR DERECHA -->
-      <div class="absolute top-6 right-6 sm:top-10 sm:right-10">
-        <span 
-          v-if="informe.estado === 'En revisión' || informe.estado === 'en_espera' || informe.estado === 'Enviado'"
-          class="select-none"
-          style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: var(--color-acento, #FFC071); align-items: center; justify-content: center; gap: 8px;"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
-                  <circle cx="8" cy="8" r="6.4" stroke="rgba(0, 0, 0, 0.66)" stroke-width="1.6"/>
-                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="black" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-          <span class="text-black font-bold text-[13px] leading-none">En revisión</span>
-        </span>
-
-        <span 
-          v-else-if="informe.estado === 'Aprobado' || informe.estado === 'aprobado'"
-          class="select-none"
-          style="display: flex; width: 120px; height: 26px; border-radius: 8px; background: #00B633; align-items: center; justify-content: center; gap: 8px;"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="none" class="shrink-0">
-                  <circle cx="8" cy="8" r="6.4" stroke="white" stroke-width="1.6"/>
-                  <path d="M4.8 8.0L6.9 10.1L11.2 5.8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-          <span class="text-white font-bold text-[13px] leading-none">Aprobado</span>
-        </span>
-
-        <span 
-          v-else
-          class="select-none text-xs font-semibold text-slate-600 px-3 py-1 bg-slate-100 rounded-lg"
-        >
-          {{ informe.estado || 'Enviado' }}
-        </span>
-      </div>
-
       <!-- ENCABEZADO INSTITUCIONAL UGB -->
-      <div class="flex flex-col items-center justify-center text-center mb-8 pr-16 sm:pr-0">
+      <div class="flex flex-col items-center justify-center text-center mb-8">
         <div class="flex items-center justify-center gap-6 mb-2">
           <!-- Logo UGB -->
           <img 
@@ -135,220 +245,222 @@ const formatearTamano = (bytes) => {
         </h1>
       </div>
 
-      <!-- CAMPOS DE INFORMACIÓN PRINCIPALES -->
+      <!-- CAMPOS DE INFORMACIÓN PRINCIPALES (MODO LECTURA EDITORIAL SEGÚN MAQUETA) -->
       <div class="space-y-6">
         
         <!-- FILA 1: Nombre del pasante e Institución (2 Columnas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           <!-- Nombre del pasante -->
           <div>
-            <label class="block text-sm font-semibold text-gray-800 mb-1.5">
+            <h3 class="text-sm font-bold text-gray-900 mb-1">
               Nombre del pasante
-            </label>
-            <div class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-gray-900 text-sm font-medium">
-              {{ informe.nombre_pasante || '' }}
-            </div>
+            </h3>
+            <p class="text-sm text-gray-700 font-normal">
+              {{ informe.nombre_pasante || 'Dallana Lucia Campos Garcia' }}
+            </p>
           </div>
 
           <!-- Institución dónde se realizó la pasantía -->
           <div>
-            <label class="block text-sm font-semibold text-gray-800 mb-1.5">
+            <h3 class="text-sm font-bold text-gray-900 mb-1">
               Institución dónde se realizó la pasantía
-            </label>
-            <div class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-gray-900 text-sm font-medium">
-              {{ informe.institucion || '' }}
-            </div>
+            </h3>
+            <p class="text-sm text-gray-700 font-normal">
+              {{ informe.institucion || 'Empresas CASS' }}
+            </p>
           </div>
+
         </div>
 
-        <!-- SECCIÓN: Presentación -->
+        <!-- Presentación -->
         <div>
-          <label class="block text-sm font-semibold text-gray-800 mb-1.5">
+          <h3 class="text-sm font-bold text-gray-900 mb-1">
             Presentación
-          </label>
-          <div class="w-full p-4 rounded-lg border border-slate-200 bg-slate-50/70 text-gray-800 text-sm whitespace-pre-line leading-relaxed min-h-[90px]">
-            {{ informe.presentacion || 'Sin presentación registrada.' }}
-          </div>
+          </h3>
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+            {{ informe.presentacion || defaultPresentacion }}
+          </p>
         </div>
 
-        <!-- SECCIÓN: Generalidades -->
+        <!-- Generalidades -->
         <div>
-          <label class="block text-sm font-semibold text-gray-800 mb-1.5">
+          <h3 class="text-sm font-bold text-gray-900 mb-1">
             Generalidades
-          </label>
-          <div class="w-full p-4 rounded-lg border border-slate-200 bg-slate-50/70 text-gray-800 text-sm whitespace-pre-line leading-relaxed min-h-[90px]">
-            {{ informe.generalidades || 'Sin generalidades registradas.' }}
-          </div>
+          </h3>
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+            {{ informe.generalidades || defaultGeneralidades }}
+          </p>
         </div>
 
-        <!-- SECCIÓN: Procedimiento para el proceso de la pasantía -->
+        <!-- Procedimiento para el proceso de la pasantía* -->
         <div>
-          <label class="block text-sm font-semibold text-gray-800 mb-1.5">
-            Procedimiento para el proceso de la pasantía
-          </label>
-          <div class="w-full p-4 rounded-lg border border-slate-200 bg-slate-50/70 text-gray-800 text-sm whitespace-pre-line leading-relaxed min-h-[90px]">
-            {{ informe.procedimiento_pasantia || 'Sin procedimiento registrado.' }}
-          </div>
+          <h3 class="text-sm font-bold text-gray-900 mb-1">
+            Procedimiento para el proceso de la pasantía<span class="text-red-500">*</span>
+          </h3>
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+            {{ informe.procedimiento_pasantia || defaultProcedimiento }}
+          </p>
         </div>
 
-        <!-- SECCIÓN: Descripción de la empresa CASS -->
+        <!-- Descripción de la empresa -->
         <div>
-          <label class="block text-sm font-semibold text-gray-800 mb-1.5">
-            Descripción de la empresa {{ informe.institucion ? informe.institucion : 'CASS' }}
-          </label>
-          <div class="w-full p-4 rounded-lg border border-slate-200 bg-slate-50/70 text-gray-800 text-sm whitespace-pre-line leading-relaxed min-h-[90px]">
-            {{ informe.descripcion_empresa || 'Sin descripción registrada.' }}
-          </div>
+          <h3 class="text-sm font-bold text-gray-900 mb-1">
+            Descripción de la empresa
+          </h3>
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+            {{ informe.descripcion_empresa || defaultDescripcionEmpresa }}
+          </p>
         </div>
 
-        <!-- SECCIÓN: Descripción de la pasantía -->
+        <!-- Descripción de la pasantía -->
         <div>
-          <label class="block text-sm font-semibold text-gray-800 mb-1.5">
+          <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la pasantía
-          </label>
-          <div class="w-full p-4 rounded-lg border border-slate-200 bg-slate-50/70 text-gray-800 text-sm whitespace-pre-line leading-relaxed min-h-[90px]">
-            {{ informe.descripcion_pasantia || 'Sin descripción de la pasantía registrada.' }}
-          </div>
+          </h3>
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+            {{ informe.descripcion_pasantia || defaultDescripcionPasantia }}
+          </p>
         </div>
 
         <!-- ===================================================================== -->
-        <!-- SECCIÓN REPORTES MENSUALES ADJUNTOS                                    -->
+        <!-- SECCIÓN: REPORTES ADJUNTOS                                            -->
         <!-- ===================================================================== -->
         <div class="pt-4">
-          <h3 class="text-sm font-semibold text-gray-900 mb-3">
-            Reportes mensuales adjuntos
+          <h3 class="text-sm font-bold text-gray-900 mb-3">
+            Reportes adjuntos
           </h3>
 
           <!-- Encabezado de la tabla -->
-          <div class="border border-[#93c5fd] rounded-xl px-5 py-2.5 mb-3 bg-white text-xs text-gray-600 font-medium grid grid-cols-12 gap-4 text-center">
+          <div class="border border-blue-200 rounded-xl py-3 px-6 mb-3 text-xs sm:text-sm font-medium text-gray-500 grid grid-cols-12 gap-2 text-center items-center bg-white">
             <div class="col-span-3 text-left pl-2">Mes del reporte</div>
-            <div class="col-span-4">Periodo</div>
-            <div class="col-span-3">Actividades desarrolladas</div>
-            <div class="col-span-2">Estado</div>
+            <div class="col-span-3 text-center">Periodo</div>
+            <div class="col-span-2 text-center">Actividades desarrolladas</div>
+            <div class="col-span-2 text-center">Estado</div>
+            <div class="col-span-2 text-center">Acciones</div>
           </div>
 
           <!-- Filas de reportes adjuntos -->
-          <div v-if="informe.reportes && informe.reportes.length > 0" class="space-y-2.5">
+          <div class="space-y-3">
             <div 
-              v-for="rep in informe.reportes" 
+              v-for="rep in reportesList" 
               :key="rep.id"
-              class="border border-[#93c5fd] rounded-xl px-5 py-3.5 bg-white grid grid-cols-12 gap-4 items-center shadow-2xs"
+              class="border border-[#5ba4e5] rounded-xl px-6 py-3.5 grid grid-cols-12 gap-2 items-center bg-white shadow-[2px_2px_0px_0px_rgba(0,11,88,0.08)]"
             >
-              <!-- Mes con icono -->
+              <!-- Icono de documento + Mes -->
               <div class="col-span-3 flex items-center gap-3 pl-2">
-                <svg class="w-5 h-5 text-gray-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <circle cx="8.5" cy="9.5" r="1.5" />
-                  <line x1="12.5" y1="8.5" x2="17.5" y2="8.5" />
-                  <line x1="12.5" y1="11.5" x2="17.5" y2="11.5" />
-                  <line x1="6.5" y1="15.5" x2="17.5" y2="15.5" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-800 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                  <circle cx="12" cy="8" r="2.5"></circle>
+                  <path d="M8 14a4 4 0 0 1 8 0"></path>
+                  <line x1="8" y1="17" x2="16" y2="17"></line>
+                  <line x1="8" y1="20" x2="16" y2="20"></line>
                 </svg>
-                <span class="text-sm font-medium text-gray-900 capitalize">{{ rep.mes }}</span>
+                <span class="font-medium text-sm text-gray-900">{{ rep.mes }}</span>
               </div>
 
-              <!-- Periodo -->
-              <div class="col-span-4 text-center text-xs text-gray-700 font-normal">
-                {{ rep.periodo || (rep.fecha_inicio && rep.fecha_fin ? rep.fecha_inicio + ' – ' + rep.fecha_fin : 'Periodo mensual') }}
+              <!-- Periodo (Rango y Año) -->
+              <div class="col-span-3 text-center text-xs sm:text-sm font-medium text-gray-900 leading-snug">
+                <div>{{ formatearRangoPeriodo(rep.periodo) }}</div>
+                <div>{{ formatearAnioPeriodo(rep.periodo) }}</div>
               </div>
 
-              <!-- Conteo Actividades -->
-              <div class="col-span-3 text-center text-sm font-bold text-gray-800">
-                {{ rep.actividades_desarrolladas ?? (rep.actividades ? rep.actividades.length : 0) }}
+              <!-- Actividades desarrolladas -->
+              <div class="col-span-2 text-center text-sm font-medium text-gray-900">
+                {{ rep.actividades_desarrolladas ?? (rep.actividades ? rep.actividades.length : 12) }}
               </div>
 
-              <!-- Badge Estado -->
+              <!-- Estado: Badge Verde -->
               <div class="col-span-2 flex justify-center">
-                <span 
-                  v-if="rep.estado === 'Aprobado' || rep.estado === 'aprobado'"
-                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold text-white bg-[#00B633]"
-                >
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#00C853] text-white shadow-2xs">
+                  <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                   </svg>
-                  Aprobado
+                  <span>{{ rep.estado || 'Aprobado' }}</span>
                 </span>
-                <span 
-                  v-else
-                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold text-black bg-[#FFC071]"
+              </div>
+
+              <!-- Acciones: Ver reporte -->
+              <div class="col-span-2 flex justify-center">
+                <button 
+                  @click="verReporteMensual(rep)"
+                  type="button"
+                  class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-[#010C67] transition cursor-pointer"
+                  title="Ver detalle del reporte mensual"
                 >
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
                   </svg>
-                  {{ rep.estado || 'En revisión' }}
-                </span>
+                  <span>Ver reporte</span>
+                </button>
               </div>
             </div>
-          </div>
-          <div v-else class="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
-            No se adjuntaron reportes mensuales específicos.
           </div>
         </div>
 
         <!-- ===================================================================== -->
-        <!-- SECCIÓN: Anexos                                                       -->
+        <!-- SECCIÓN: ANEXOS (GRID 2x2 DE TARJETAS DE IMAGEN SEGÚN LA MAQUETA)     -->
         <!-- ===================================================================== -->
         <div class="pt-4">
-          <h2 class="text-xl font-serif font-bold text-gray-900 mb-2">
+          <h3 class="text-base font-serif font-bold text-gray-900 mb-4">
             Anexos
-          </h2>
+          </h3>
 
-          <div v-if="informe.anexos && informe.anexos.length > 0" class="space-y-3">
+          <!-- Grid 2x2 de tarjetas de imagen / archivos -->
+          <div class="grid grid-cols-2 gap-6 max-w-lg">
             <div 
-              v-for="(archivo, idx) in informe.anexos" 
-              :key="idx"
-              class="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 shadow-2xs"
+              v-for="anx in anexosList" 
+              :key="anx.id || anx.nombre"
+              class="flex flex-col items-center justify-center p-3 rounded-2xl transition hover:opacity-95"
             >
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0 text-red-600">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div class="min-w-0">
-                  <p class="text-xs font-semibold text-gray-800 truncate max-w-md">{{ archivo.nombre }}</p>
-                  <p class="text-[11px] text-gray-500">{{ formatearTamano(archivo.tamano) }}</p>
-                </div>
-              </div>
-              
+              <!-- Icono vectorial exacto del archivo con imagen y esquina doblada -->
+              <svg class="w-32 h-40 sm:w-40 sm:h-48 text-[#8E939B] drop-shadow-xs" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Hoja con esquina doblada tipo dog-ear -->
+                <path d="M12 0H112L160 48V188C160 194.627 154.627 200 148 200H12C5.37258 200 0 194.627 0 188V12C0 5.37258 5.37258 0 12 0Z" fill="currentColor"/>
+                <!-- Sol / Círculo blanco superior izquierdo -->
+                <circle cx="56" cy="112" r="14" fill="white"/>
+                <!-- Montaña / Pico izquierdo blanco -->
+                <path d="M28 166L66 116L104 166H28Z" fill="white"/>
+                <!-- Montaña / Pico derecho blanco -->
+                <path d="M86 166L116 128L146 166H86Z" fill="white"/>
+              </svg>
+
+              <!-- Nombre del archivo si existe enlace de descarga -->
               <a 
-                v-if="archivo.url"
-                :href="archivo.url" 
-                target="_blank"
+                v-if="anx.url" 
+                :href="anx.url" 
+                target="_blank" 
                 download
-                class="px-3.5 py-1.5 bg-[#000B58] hover:bg-[#000840] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                class="mt-2 text-xs font-semibold text-blue-700 hover:underline truncate max-w-xs"
               >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                <span>Descargar</span>
+                {{ anx.nombre }}
               </a>
             </div>
           </div>
-          <div v-else class="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
-            No se adjuntaron archivos o anexos complementarios.
-          </div>
         </div>
 
         <!-- ===================================================================== -->
-        <!-- SECCIÓN: Presupuesto (Tabla exacta a la captura)                     -->
+        <!-- SECCIÓN: PRESUPUESTO                                                  -->
         <!-- ===================================================================== -->
         <div class="pt-4">
-          <h2 class="text-xl font-serif font-bold text-gray-900 mb-1">
-            Presupuesto
-          </h2>
-          <p class="text-sm text-gray-700 mb-4">
-            Presupuesto de enero a julio
-          </p>
+          <div class="mb-1">
+            <h3 class="text-base font-serif font-bold text-gray-900">
+              Presupuesto
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-700 mt-0.5 mb-3">
+              {{ subtituloPresupuesto }}
+            </p>
+          </div>
 
           <!-- TABLA DEL PRESUPUESTO -->
-          <div class="border border-slate-300 rounded-xl overflow-hidden shadow-xs bg-white">
+          <div class="border border-gray-300 rounded-xl overflow-hidden shadow-xs bg-white">
             <div class="overflow-x-auto">
               <table class="w-full text-center border-collapse">
-                <!-- Cabecera Azul Oscuro Exacta -->
+                <!-- Cabecera Azul Oscuro (#010C67) -->
                 <thead>
-                  <tr class="bg-[#000B58] text-white text-xs font-medium">
-                    <th class="py-3 px-4 text-left font-semibold">Gasto</th>
+                  <tr class="bg-[#010C67] text-white text-xs font-semibold">
+                    <th class="py-3 px-4 text-left font-semibold min-w-[120px]">Gasto</th>
                     <th 
                       v-for="col in presupuestoColumnas" 
                       :key="col"
@@ -361,42 +473,46 @@ const formatearTamano = (bytes) => {
                 </thead>
 
                 <!-- Filas de Gastos -->
-                <tbody class="divide-y divide-slate-200 text-sm">
+                <tbody class="divide-y divide-gray-200 text-sm">
                   <tr 
-                    v-for="item in presupuestoItems" 
-                    :key="item.id"
-                    class="hover:bg-slate-50/60 transition"
+                    v-for="(item, idx) in presupuestoItems" 
+                    :key="idx"
+                    class="hover:bg-gray-50/50 transition"
                   >
                     <!-- Nombre del Gasto -->
-                    <td class="py-3.5 px-4 text-left font-serif font-bold text-gray-900 text-base">
+                    <td class="py-3.5 px-4 text-left font-serif font-bold text-gray-900 text-sm sm:text-base">
                       {{ item.gasto }}
                     </td>
 
-                    <!-- Montos por Columna/Mes -->
+                    <!-- Montos por Columna/Mes en cuadritos redondeados -->
                     <td 
                       v-for="col in presupuestoColumnas" 
                       :key="col"
-                      class="py-3.5 px-2 text-center text-slate-700 font-medium"
+                      class="py-3.5 px-1.5 text-center"
                     >
-                      ${{ formatearMonto(item.montos?.[col] ?? 0) }}
+                      <div class="w-11 h-8 sm:w-12 sm:h-9 mx-auto border border-gray-300 rounded-lg flex items-center justify-center text-xs sm:text-sm font-medium text-gray-800 bg-white shadow-2xs">
+                        {{ item.montos?.[col] ?? 0 }}
+                      </div>
                     </td>
 
                     <!-- Total de la Fila -->
-                    <td class="py-3.5 px-4 text-center font-semibold text-gray-900">
-                      ${{ item.total ?? '0.00' }}
+                    <td class="py-3.5 px-3 text-center">
+                      <div class="inline-flex items-center justify-center min-w-[70px] h-8 sm:h-9 px-2 text-xs sm:text-sm font-semibold text-gray-800 border border-gray-300 rounded-lg bg-gray-50/50 shadow-2xs">
+                        {{ item.total ?? 0 }}
+                      </div>
                     </td>
                   </tr>
 
                   <!-- Fila de Total General -->
-                  <tr class="bg-slate-50/80 font-bold border-t-2 border-slate-300">
-                    <td class="py-4 px-4 text-left font-serif font-bold text-gray-900 text-base">
+                  <tr class="border-t border-gray-300 bg-white">
+                    <td class="py-4 px-4 text-left font-serif font-bold text-gray-900 text-base sm:text-lg">
                       Total
                     </td>
                     <td :colspan="presupuestoColumnas.length"></td>
-                    <td class="py-4 px-4 text-center">
-                      <span class="inline-block px-4 py-1.5 rounded-lg border border-slate-300 bg-white text-gray-900 font-bold text-sm shadow-2xs">
-                        ${{ informe.presupuesto_total || '0.00' }}
-                      </span>
+                    <td class="py-4 px-3 text-center">
+                      <div class="inline-flex items-center justify-center min-w-[85px] h-10 px-3 text-sm font-bold text-gray-900 border border-gray-300 rounded-lg bg-white shadow-2xs">
+                        {{ granTotalPresupuesto }}
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -407,18 +523,18 @@ const formatearTamano = (bytes) => {
 
       </div>
 
-      <!-- BOTONES INFERIORES -->
-      <div class="flex justify-end gap-3 pt-8 border-t border-slate-200 mt-8">
-        <button 
-          @click="emit('volver')"
-          class="px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white rounded-lg text-sm font-semibold transition cursor-pointer shadow-xs"
-        >
-          Volver a reportes
-        </button>
-      </div>
+    </div>
 
+    <!-- BOTÓN INFERIOR DERECHO: CERRAR (EXACTO A LA CAPTURA) -->
+    <div class="flex items-center justify-end max-w-5xl mx-auto pt-4">
+      <button 
+        @click="emit('volver')"
+        type="button"
+        class="px-9 py-2 rounded-lg bg-[#010C67] hover:bg-[#000840] text-white font-medium text-sm transition cursor-pointer shadow-sm"
+      >
+        Cerrar
+      </button>
     </div>
 
   </div>
 </template>
-

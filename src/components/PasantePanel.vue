@@ -178,8 +178,8 @@ const handleLogout = () => {
 
 <template>
   <div class="flex min-h-screen bg-[#f4f5f7] font-sans antialiased text-gray-900 select-none">
-     <!-- SIDEBAR NAVEGACIÓN (IZQUIERDA) — Con sombra permanente idéntica a la imagen 2 -->
-    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[4px_0_24px_rgba(0,0,0,0.22),2px_0_10px_rgba(0,0,0,0.12)] relative z-20 flex flex-col justify-between shrink-0 select-none min-h-screen">
+     <!-- SIDEBAR NAVEGACIÓN (IZQUIERDA) — Con línea de sombra definida -->
+    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[3px_0_0px_0px_rgba(0,0,0,0.08)] relative z-20 flex flex-col justify-between shrink-0 select-none min-h-screen">
       <div>
         <!-- Logo UGB Centrado -->
         <div class="pt-8 pb-6 flex justify-center">
