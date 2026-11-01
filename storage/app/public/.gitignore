@@ -1,2 +1,12 @@
-*
+# Preservar fotos de perfil, evidencias y documentos para el despliegue
+!cv_fotos/
+!cv_fotos/**
+!reportes/
+!reportes/**
+!informes/
+!informes/**
+!informes_finales/
+!informes_finales/**
+!cvs/
+!cvs/**
 !.gitignore
