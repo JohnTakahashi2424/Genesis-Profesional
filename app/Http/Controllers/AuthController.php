@@ -340,8 +340,10 @@ class AuthController extends Controller
         ];
 
         if (!$envio['exito']) {
-            $respuesta['codigo_simulado'] = $registroCodigo->codigo;
-            $respuesta['aviso_envio'] = 'Aviso: el proveedor SMTP rechazó el envío (IP dinámica de Render no autorizada en Brevo: 525 5.7.1). Código: ' . $registroCodigo->codigo;
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'No fue posible enviar el código de verificación al correo ingresado. Por favor, intente más tarde.'
+            ], 500);
         }
 
         return response()->json($respuesta, 200);
