@@ -177,15 +177,21 @@ const irAlRecurso = (enlace) => {
     (textoCompleto.includes('final') && (textoCompleto.includes('informe') || textoCompleto.includes('reporte')))
 
   if (esInformeFinal) {
-    localStorage.setItem('genesis_ver_informe_final', 'true')
-    const matchId = url.match(/(\d+)/) || mensaje.match(/(\d+)/)
+    let targetId = null
+    const matchId = url.match(/informe-final\/(\d+)/) || url.match(/reportes\/(\d+)/) || url.match(/(\d+)/)
     if (matchId && matchId[1]) {
-      localStorage.setItem('genesis_ver_informe_final_id', matchId[1])
+      targetId = matchId[1]
+    } else if (textoCompleto.includes('cass') && !textoCompleto.includes('empresas cass')) {
+      targetId = '3'
+    } else if (textoCompleto.includes('empresas cass')) {
+      targetId = '2'
     }
-    window.dispatchEvent(new CustomEvent('abrir-informe-final-detalle', {
-      detail: { id: matchId ? matchId[1] : null }
-    }))
-    emit('navegar', 'reportes')
+
+    localStorage.setItem('genesis_ver_informe_final', 'true')
+    if (targetId) {
+      localStorage.setItem('genesis_ver_informe_final_id', String(targetId))
+    }
+    emit('navegar', 'reportes', 'informe_final_detalle', targetId)
     return
   }
 
@@ -199,8 +205,10 @@ const irAlRecurso = (enlace) => {
     const matchId = urlFinal.match(/reportes\/(\d+)/)
     if (matchId && matchId[1]) {
       localStorage.setItem('genesis_ver_reporte_id', matchId[1])
+      emit('navegar', 'reportes', 'detalle', matchId[1])
+    } else {
+      emit('navegar', 'reportes')
     }
-    emit('navegar', 'reportes')
   } else if (urlFinal.includes('perfil') || urlFinal.includes('cv')) {
     emit('navegar', 'perfil')
   } else if (urlFinal.includes('historial')) {

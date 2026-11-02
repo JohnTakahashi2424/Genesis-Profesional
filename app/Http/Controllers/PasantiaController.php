@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\CurriculumVitae;
 use App\Models\Reporte;
 use App\Models\InformeFinal;
+use App\Models\Notificacion;
 
 class PasantiaController extends Controller
 {
@@ -115,6 +116,13 @@ class PasantiaController extends Controller
             ]);
         }
 
+        // 5. Emitir notificaciones automáticas al completarse cada fase si aún no se han notificado
+        try {
+            $this->verificarNotificacionesFases($user->id, $fase1, $fase2, $fase3, $fase4);
+        } catch (\Throwable $eNotif) {
+            \Illuminate\Support\Facades\Log::warning('Error al emitir notificaciones de fases: ' . $eNotif->getMessage());
+        }
+
         return response()->json([
             'status' => 'success',
             'usuario' => [
@@ -154,5 +162,58 @@ class PasantiaController extends Controller
                 'horas_aprobadas' => (float) $pasante->horas_aprobadas,
             ]
         ], 200);
+    }
+
+    /**
+     * Notificar al usuario cuando una de las 4 fases de la pasantía se ha completado
+     */
+    protected function verificarNotificacionesFases(int $userId, string $fase1, string $fase2, string $fase3, string $fase4): void
+    {
+        $fases = [
+            'fase_1' => [
+                'completado' => ($fase1 === 'completado'),
+                'titulo' => 'Fase 1 completada',
+                'mensaje' => '¡Felicidades! Has completado la Fase 1: Currículum. Tu perfil profesional está registrado y listo.',
+                'enlace' => '/cv'
+            ],
+            'fase_2' => [
+                'completado' => ($fase2 === 'completado'),
+                'titulo' => 'Fase 2 completada',
+                'mensaje' => '¡Felicidades! Has sido aceptado en tu institución de pasantía. La Fase 2: Aceptado ha sido completada.',
+                'enlace' => '/reportes'
+            ],
+            'fase_3' => [
+                'completado' => ($fase3 === 'completado'),
+                'titulo' => 'Fase 3 completada',
+                'mensaje' => 'Has culminado tu periodo de prácticas profesionales. La Fase 3: Prácticas ha sido completada.',
+                'enlace' => '/reportes'
+            ],
+            'fase_4' => [
+                'completado' => ($fase4 === 'completado'),
+                'titulo' => 'Fase 4 completada',
+                'mensaje' => 'Tu informe final ha sido evaluado y completado exitosamente. Has culminado tu proceso de pasantía.',
+                'enlace' => '/reportes'
+            ]
+        ];
+
+        foreach ($fases as $cfg) {
+            if ($cfg['completado']) {
+                $existe = Notificacion::where('user_id', $userId)
+                    ->where('titulo', $cfg['titulo'])
+                    ->exists();
+
+                if (!$existe) {
+                    Notificacion::crearNotificacion(
+                        userId: $userId,
+                        titulo: $cfg['titulo'],
+                        mensaje: $cfg['mensaje'],
+                        tipo: 'sistema',
+                        origenTipo: 'sistema',
+                        remitenteNombre: 'Notificaciones',
+                        enlace: $cfg['enlace']
+                    );
+                }
+            }
+        }
     }
 }

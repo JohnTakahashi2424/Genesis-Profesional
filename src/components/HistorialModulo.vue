@@ -370,6 +370,18 @@ const ingresarASeccion = (ind) => {
   }
 }
 
+// Obtener descripción de la actividad (para informe final siempre muestra exactamente "Se ha enviado el informe final")
+const obtenerDescripcionItem = (item) => {
+  const txt = `${item?.titulo || ''} ${item?.descripcion || ''} ${item?.accion_texto || ''} ${item?.accion_url || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  if (txt.includes('informe final') || txt.includes('reporte final')) {
+    return 'Se ha enviado el informe final'
+  }
+  return item?.descripcion || ''
+}
+
 // Acción de navegación al hacer clic en "Ver reporte", "Ver perfil", etc.
 const ejecutarAccion = (item) => {
   const titulo = (item.titulo || '').toLowerCase()
@@ -392,14 +404,13 @@ const ejecutarAccion = (item) => {
 
   if (esInformeFinal) {
     localStorage.setItem('genesis_ver_informe_final', 'true')
-    const matchId = url.match(/(\d+)/) || descripcion.match(/(\d+)/)
-    if (matchId && matchId[1]) {
-      localStorage.setItem('genesis_ver_informe_final_id', matchId[1])
+    let matchId = null
+    const m = url.match(/informe-final\/(\d+)/) || url.match(/reportes\/(\d+)/) || url.match(/(\d+)/) || descripcion.match(/(\d+)/)
+    if (m && m[1]) {
+      matchId = m[1]
+      localStorage.setItem('genesis_ver_informe_final_id', matchId)
     }
-    window.dispatchEvent(new CustomEvent('abrir-informe-final-detalle', {
-      detail: { id: matchId ? matchId[1] : null }
-    }))
-    emit('navegar', 'reportes')
+    emit('navegar', 'reportes', 'informe_final_detalle', matchId)
     return
   }
 
@@ -511,7 +522,7 @@ const seleccionarOrden = (orden) => {
                           </span>
                         </div>
                         <p class="text-xs text-slate-500 mt-0.5 leading-tight">
-                          {{ item.descripcion }}
+                          {{ obtenerDescripcionItem(item) }}
                         </p>
                       </div>
 

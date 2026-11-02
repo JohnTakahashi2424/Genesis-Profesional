@@ -417,7 +417,7 @@ class InformeFinalController extends Controller
                     userId: (int)$userId,
                     categoria: 'reportes',
                     titulo: $tituloProgreso,
-                    descripcion: "Se ha registrado el {$tituloProgreso} para la institución {$informe->institucion}.",
+                    descripcion: 'Se ha enviado el informe final',
                     accionTexto: 'Ver informe final',
                     accionUrl: '/reportes/informe-final/' . $informe->id,
                     progreso: 100

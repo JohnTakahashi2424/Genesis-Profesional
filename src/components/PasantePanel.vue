@@ -246,16 +246,21 @@ const mapPathToItem = (path) => {
   return 'inicio'
 }
 
-const navegarA = (item, subvista = null) => {
+const reportesInformeFinalId = ref(null)
+
+const navegarA = (item, subvista = null, targetId = null) => {
   itemActivo.value = item
   if (item === 'reportes') {
     if (subvista === 'informe_final_detalle' || localStorage.getItem('genesis_ver_informe_final') === 'true') {
       reportesVistaInicial.value = 'informe_final_detalle'
+      reportesInformeFinalId.value = targetId || localStorage.getItem('genesis_ver_informe_final_id') || null
     } else {
       reportesVistaInicial.value = 'tabla'
+      reportesInformeFinalId.value = null
     }
   } else {
     reportesVistaInicial.value = 'tabla'
+    reportesInformeFinalId.value = null
   }
   const currentPath = window.location.pathname
   let basePath = '/pasante'
@@ -455,7 +460,9 @@ const handleLogout = () => {
       <CvModulo v-if="itemActivo === 'cv'" @volver="navegarA('inicio')" />
       <ReportesModulo 
         v-else-if="itemActivo === 'reportes'" 
+        :key="itemActivo + '_' + reportesVistaInicial + '_' + (reportesInformeFinalId || '')"
         :vista-inicial="reportesVistaInicial"
+        :informe-final-id="reportesInformeFinalId"
         @volver="navegarA('inicio')" 
         @navegar="navegarA" 
       />
@@ -564,8 +571,8 @@ const handleLogout = () => {
             <!-- Fase 2: Aceptado -->
             <div class="flex flex-col items-center">
               <div class="mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 25 21" fill="none">
-                  <path d="M24.1466 12.1559V16.945C24.1466 17.7876 23.765 18.5958 23.0858 19.1916C22.4065 19.7874 21.4852 20.1222 20.5246 20.1222H3.62199C2.66138 20.1222 1.74011 19.7874 1.06086 19.1916C0.381602 18.5958 0 17.7876 0 16.945V12.1559L0.667654 12.4493C4.20625 14.0127 8.1133 14.8269 12.0754 14.8265C16.0375 14.8261 19.9444 14.0112 23.4826 12.4472L24.1466 12.1559ZM14.488 0C15.4486 0 16.3698 0.334738 17.0491 0.930576C17.7284 1.52641 18.11 2.33454 18.11 3.17719V4.23625H20.5246C21.4852 4.23625 22.4065 4.57099 23.0858 5.16682C23.765 5.76266 24.1466 6.57079 24.1466 7.41343V9.78785L22.3996 10.5546C19.2739 11.9368 15.829 12.6732 12.3287 12.7073C8.82851 12.7415 5.3658 12.0725 2.20579 10.7516L1.42465 10.4127L0 9.78785V7.41343C0 6.57079 0.381602 5.76266 1.06086 5.16682C1.74011 4.57099 2.66138 4.23625 3.62199 4.23625H6.03665V3.17719C6.03665 2.33454 6.41825 1.52641 7.09751 0.930576C7.77676 0.334738 8.69803 0 9.65864 0H14.488ZM12.0733 8.47249C11.7531 8.47249 11.446 8.58407 11.2196 8.78269C10.9932 8.9813 10.866 9.25068 10.866 9.53156C10.8652 9.67063 10.8956 9.80849 10.9556 9.93724C11.0155 10.066 11.1038 10.1831 11.2153 10.282C11.3269 10.3808 11.4595 10.4594 11.6057 10.5133C11.7519 10.5671 11.9087 10.5952 12.0673 10.5959C12.2258 10.5966 12.383 10.5699 12.5298 10.5173C12.6765 10.4647 12.8101 10.3873 12.9227 10.2895C13.0354 10.1916 13.125 10.0753 13.1864 9.94703C13.2478 9.8188 13.2798 9.68122 13.2806 9.54215C13.2806 8.94695 12.7398 8.47249 12.0733 8.47249ZM14.488 2.11812H9.65864C9.33844 2.11812 9.03135 2.2297 8.80493 2.42832C8.57851 2.62693 8.45131 2.8963 8.45131 3.17719V4.23625H15.6953V3.17719C15.6953 2.8963 15.5681 2.62693 15.3417 2.42832C15.1153 2.2297 14.8082 2.11812 14.488 2.11812Z" fill="black"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 33 33" fill="none">
+                  <path d="M9.097 28.875C8.46358 28.875 7.93512 28.6632 7.51162 28.2397C7.08812 27.8162 6.87592 27.2878 6.875 26.6544V6.34562C6.875 5.71312 7.08721 5.18512 7.51162 4.76163C7.93604 4.33813 8.4645 4.12592 9.097 4.125H19.9375L26.125 10.3125V14.993C25.6685 15.0544 25.2423 15.1937 24.8462 15.411C24.4502 15.6282 24.0836 15.9051 23.7463 16.2415L15.4963 24.4571V28.875H9.097ZM18.7743 28.875V25.8363L26.1071 18.5391C26.2428 18.42 26.3835 18.3329 26.5293 18.2779C26.6759 18.221 26.8226 18.1926 26.9692 18.1926C27.1205 18.1926 27.2736 18.222 27.4285 18.2806C27.5843 18.3402 27.7209 18.4291 27.8383 18.5474L29.1101 19.8454C29.2229 19.981 29.309 20.1222 29.3686 20.2689C29.4273 20.4146 29.4566 20.5608 29.4566 20.7075C29.4566 20.8542 29.4287 21.0017 29.3727 21.1502C29.3168 21.2987 29.2298 21.4408 29.1115 21.5765L21.8116 28.875H18.7743ZM26.9692 22.0206L28.2411 20.7061L26.9692 19.4095L25.663 20.7157L26.9692 22.0206ZM19.25 11H24.75L19.25 5.5V11Z" fill="black" fill-opacity="0.7"/>
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 2: Aceptado</span>

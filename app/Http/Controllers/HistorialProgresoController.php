@@ -144,7 +144,7 @@ class HistorialProgresoController extends Controller
                         'user_id' => $inf->user_id,
                         'categoria' => 'reportes',
                         'titulo' => 'Envío de Informe Final',
-                        'descripcion' => "Envío de informe final de pasantía para {$inf->institucion}",
+                        'descripcion' => 'Se ha enviado el informe final',
                         'fecha_exacta' => $inf->created_at ?? now(),
                         'accion_texto' => 'Ver informe final',
                         'accion_url' => '/reportes/informe-final/' . $inf->id,

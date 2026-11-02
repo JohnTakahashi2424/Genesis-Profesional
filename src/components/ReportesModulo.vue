@@ -12,6 +12,10 @@ const props = defineProps({
     type: [Number, String],
     default: null
   },
+  informeFinalId: {
+    type: [Number, String],
+    default: null
+  },
   vistaInicial: {
     type: String,
     default: 'tabla'
@@ -32,11 +36,11 @@ const handleEventoAbrirInformeFinal = async (e) => {
 
 watch(() => props.vistaInicial, async (val) => {
   if (val === 'informe_final_detalle') {
-    await abrirInformeFinalDetalleDirecto()
+    await abrirInformeFinalDetalleDirecto(props.informeFinalId)
   } else if (val) {
     vistaActual.value = val
   }
-}, { immediate: true })
+})
 
 // Lista de reportes y estados de carga (obtenidos exclusivamente de la base de datos)
 const reportes = ref([])
@@ -414,7 +418,7 @@ const handleInformeFinalGuardado = () => {
 
 const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
   cargando.value = true
-  const idTarget = idDeseado || localStorage.getItem('genesis_ver_informe_final_id')
+  const idTarget = idDeseado || props.informeFinalId || localStorage.getItem('genesis_ver_informe_final_id')
   localStorage.removeItem('genesis_ver_informe_final')
   localStorage.removeItem('genesis_ver_informe_final_id')
 
@@ -509,9 +513,10 @@ const verDetalle = async (item) => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
       let res = null
-      if (idToFetch && typeof idToFetch === 'number') {
+      const numId = Number(idToFetch)
+      if (numId && !isNaN(numId)) {
         try {
-          res = await axios.get(`/api/informes-finales/${idToFetch}`, { headers })
+          res = await axios.get(`/api/informes-finales/${numId}`, { headers })
         } catch (eGet) {
           res = null
         }
@@ -850,8 +855,9 @@ onMounted(async () => {
   // 1. Abrir informe final si fue invocado desde Historial, Notificaciones o Panel
   const verInformeFinal = localStorage.getItem('genesis_ver_informe_final')
   const informeFinalId = localStorage.getItem('genesis_ver_informe_final_id')
-  if (verInformeFinal === 'true' || informeFinalId || props.vistaInicial === 'informe_final_detalle') {
-    await abrirInformeFinalDetalleDirecto(informeFinalId)
+  const targetInfId = props.informeFinalId || informeFinalId
+  if (verInformeFinal === 'true' || targetInfId || props.vistaInicial === 'informe_final_detalle') {
+    await abrirInformeFinalDetalleDirecto(targetInfId)
     return
   }
 
@@ -1145,22 +1151,22 @@ onUnmounted(() => {
         
         <!-- ENCABEZADO INSTITUCIONAL DE LA FACULTAD -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8 pb-6 border-b border-slate-100">
-          <!-- Logo UGB -->
+          <!-- Logo UGB (40% más grande: 140px alto x 172.87px ancho) -->
           <div class="shrink-0 flex items-center justify-center">
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width:123.482px; height:100px; flex-shrink:0; aspect-ratio:123.48/100; object-fit:contain;"
+              style="width: 172.87px; height: 140px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
 
           <!-- Títulos Oficiales de la Facultad -->
           <div class="text-center">
-            <h2 style="font-family:'Lora',serif; font-size:24px; font-weight:500; color:#010C67; text-align:center; line-height:normal;">
+            <h2 style="font-family:'Lora',serif; font-size: 26px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
               FACULTAD DE CIENCIA Y TECNOLOGÍA
             </h2>
-            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-0.5">
+            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-1">
               Trabajo de Graduación Modalidad Pasantía
             </h3>
             <p class="text-sm font-medium text-[#1E3A8A] text-center mt-0.5">
@@ -1663,19 +1669,19 @@ onUnmounted(() => {
 
         <!-- ENCABEZADO: LOGO + TÍTULOS OFICIALES -->
         <div class="flex items-start gap-8 mb-8 pb-4">
-          <!-- Logo UGB -->
-          <div class="shrink-0">
+          <!-- Logo UGB (40% más grande: 140px alto x 172.87px ancho) -->
+          <div class="shrink-0 flex items-center justify-center">
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width: 123.482px; height: 100px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
+              style="width: 172.87px; height: 140px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
 
           <!-- Títulos Oficiales de la Facultad -->
           <div class="flex-1 text-center pr-28">
-            <h2 style="font-family:'Lora',serif; font-size:24px; font-weight:500; color:#010C67; text-align:center; line-height:normal;">
+            <h2 style="font-family:'Lora',serif; font-size: 26px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
               FACULTAD DE CIENCIA Y TECNOLOGÍA
             </h2>
             <h3 class="text-sm font-semibold text-[#010C67] text-center mt-1">
