@@ -1,13 +1,13 @@
 <?php
 
-namespace AppHttpControllers;
+namespace App\Http\Controllers;
 
-use IlluminateHttpRequest;
-use AppModelsPasante;
-use AppModelsUser;
-use AppModelsCurriculumVitae;
-use AppModelsReporte;
-use AppModelsInformeFinal;
+use Illuminate\Http\Request;
+use App\Models\Pasante;
+use App\Models\User;
+use App\Models\CurriculumVitae;
+use App\Models\Reporte;
+use App\Models\InformeFinal;
 
 class PasantiaController extends Controller
 {
