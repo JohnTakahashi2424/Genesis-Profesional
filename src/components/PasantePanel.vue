@@ -247,6 +247,8 @@ const mapPathToItem = (path) => {
 }
 
 const reportesInformeFinalId = ref(null)
+const reportesDetalleId = ref(null)
+let canalNotifPanel = null
 
 const navegarA = (item, subvista = null, targetId = null) => {
   itemActivo.value = item
@@ -254,13 +256,20 @@ const navegarA = (item, subvista = null, targetId = null) => {
     if (subvista === 'informe_final_detalle' || localStorage.getItem('genesis_ver_informe_final') === 'true') {
       reportesVistaInicial.value = 'informe_final_detalle'
       reportesInformeFinalId.value = targetId || localStorage.getItem('genesis_ver_informe_final_id') || null
+      reportesDetalleId.value = null
+    } else if (subvista === 'detalle' || targetId || localStorage.getItem('genesis_ver_reporte_id')) {
+      reportesVistaInicial.value = 'detalle'
+      reportesDetalleId.value = targetId || localStorage.getItem('genesis_ver_reporte_id') || null
+      reportesInformeFinalId.value = null
     } else {
       reportesVistaInicial.value = 'tabla'
       reportesInformeFinalId.value = null
+      reportesDetalleId.value = null
     }
   } else {
     reportesVistaInicial.value = 'tabla'
     reportesInformeFinalId.value = null
+    reportesDetalleId.value = null
   }
   const currentPath = window.location.pathname
   let basePath = '/pasante'
@@ -290,19 +299,38 @@ onMounted(async () => {
 
   window.addEventListener('focus', cargarContadorNotificaciones)
   window.addEventListener('pasantia-actualizada', cargarEstadoPasantia)
-  window.addEventListener('storage', cargarEstadoPasantia)
+  window.addEventListener('notificaciones-actualizadas', cargarContadorNotificaciones)
+  window.addEventListener('storage', (e) => {
+    cargarEstadoPasantia()
+    if (e.key === 'genesis_notificaciones_updated') {
+      cargarContadorNotificaciones()
+    }
+  })
 
-  // Sondeo en tiempo real cada 30 segundos
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      canalNotifPanel = new BroadcastChannel('genesis_notificaciones_sync')
+      canalNotifPanel.onmessage = () => {
+        cargarContadorNotificaciones()
+      }
+    } catch (e) {}
+  }
+
+  // Sondeo en tiempo real cada 15 segundos
   intervalNotificaciones = setInterval(() => {
     cargarContadorNotificaciones()
-  }, 30000)
+  }, 15000)
 })
 
 onUnmounted(() => {
   if (intervalNotificaciones) {
     clearInterval(intervalNotificaciones)
   }
+  if (canalNotifPanel) {
+    canalNotifPanel.close()
+  }
   window.removeEventListener('focus', cargarContadorNotificaciones)
+  window.removeEventListener('notificaciones-actualizadas', cargarContadorNotificaciones)
 })
 
 const handleLogout = () => {
@@ -460,9 +488,10 @@ const handleLogout = () => {
       <CvModulo v-if="itemActivo === 'cv'" @volver="navegarA('inicio')" />
       <ReportesModulo 
         v-else-if="itemActivo === 'reportes'" 
-        :key="itemActivo + '_' + reportesVistaInicial + '_' + (reportesInformeFinalId || '')"
+        :key="itemActivo + '_' + reportesVistaInicial + '_' + (reportesInformeFinalId || reportesDetalleId || '')"
         :vista-inicial="reportesVistaInicial"
         :informe-final-id="reportesInformeFinalId"
+        :reporte-inicial-id="reportesDetalleId"
         @volver="navegarA('inicio')" 
         @navegar="navegarA" 
       />

@@ -259,6 +259,30 @@ class ReporteController extends Controller
                     remitenteNombre: 'Notificaciones',
                     enlace: '/reportes/' . $reporte->id
                 );
+
+                // 5. Si se adjuntaron evidencias al crear el reporte, registrar también el anexo
+                if (!empty($urlsEvidencias) && count($urlsEvidencias) > 0) {
+                    \App\Models\HistorialProgreso::registrar(
+                        userId: (int)$userId,
+                        categoria: 'anexos',
+                        titulo: 'Anexo agregado al reporte',
+                        descripcion: "Se han adjuntado imágenes de evidencia al reporte del mes de {$validated['mes']}",
+                        accionTexto: 'Ver reporte',
+                        accionUrl: '/reportes/' . $reporte->id,
+                        progreso: $progresoActual,
+                        fechaExacta: now()->toDateTimeString()
+                    );
+
+                    \App\Models\Notificacion::crearNotificacion(
+                        userId: (int)$userId,
+                        titulo: 'Anexos agregados',
+                        mensaje: "Se han adjuntado imágenes de evidencia al reporte del mes de {$validated['mes']}.",
+                        tipo: 'reporte',
+                        origenTipo: 'sistema',
+                        remitenteNombre: 'Notificaciones',
+                        enlace: '/reportes/' . $reporte->id
+                    );
+                }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('No se pudo registrar en historial o notificaciones: ' . $e->getMessage());
             }
@@ -305,10 +329,13 @@ class ReporteController extends Controller
             'actividades.*.resultado_aprendizaje' => 'required|string',
         ]);
 
+        $conteoActividadesAntes = $reporte->actividades()->count();
+        $conteoEvidenciasAntes = count($reporte->evidencias ?? []);
+
         // Procesar evidencias nuevas o mantener existentes
         $urlsEvidencias = $this->procesarEvidencias($request, $reporte->evidencias ?? []);
 
-        return DB::transaction(function () use ($reporte, $validated, $urlsEvidencias) {
+        return DB::transaction(function () use ($reporte, $validated, $urlsEvidencias, $conteoActividadesAntes, $conteoEvidenciasAntes, $request) {
             // Actualizar datos del reporte
             $reporte->update([
                 'area_pasantia' => $validated['area_pasantia'],
@@ -332,6 +359,123 @@ class ReporteController extends Controller
                         'resultado_aprendizaje' => $act['resultado_aprendizaje'],
                     ]);
                 }
+            }
+
+            // Registrar en Historial de Progreso y Notificaciones según el cambio realizado
+            try {
+                $userId = (int)($reporte->user_id ?? $request->user()?->id ?? $request->header('X-User-Id') ?? 1);
+                $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual($userId);
+                $mesReporte = $validated['mes'] ?? $reporte->mes;
+                $enlaceReporte = '/reportes/' . $reporte->id;
+
+                $conteoActividadesDespues = isset($validated['actividades']) ? count($validated['actividades']) : $conteoActividadesAntes;
+                $conteoEvidenciasDespues = count($urlsEvidencias);
+
+                $seAgregoActividad = ($conteoActividadesDespues > $conteoActividadesAntes);
+                $seAgregoEvidencia = ($conteoEvidenciasDespues > $conteoEvidenciasAntes);
+
+                if ($seAgregoActividad && $seAgregoEvidencia) {
+                    // AMBOS: Se agregaron tanto actividades como imágenes de evidencia
+                    \App\Models\HistorialProgreso::registrar(
+                        userId: $userId,
+                        categoria: 'reportes',
+                        titulo: 'Nueva actividad agregada',
+                        descripcion: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}",
+                        accionTexto: 'Ver reporte',
+                        accionUrl: $enlaceReporte,
+                        progreso: $progresoActual,
+                        fechaExacta: now()->subSeconds(2)->toDateTimeString()
+                    );
+
+                    \App\Models\HistorialProgreso::registrar(
+                        userId: $userId,
+                        categoria: 'anexos',
+                        titulo: 'Anexo agregado al reporte',
+                        descripcion: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}",
+                        accionTexto: 'Ver reporte',
+                        accionUrl: $enlaceReporte,
+                        progreso: $progresoActual,
+                        fechaExacta: now()->toDateTimeString()
+                    );
+
+                    \App\Models\Notificacion::crearNotificacion(
+                        userId: $userId,
+                        titulo: 'Cambios en reporte',
+                        mensaje: "Se ha agregado una nueva actividad y una nueva imagen de evidencia al reporte del mes de {$mesReporte}.",
+                        tipo: 'reporte',
+                        origenTipo: 'sistema',
+                        remitenteNombre: 'Notificaciones',
+                        enlace: $enlaceReporte
+                    );
+                } elseif ($seAgregoActividad) {
+                    // SOLO NUEVA ACTIVIDAD
+                    \App\Models\HistorialProgreso::registrar(
+                        userId: $userId,
+                        categoria: 'reportes',
+                        titulo: 'Nueva actividad agregada',
+                        descripcion: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}",
+                        accionTexto: 'Ver reporte',
+                        accionUrl: $enlaceReporte,
+                        progreso: $progresoActual,
+                        fechaExacta: now()->toDateTimeString()
+                    );
+
+                    \App\Models\Notificacion::crearNotificacion(
+                        userId: $userId,
+                        titulo: 'Nueva actividad en reporte',
+                        mensaje: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}.",
+                        tipo: 'reporte',
+                        origenTipo: 'sistema',
+                        remitenteNombre: 'Notificaciones',
+                        enlace: $enlaceReporte
+                    );
+                } elseif ($seAgregoEvidencia) {
+                    // SOLO NUEVA IMAGEN / ANEXO
+                    \App\Models\HistorialProgreso::registrar(
+                        userId: $userId,
+                        categoria: 'anexos',
+                        titulo: 'Anexo agregado al reporte',
+                        descripcion: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}",
+                        accionTexto: 'Ver reporte',
+                        accionUrl: $enlaceReporte,
+                        progreso: $progresoActual,
+                        fechaExacta: now()->toDateTimeString()
+                    );
+
+                    \App\Models\Notificacion::crearNotificacion(
+                        userId: $userId,
+                        titulo: 'Nueva imagen en reporte',
+                        mensaje: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}.",
+                        tipo: 'reporte',
+                        origenTipo: 'sistema',
+                        remitenteNombre: 'Notificaciones',
+                        enlace: $enlaceReporte
+                    );
+                } else {
+                    // CAMBIO GENERAL EN REPORTE
+                    \App\Models\HistorialProgreso::registrar(
+                        userId: $userId,
+                        categoria: 'reportes',
+                        titulo: 'Actualización de reporte',
+                        descripcion: "Se han actualizado los datos del reporte del mes de {$mesReporte}",
+                        accionTexto: 'Ver reporte',
+                        accionUrl: $enlaceReporte,
+                        progreso: $progresoActual,
+                        fechaExacta: now()->toDateTimeString()
+                    );
+
+                    \App\Models\Notificacion::crearNotificacion(
+                        userId: $userId,
+                        titulo: 'Reporte actualizado',
+                        mensaje: "El reporte del mes de {$mesReporte} ha sido actualizado correctamente.",
+                        tipo: 'reporte',
+                        origenTipo: 'sistema',
+                        remitenteNombre: 'Notificaciones',
+                        enlace: $enlaceReporte
+                    );
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error al registrar historial/notificación en update de reporte: ' . $e->getMessage());
             }
 
             return response()->json([

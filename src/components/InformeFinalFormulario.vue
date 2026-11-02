@@ -545,7 +545,7 @@ const finalizarEnvio = () => {
           <img 
             src="/images/Logo_para_reportes_mensuales.png" 
             alt="Universidad Gerardo Barrios" 
-            style="width: 300px; height: 240px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
+            style="width: 240px; height: 192px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
             @error="(e) => e.target.style.display = 'none'"
           />
         </div>

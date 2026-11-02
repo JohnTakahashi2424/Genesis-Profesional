@@ -86,13 +86,52 @@ const handleClickAfuera = (e) => {
   }
 }
 
+let canalNotifBroadcast = null
+let intervaloNotifPolling = null
+
+const handleEventoNotificaciones = () => {
+  cargarNotificaciones()
+}
+
+const handleStorageNotif = (e) => {
+  if (e.key === 'genesis_notificaciones_updated' || e.key === 'genesis_historial_updated') {
+    cargarNotificaciones()
+  }
+}
+
 onMounted(() => {
   cargarNotificaciones()
   window.addEventListener('click', handleClickAfuera)
+  window.addEventListener('notificaciones-actualizadas', handleEventoNotificaciones)
+  window.addEventListener('storage', handleStorageNotif)
+
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      canalNotifBroadcast = new BroadcastChannel('genesis_notificaciones_sync')
+      canalNotifBroadcast.onmessage = () => {
+        cargarNotificaciones()
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel notificaciones no disponible:', e)
+    }
+  }
+
+  // Comprobación periódica para vista en vivo y entre pestañas
+  intervaloNotifPolling = setInterval(() => {
+    cargarNotificaciones()
+  }, 5000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', handleClickAfuera)
+  window.removeEventListener('notificaciones-actualizadas', handleEventoNotificaciones)
+  window.removeEventListener('storage', handleStorageNotif)
+  if (canalNotifBroadcast) {
+    canalNotifBroadcast.close()
+  }
+  if (intervaloNotifPolling) {
+    clearInterval(intervaloNotifPolling)
+  }
 })
 
 // Acción del ojo (👁): Ver detalle y marcar como leída

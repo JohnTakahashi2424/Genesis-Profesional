@@ -764,16 +764,25 @@ const enviarReporte = async () => {
       await axios.post('/api/reportes', payload, { headers })
     }
 
-    // Notificar en tiempo real a otras pestañas y ventanas abiertas (Historial de progreso)
+    // Notificar en tiempo real a otras pestañas y ventanas abiertas (Historial de progreso y Notificaciones)
     try {
       if (typeof BroadcastChannel !== 'undefined') {
         const canalSync = new BroadcastChannel('genesis_historial_sync')
         canalSync.postMessage({
-          tipo: 'reporte_creado',
+          tipo: esEdicion.value ? 'reporte_actualizado' : 'reporte_creado',
           mes: payload.mes,
+          reporteId: esEdicion.value ? reporteIdEditando.value : null,
           timestamp: Date.now()
         })
         canalSync.close()
+
+        const canalNotif = new BroadcastChannel('genesis_notificaciones_sync')
+        canalNotif.postMessage({
+          tipo: esEdicion.value ? 'reporte_actualizado' : 'reporte_creado',
+          mes: payload.mes,
+          timestamp: Date.now()
+        })
+        canalNotif.close()
       }
     } catch (e) {
       console.warn('BroadcastChannel no disponible:', e)
@@ -781,16 +790,18 @@ const enviarReporte = async () => {
 
     try {
       localStorage.setItem('genesis_historial_evento', JSON.stringify({
-        tipo: 'reporte_creado',
+        tipo: esEdicion.value ? 'reporte_actualizado' : 'reporte_creado',
         mes: payload.mes,
         timestamp: Date.now()
       }))
       localStorage.setItem('genesis_historial_updated', Date.now().toString())
+      localStorage.setItem('genesis_notificaciones_updated', Date.now().toString())
     } catch (e) {}
 
-    // Refrescar lista
+    // Refrescar lista y emitir eventos de reactividad
     await cargarReportes()
     window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+    window.dispatchEvent(new CustomEvent('notificaciones-actualizadas'))
     localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
 
     // Mostrar modal / toast de éxito de la Captura 4
@@ -1156,7 +1167,7 @@ onUnmounted(() => {
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width: 300px; height: 240px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
+              style="width: 240px; height: 192px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
@@ -1674,7 +1685,7 @@ onUnmounted(() => {
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width: 300px; height: 240px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
+              style="width: 240px; height: 192px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>

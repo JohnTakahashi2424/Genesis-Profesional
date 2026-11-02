@@ -418,8 +418,10 @@ const ejecutarAccion = (item) => {
     const match = item.accion_url.match(/reportes\/(\d+)/)
     if (match && match[1]) {
       localStorage.setItem('genesis_ver_reporte_id', match[1])
+      emit('navegar', 'reportes', 'detalle', match[1])
+    } else {
+      emit('navegar', 'reportes')
     }
-    emit('navegar', 'reportes')
   } else if (item.accion_url && (item.accion_url.includes('perfil') || item.accion_url.includes('cv'))) {
     emit('navegar', item.accion_destino || 'perfil')
   } else if (item.accion_destino) {
