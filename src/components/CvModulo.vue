@@ -631,6 +631,17 @@ const eliminarCv = async (cvId) => {
             Inicia la creación de tu perfil profesional
           </h2>
 
+          <!-- Alerta de Error en Paso 0 -->
+          <div v-if="mensajeError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between gap-2 text-left">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button type="button" @click="mensajeError = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+          </div>
+
           <div class="bg-[#f0f3ff] rounded-2xl p-6 text-left border border-blue-100 mb-6">
             <label class="block text-sm font-bold text-[#010C67] mb-2 flex items-center gap-2" style="font-family: 'Lora', Georgia, serif;">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 41 41" fill="none" class="w-5 h-5 text-black shrink-0"><g clip-path="url(#clip0_6153_508_tag)"><path d="M33.4552 18.852C33.9572 19.27 34.238 19.8063 34.2978 20.4609C34.3575 21.1155 34.1784 21.6944 33.7605 22.1975L24.6397 33.1498C24.2217 33.6518 23.6851 33.9324 23.0299 33.9916C22.3747 34.0509 21.7961 33.872 21.2942 33.4551L11.2546 25.0945C10.9656 24.8538 10.7457 24.561 10.5951 24.216C10.4444 23.871 10.3801 23.5151 10.4023 23.1482L10.9462 12.4725L21.3472 10.0054C21.7045 9.91657 22.0665 9.91503 22.433 10.0008C22.7995 10.0865 23.127 10.25 23.4155 10.4913L33.4552 18.852Z" fill="currentColor"/></g><defs><clipPath id="clip0_6153_508_tag"><rect width="28.5055" height="28.5055" fill="white" transform="translate(21.9048 40.1461) rotate(-140.214)"/></clipPath></defs></svg>
@@ -690,6 +701,17 @@ const eliminarCv = async (cvId) => {
 
         <!-- Contenido Vista Previa -->
         <div class="p-6 md:p-8 overflow-y-auto flex-1 space-y-6">
+          <!-- Alerta de Error al Guardar CV -->
+          <div v-if="mensajeError" class="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between gap-2 text-left shadow-xs">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button type="button" @click="mensajeError = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+          </div>
+
           <h2 class="text-center text-xl font-serif text-gray-800 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             Vista previa
           </h2>
@@ -965,6 +987,17 @@ const eliminarCv = async (cvId) => {
 
         <!-- Contenido principal del Paso -->
         <div class="p-6 sm:p-8 overflow-y-auto flex-1 text-left">
+          <!-- Alerta de Validación / Error en Pasos del Wizard -->
+          <div v-if="mensajeError" class="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between gap-2 text-left shadow-xs">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button type="button" @click="mensajeError = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+          </div>
+
 
           <!-- PASO 1: DISEÑO -->
           <div v-if="pasoActual === 1" class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">

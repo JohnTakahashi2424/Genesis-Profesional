@@ -586,3 +586,4 @@ return new class extends Migration
         DB::table('estudiantes')->whereIn('codigo_estudiante', $codigos)->delete();
     }
 };
+
