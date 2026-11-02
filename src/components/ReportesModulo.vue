@@ -321,103 +321,12 @@ const cargarReportes = async () => {
         return fA - fB
       })
 
-    // 4. Reportes de la base de datos o fallback de maqueta si está vacía
+    // 4. Reportes de la base de datos en tiempo real exclusivamente
     const combinados = [...reportesMensualesMapeados, ...informesMapeados]
-    if (combinados.length > 0) {
-      reportes.value = combinados
-    } else {
-      reportes.value = [
-        {
-          id: 1,
-          mes: 'Agosto',
-          periodo: '01 Ago – 31 Ago 2026',
-          actividades_desarrolladas: 2,
-          estado: 'En revisión'
-        },
-        {
-          id: 2,
-          mes: 'Septiembre',
-          periodo: '01 Sept – 30 Sept 2026',
-          actividades_desarrolladas: 3,
-          estado: 'En revisión'
-        },
-        {
-          id: 3,
-          mes: 'Octubre',
-          periodo: '01 Oct – 30 Oct 2026',
-          actividades_desarrolladas: 1,
-          estado: 'En revisión'
-        },
-        {
-          id: 4,
-          mes: 'Noviembre',
-          periodo: '01 Nov – 30 Nov 2026',
-          actividades_desarrolladas: 1,
-          estado: 'En revisión'
-        },
-        {
-          id: 5,
-          mes: 'Diciembre',
-          periodo: '01 Dic – 31 Dic 2026',
-          actividades_desarrolladas: 1,
-          estado: 'En revisión'
-        },
-        {
-          id: 'inf_final_mock',
-          es_informe_final: true,
-          mes: 'Reporte final',
-          periodo: '01 Ago – 31 Dic 2026',
-          actividades_desarrolladas: 7,
-          estado: 'En revisión'
-        }
-      ]
-    }
+    reportes.value = combinados
   } catch (err) {
-    reportes.value = [
-      {
-        id: 1,
-        mes: 'Agosto',
-        periodo: '01 Ago – 31 Ago 2026',
-        actividades_desarrolladas: 2,
-        estado: 'En revisión'
-      },
-      {
-        id: 2,
-        mes: 'Septiembre',
-        periodo: '01 Sept – 30 Sept 2026',
-        actividades_desarrolladas: 3,
-        estado: 'En revisión'
-      },
-      {
-        id: 3,
-        mes: 'Octubre',
-        periodo: '01 Oct – 30 Oct 2026',
-        actividades_desarrolladas: 1,
-        estado: 'En revisión'
-      },
-      {
-        id: 4,
-        mes: 'Noviembre',
-        periodo: '01 Nov – 30 Nov 2026',
-        actividades_desarrolladas: 1,
-        estado: 'En revisión'
-      },
-      {
-        id: 5,
-        mes: 'Diciembre',
-        periodo: '01 Dic – 31 Dic 2026',
-        actividades_desarrolladas: 1,
-        estado: 'En revisión'
-      },
-      {
-        id: 'inf_final_mock',
-        es_informe_final: true,
-        mes: 'Reporte final',
-        periodo: '01 Ago – 31 Dic 2026',
-        actividades_desarrolladas: 7,
-        estado: 'En revisión'
-      }
-    ]
+    console.error('Error al cargar reportes desde la base de datos:', err)
+    reportes.value = []
   } finally {
     cargando.value = false
   }

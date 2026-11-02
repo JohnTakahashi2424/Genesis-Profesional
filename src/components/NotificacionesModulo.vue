@@ -19,42 +19,8 @@ const filtroOrden = ref('recientes') // 'recientes' | 'antiguos'
 const notificacionSeleccionada = ref(null)
 const vista = ref('lista')
 
-// Notificaciones base de ejemplo para la interfaz (conforme a la captura)
-const notificacionesBaseMock = [
-  {
-    id: 1,
-    origen_tipo: 'sistema',
-    remitente_nombre: 'Notificación',
-    titulo: 'Reporte enviado',
-    mensaje: 'El reporte del mes de febrero ha sido creado y enviado correctamente',
-    fecha_formateada: '28 de feb. 2026 - 01:08:09 p.m.',
-    leido_at: null,
-    enlace: '/reportes'
-  },
-  {
-    id: 2,
-    origen_tipo: 'sistema',
-    remitente_nombre: 'Notificación',
-    titulo: 'Reporte enviado',
-    mensaje: 'El reporte del mes de enero ha sido creado y enviado correctamente',
-    fecha_formateada: '1 de feb. 2026 - 01:08:09 p.m.',
-    leido_at: null,
-    enlace: '/reportes'
-  },
-  {
-    id: 3,
-    origen_tipo: 'usuario',
-    remitente_nombre: 'Jenny Flores',
-    titulo: 'Observaciones',
-    mensaje: 'Agregar 2 o 3 anexos más en el informe para validar la evidencia.',
-    fecha_formateada: '1 de feb. 2026 - 08:11:06 a.m.',
-    leido_at: null,
-    enlace: '/reportes'
-  }
-]
-
-// Estado de carga y listado
-const notificaciones = ref([...notificacionesBaseMock])
+// Estado de carga y listado en tiempo real desde la BD
+const notificaciones = ref([])
 const cargando = ref(false)
 const eliminandoId = ref(null)
 
@@ -89,20 +55,14 @@ const cargarNotificaciones = async () => {
     }
 
     const res = await axios.get('/api/notificaciones', config)
-    if (res.data && Array.isArray(res.data.items) && res.data.items.length > 0) {
+    if (res.data && Array.isArray(res.data.items)) {
       notificaciones.value = res.data.items
-    } else if (res.data && Array.isArray(res.data.items)) {
-      // Si la BD no tiene registros para este filtro, mantener los base si estamos en 'Todos'
-      if (filtroEstado.value === 'Todos') {
-        notificaciones.value = [...notificacionesBaseMock]
-      } else {
-        notificaciones.value = res.data.items
-      }
     } else {
-      notificaciones.value = [...notificacionesBaseMock]
+      notificaciones.value = []
     }
   } catch (e) {
-    notificaciones.value = [...notificacionesBaseMock]
+    console.error('Error al cargar notificaciones:', e)
+    notificaciones.value = []
   } finally {
     cargando.value = false
   }

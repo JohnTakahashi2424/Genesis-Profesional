@@ -140,43 +140,21 @@ const ordenarPorMesMayorAMenor = (lista) => {
   })
 }
 
-// Reportes adjuntos (si vienen de API o fallback exacto al diseño, ordenados de mes mayor a menor)
+// Reportes adjuntos desde la base de datos (ordenados de mes mayor a menor)
 const reportesList = computed(() => {
   let lista = []
   if (props.informe?.reportes && Array.isArray(props.informe.reportes) && props.informe.reportes.length > 0) {
     lista = props.informe.reportes
-  } else {
-    lista = [
-      {
-        id: 2,
-        mes: 'Febrero',
-        periodo: '01 Febr – 27 Febr 2026',
-        actividades_desarrolladas: 12,
-        estado: 'Aprobado'
-      },
-      {
-        id: 1,
-        mes: 'Enero',
-        periodo: '01 Ene – 27 Ene 2026',
-        actividades_desarrolladas: 20,
-        estado: 'Aprobado'
-      }
-    ]
   }
   return ordenarPorMesMayorAMenor(lista)
 })
 
-// Anexos (si vienen de API o 4 placeholders exactos al diseño)
+// Anexos desde la base de datos
 const anexosList = computed(() => {
   if (props.informe?.anexos && Array.isArray(props.informe.anexos) && props.informe.anexos.length > 0) {
     return props.informe.anexos
   }
-  return [
-    { id: 1, nombre: 'Anexo_1.png' },
-    { id: 2, nombre: 'Anexo_2.png' },
-    { id: 3, nombre: 'Anexo_3.png' },
-    { id: 4, nombre: 'Anexo_4.png' }
-  ]
+  return []
 })
 
 // Helpers para separar rango y año de fechas

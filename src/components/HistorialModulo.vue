@@ -60,113 +60,8 @@ const catalogoIndicadores = [
   }
 ]
 
-// Elementos base de la interfaz conforme a la captura visual
-const itemsBaseMock = [
-  // 01 de marzo de 2026
-  {
-    id: 'mock-1',
-    fecha_agrupada: '01 de marzo de 2026',
-    fecha_exacta_raw: '2026-03-01T08:16:03',
-    titulo: 'Envío de reporte',
-    descripcion: 'Envío de reporte del mes de febrero',
-    fecha_linea1: '01 de marzo de 2026',
-    fecha_linea2: '- 08:16:03 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 12,
-    categoria: 'reportes'
-  },
-  {
-    id: 'mock-2',
-    fecha_agrupada: '01 de marzo de 2026',
-    fecha_exacta_raw: '2026-03-01T08:00:03',
-    titulo: 'Creación de reporte',
-    descripcion: 'Creación de reporte del mes de febrero',
-    fecha_linea1: '01 de marzo de 2026',
-    fecha_linea2: '- 08:00:03 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 12,
-    categoria: 'reportes'
-  },
-  // 20 de enero de 2026
-  {
-    id: 'mock-3',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T11:49:03',
-    titulo: 'Actualización de fotografía',
-    descripcion: 'actualización de fotografía en el perfil',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '11:49:03 a.m.',
-    accion_texto: 'Ver perfil',
-    accion_url: '/perfil',
-    accion_destino: 'perfil',
-    progreso: 10,
-    categoria: 'perfil'
-  },
-  {
-    id: 'mock-4',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T11:16:03',
-    titulo: 'Reporte aprovado',
-    descripcion: 'reporte aprovado por - Jenny Flores',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '11:16:03 a.m.',
-    accion_texto: 'ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 10,
-    categoria: 'reportes_aprobados'
-  },
-  {
-    id: 'mock-5',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T08:11:08',
-    titulo: 'Envío de reporte',
-    descripcion: 'Envío de reporte del mes de enero',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '08:11:08 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 8,
-    categoria: 'reportes'
-  },
-  {
-    id: 'mock-6',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T06:16:03',
-    titulo: 'Creación de reporte',
-    descripcion: 'Creación de reporte del mes de enero',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '06:16:03 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 8,
-    categoria: 'reportes'
-  },
-  // 18 de enero de 2026
-  {
-    id: 'mock-7',
-    fecha_agrupada: '18 de enero de 2026',
-    fecha_exacta_raw: '2026-01-18T08:16:03',
-    titulo: 'Actualización de cv',
-    descripcion: 'Actualización de datos personales en el cv',
-    fecha_linea1: '18 de enero de 2026 -',
-    fecha_linea2: '08:16:03 a.m.',
-    accion_texto: 'Ver perfil',
-    accion_url: '/cv',
-    accion_destino: 'cv',
-    progreso: 7,
-    categoria: 'cv'
-  }
-]
-
-// Listado reactivo de actividades
-const itemsHistorial = ref([...itemsBaseMock])
+// Listado reactivo de actividades desde la base de datos (tiempo real)
+const itemsHistorial = ref([])
 const cargando = ref(false)
 
 // Cargar actividades desde la base de datos asegurando que no se omita ningún elemento del diseño
@@ -185,8 +80,8 @@ const cargarHistorialDesdeApi = async () => {
     }
 
     const res = await axios.get('/api/historial-progreso', config)
-    if (res.data && Array.isArray(res.data.items) && res.data.items.length > 0) {
-      const apiItems = res.data.items.map(item => ({
+    if (res.data && Array.isArray(res.data.items)) {
+      itemsHistorial.value = res.data.items.map(item => ({
         id: item.id,
         fecha_agrupada: item.fecha_agrupada || item.fecha,
         fecha_exacta_raw: item.fecha_exacta || item.created_at,
@@ -199,16 +94,12 @@ const cargarHistorialDesdeApi = async () => {
         progreso: Number(item.progreso) || 0,
         categoria: item.categoria || 'reportes'
       }))
-
-      // Unir garantizando que no se omita ningún elemento de la imagen
-      const titulosEnApi = new Set(apiItems.map(i => `${i.titulo.toLowerCase()}_${i.fecha_agrupada}`))
-      const faltantesMock = itemsBaseMock.filter(m => !titulosEnApi.has(`${m.titulo.toLowerCase()}_${m.fecha_agrupada}`))
-      itemsHistorial.value = [...apiItems, ...faltantesMock]
     } else {
-      itemsHistorial.value = [...itemsBaseMock]
+      itemsHistorial.value = []
     }
   } catch (e) {
-    itemsHistorial.value = [...itemsBaseMock]
+    console.error('Error al cargar historial desde la API:', e)
+    itemsHistorial.value = []
   } finally {
     cargando.value = false
   }
@@ -390,6 +281,19 @@ const seleccionarOrden = (orden) => {
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span class="text-sm font-medium">Cargando historial de actividades...</span>
+          </div>
+
+          <!-- Estado vacío si el usuario no tiene actividades registradas aún -->
+          <div v-else-if="itemsHistorial.length === 0" class="flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-[#000B58] mb-3">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-base font-semibold text-slate-800 mb-1">Sin actividades registradas aún</h3>
+            <p class="text-xs text-slate-500 max-w-sm">
+              Cada acción que realices en el sistema (actualizar tu perfil, crear tu currículum o enviar reportes) se reflejará automáticamente aquí en tiempo real.
+            </p>
           </div>
 
           <!-- Estado de actividades agrupadas por fecha con línea vertical de tiempo -->
