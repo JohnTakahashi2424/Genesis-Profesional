@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 
-const emit = defineEmits(['volver', 'navegar'])
+const emit = defineEmits(['volver', 'navegar', 'actualizar-contador'])
 
 // Datos del usuario autenticado
 const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
@@ -60,6 +60,9 @@ const cargarNotificaciones = async () => {
     } else {
       notificaciones.value = []
     }
+    if (res.data && typeof res.data.no_leidas_count === 'number') {
+      emit('actualizar-contador', res.data.no_leidas_count)
+    }
   } catch (e) {
     console.error('Error al cargar notificaciones:', e)
     notificaciones.value = []
@@ -103,8 +106,19 @@ const verDetalleNotificacion = async (item) => {
     item.leido_at = new Date().toISOString()
     try {
       const token = localStorage.getItem('genesis_token')
-      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
-      await axios.patch(`/api/notificaciones/${item.id}/leer`, {}, config)
+      const userId = usuario.value?.id || usuario.value?.user_id || ''
+      const config = {
+        params: userId ? { user_id: userId } : {}
+      }
+      if (token) {
+        config.headers = { Authorization: `Bearer ${token}`, 'X-User-Id': userId }
+      }
+      const res = await axios.patch(`/api/notificaciones/${item.id}/leer`, {}, config)
+      if (res.data && typeof res.data.no_leidas_count === 'number') {
+        emit('actualizar-contador', res.data.no_leidas_count)
+      } else {
+        emit('actualizar-contador')
+      }
     } catch (e) {
       console.warn('No se pudo marcar como leída en API:', e?.message)
     }
@@ -126,10 +140,15 @@ const eliminarNotificacion = async (id) => {
       params: userId ? { user_id: userId } : {}
     }
     if (token) {
-      config.headers = { Authorization: `Bearer ${token}` }
+      config.headers = { Authorization: `Bearer ${token}`, 'X-User-Id': userId }
     }
-    await axios.delete(`/api/notificaciones/${id}`, config)
+    const res = await axios.delete(`/api/notificaciones/${id}`, config)
     notificaciones.value = notificaciones.value.filter(n => n.id !== id)
+    if (res.data && typeof res.data.no_leidas_count === 'number') {
+      emit('actualizar-contador', res.data.no_leidas_count)
+    } else {
+      emit('actualizar-contador')
+    }
   } catch (e) {
     console.error('Error al eliminar la notificación:', e?.message || '')
   } finally {

@@ -171,6 +171,20 @@ class AuthController extends Controller
                 'estado' => 'activo',
             ]);
 
+            // Generar notificación inicial de bienvenida vinculada al ID del nuevo usuario
+            try {
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: $user->id,
+                    titulo: 'Bienvenido a Génesis Profesional',
+                    mensaje: 'Tu cuenta ha sido creada exitosamente. Completa tu perfil profesional para dar inicio a tu proceso de pasantías.',
+                    tipo: 'general',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones'
+                );
+            } catch (\Throwable $notifEx) {
+                Log::warning('No se pudo generar notificación inicial de bienvenida: ' . $notifEx->getMessage());
+            }
+
             DB::commit();
 
             $usuarioData = [

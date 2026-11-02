@@ -84,6 +84,7 @@ Route::middleware('jwt.auth')->group(function () {
 
     // Rutas del Módulo de Notificaciones
     Route::prefix('notificaciones')->group(function () {
+        Route::get('/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador');
         Route::get('/', [NotificacionController::class, 'index'])->name('api.notificaciones.index');
         Route::post('/', [NotificacionController::class, 'store'])->name('api.notificaciones.store');
         Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');

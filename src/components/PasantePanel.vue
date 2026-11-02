@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 
 import CvModulo from './CvModulo.vue'
@@ -57,12 +57,67 @@ const fotoUsuario = computed(() => {
   return raw ? normalizarUrlFoto(raw) : null
 })
 
+// Contador de notificaciones no leídas dinámico según ID del usuario
+const notificacionesNoLeidas = ref(0)
+let intervalNotificaciones = null
+
+const cargarContadorNotificaciones = async (conteoDirecto = null) => {
+  if (typeof conteoDirecto === 'number') {
+    notificacionesNoLeidas.value = conteoDirecto
+    return
+  }
+
+  try {
+    const userId = usuario.value?.id || usuario.value?.user_id
+    const correo = usuario.value?.correo || usuario.value?.email || ''
+    if (!userId && !correo) {
+      notificacionesNoLeidas.value = 0
+      return
+    }
+
+    const token = localStorage.getItem('genesis_token')
+    const config = {
+      params: {}
+    }
+    if (userId) config.params.user_id = userId
+    if (correo) config.params.correo = correo
+    if (token) {
+      config.headers = {
+        Authorization: `Bearer ${token}`,
+        'X-User-Id': userId
+      }
+    }
+
+    // Usar endpoint liviano /api/notificaciones/contador
+    const res = await axios.get('/api/notificaciones/contador', config)
+    if (res.data && typeof res.data.no_leidas_count === 'number') {
+      notificacionesNoLeidas.value = res.data.no_leidas_count
+    } else {
+      notificacionesNoLeidas.value = 0
+    }
+  } catch (error) {
+    // Respaldo consultando /api/notificaciones con limit 1
+    try {
+      const userId = usuario.value?.id || usuario.value?.user_id
+      const resFallback = await axios.get('/api/notificaciones', { 
+        params: { user_id: userId, limit: 1 } 
+      })
+      if (resFallback.data && typeof resFallback.data.no_leidas_count === 'number') {
+        notificacionesNoLeidas.value = resFallback.data.no_leidas_count
+      }
+    } catch (e) {
+      console.warn('Error al consultar contador de notificaciones:', error?.message)
+    }
+  }
+}
+
 watch(itemActivo, async (newVal) => {
   if (newVal === 'inicio' || newVal === 'perfil') {
     imgErrorPasante.value = false
     usuario.value = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
     await cargarEstadoPasantia()
   }
+  await cargarContadorNotificaciones()
 })
 
 watch(fotoUsuario, (newVal) => {
@@ -160,13 +215,28 @@ const navegarA = (item) => {
   }
 }
 
-onMounted(() => {
-  cargarEstadoPasantia()
+onMounted(async () => {
+  await cargarEstadoPasantia()
   itemActivo.value = mapPathToItem(window.location.pathname)
+  await cargarContadorNotificaciones()
 
   window.addEventListener('popstate', () => {
     itemActivo.value = mapPathToItem(window.location.pathname)
   })
+
+  window.addEventListener('focus', cargarContadorNotificaciones)
+
+  // Sondeo en tiempo real cada 30 segundos
+  intervalNotificaciones = setInterval(() => {
+    cargarContadorNotificaciones()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (intervalNotificaciones) {
+    clearInterval(intervalNotificaciones)
+  }
+  window.removeEventListener('focus', cargarContadorNotificaciones)
 })
 
 const handleLogout = () => {
@@ -245,8 +315,13 @@ const handleLogout = () => {
                   </clipPath>
                 </defs>
               </svg>
-              <!-- Badge rojo con contador '3' posicionado en la esquina inferior derecha de la campana -->
-              <span class="absolute -bottom-1 -right-1 bg-[#cc0000] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none pointer-events-none shadow-sm">3</span>
+              <!-- Badge rojo dinámico según las notificaciones no leídas del usuario -->
+              <span 
+                v-if="notificacionesNoLeidas > 0"
+                class="absolute -bottom-1 -right-1 bg-[#cc0000] text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center leading-none pointer-events-none shadow-sm"
+              >
+                {{ notificacionesNoLeidas > 99 ? '99+' : notificacionesNoLeidas }}
+              </span>
             </div>
             <span>Notificaciones</span>
           </button>
@@ -327,7 +402,12 @@ const handleLogout = () => {
       <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" @navegar="navegarA" />
       <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
       <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="navegarA('inicio')" />
-      <NotificacionesModulo v-else-if="itemActivo === 'notificaciones'" @volver="navegarA('inicio')" @navegar="navegarA" />
+      <NotificacionesModulo 
+        v-else-if="itemActivo === 'notificaciones'" 
+        @volver="navegarA('inicio')" 
+        @navegar="navegarA" 
+        @actualizar-contador="cargarContadorNotificaciones" 
+      />
 
       <!-- VISTA PRINCIPAL (INICIO / DASHBOARD) -->
       <template v-else>
