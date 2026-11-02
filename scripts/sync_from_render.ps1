@@ -29,3 +29,4 @@ try {
         Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
     }
 }
+
