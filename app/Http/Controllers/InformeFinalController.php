@@ -112,38 +112,17 @@ class InformeFinalController extends Controller
             return $b->id <=> $a->id;
         })->values();
 
-        // Si la base de datos aún no tiene reportes para este usuario, preparar sugerencias según la maqueta
-        if ($reportesDisponibles->isEmpty()) {
-            $reportesFormateados = collect([
-                [
-                    'id' => 1,
-                    'mes' => 'Enero',
-                    'periodo' => '01 Ene – 27 Ene 2026',
-                    'actividades_desarrolladas' => 12,
-                    'estado' => 'Aprobado',
-                    'aprobado' => true,
-                ],
-                [
-                    'id' => 2,
-                    'mes' => 'Febrero',
-                    'periodo' => '01 Febr – 27 Febr 2026',
-                    'actividades_desarrolladas' => 12,
-                    'estado' => 'Aprobado',
-                    'aprobado' => true,
-                ],
-            ]);
-        } else {
-            $reportesFormateados = $reportesDisponibles->map(function ($rep) {
-                return [
-                    'id' => $rep->id,
-                    'mes' => $rep->mes,
-                    'periodo' => $rep->periodo,
-                    'actividades_desarrolladas' => $rep->actividades_desarrolladas,
-                    'estado' => $rep->estado,
-                    'aprobado' => strtolower($rep->estado) === 'aprobado',
-                ];
-            });
-        }
+        // Mapear única y exclusivamente los reportes reales creados por este usuario
+        $reportesFormateados = $reportesDisponibles->map(function ($rep) {
+            return [
+                'id' => $rep->id,
+                'mes' => $rep->mes,
+                'periodo' => $rep->periodo,
+                'actividades_desarrolladas' => $rep->actividades_count ?? ($rep->actividades ? $rep->actividades->count() : ($rep->actividades_desarrolladas ?? 0)),
+                'estado' => $rep->estado,
+                'aprobado' => strtolower($rep->estado) === 'aprobado',
+            ];
+        });
 
         // Construir columnas del presupuesto desde el primer reporte mensual hasta el último
         $mesesAbrev = [
@@ -168,21 +147,20 @@ class InformeFinalController extends Controller
                 $columnasDinamicas[] = $mesesAbrev[$mesNum];
             }
         }
-        if (empty($columnasDinamicas)) {
-            $columnasDinamicas = ['Ene.', 'Feb.'];
-        }
+        // Si no hay reportes mensuales creados aún, dejar las columnas vacías
+        // Se irán autogenerando dinámicamente a medida que el usuario suba sus reportes
 
         $itemsDefecto = [
             [
                 'gasto' => 'Comida',
                 'orden' => 1,
-                'montos' => array_fill_keys($columnasDinamicas, 0),
+                'montos' => !empty($columnasDinamicas) ? array_fill_keys($columnasDinamicas, 0) : new \stdClass(),
                 'total' => 0,
             ],
             [
                 'gasto' => 'Pasaje',
                 'orden' => 2,
-                'montos' => array_fill_keys($columnasDinamicas, 0),
+                'montos' => !empty($columnasDinamicas) ? array_fill_keys($columnasDinamicas, 0) : new \stdClass(),
                 'total' => 0,
             ],
         ];

@@ -106,24 +106,7 @@ const ordenarPorMesMayorAMenor = (lista) => {
   })
 }
 
-const reportesDisponibles = ref([
-  {
-    id: 1,
-    mes: 'Enero',
-    periodo: '01 Ene – 27 Ene 2026',
-    actividades_desarrolladas: 12,
-    estado: 'Aprobado',
-    seleccionado: false
-  },
-  {
-    id: 2,
-    mes: 'Febrero',
-    periodo: '01 Febr – 27 Febr 2026',
-    actividades_desarrolladas: 12,
-    estado: 'Aprobado',
-    seleccionado: false
-  }
-])
+const reportesDisponibles = ref([])
 
 // Lista computada garantizada de mayor a menor
 const reportesDisponiblesOrdenados = computed(() => {
@@ -217,24 +200,24 @@ const mapaMesesNombres = {
 }
 
 // Columnas de meses dinámicas (por defecto según los reportes mensuales creados)
-const columnasMeses = ref(['Ene.', 'Feb.'])
+const columnasMeses = ref([])
 
 // Filas de gastos dinámicas
 const filasPresupuesto = ref([
   {
     gasto: 'Comida',
-    montos: { 'Ene.': '', 'Feb.': '' }
+    montos: {}
   },
   {
     gasto: 'Pasaje',
-    montos: { 'Ene.': '', 'Feb.': '' }
+    montos: {}
   }
 ])
 
 // Actualiza las columnas dinámicamente según la cantidad y orden de reportes mensuales
 const actualizarColumnasPresupuesto = () => {
   if (!reportesDisponibles.value || reportesDisponibles.value.length === 0) {
-    columnasMeses.value = ['Ene.', 'Feb.']
+    columnasMeses.value = []
     return
   }
 
@@ -253,7 +236,7 @@ const actualizarColumnasPresupuesto = () => {
     }
   })
 
-  columnasMeses.value = cols.length > 0 ? cols : ['Ene.', 'Feb.']
+  columnasMeses.value = cols
 
   // Garantizar que cada fila mantenga o inicialice sus columnas
   filasPresupuesto.value.forEach(fila => {
@@ -358,18 +341,22 @@ const cargarDatosIniciales = async () => {
       if (data.nombre_pasante) form.value.nombre_pasante = data.nombre_pasante
       if (data.institucion) form.value.institucion = data.institucion
 
-      // Si la API devuelve reportes reales, usarlos ordenados de mayor a menor
-      if (Array.isArray(data.reportes_disponibles) && data.reportes_disponibles.length > 0) {
+      // Cargar única y exclusivamente los reportes reales creados en la BD
+      if (Array.isArray(data.reportes_disponibles)) {
         const mapeados = data.reportes_disponibles.map(r => ({
           ...r,
           seleccionado: false
         }))
         reportesDisponibles.value = ordenarPorMesMayorAMenor(mapeados)
+      } else {
+        reportesDisponibles.value = []
       }
       actualizarColumnasPresupuesto()
     }
   } catch (e) {
-    console.info('Usando configuración estándar de maqueta para informe final.')
+    console.info('No se encontraron reportes o usuario nuevo.')
+    reportesDisponibles.value = []
+    actualizarColumnasPresupuesto()
   } finally {
     cargando.value = false
   }
@@ -746,8 +733,11 @@ const finalizarEnvio = () => {
             Selecciona los reportes mensuales para adjuntar<span class="text-red-500">*</span>
           </label>
 
-          <!-- Encabezado de la tabla de reportes adjuntos -->
-          <div class="border border-blue-200 rounded-xl py-3 px-6 mb-3 text-sm font-medium text-gray-500 grid grid-cols-12 gap-2 sm:gap-4 items-center bg-white">
+          <!-- Encabezado de la tabla de reportes adjuntos (solo visible si existen reportes) -->
+          <div 
+            v-if="reportesDisponiblesOrdenados.length > 0"
+            class="border border-blue-200 rounded-xl py-3 px-6 mb-3 text-sm font-medium text-gray-500 grid grid-cols-12 gap-2 sm:gap-4 items-center bg-white"
+          >
             <div class="col-span-4 text-center">Mes del reporte</div>
             <div class="col-span-3 text-center">Periodo</div>
             <div class="col-span-3 text-center">Actividades desarrolladas</div>
@@ -755,7 +745,7 @@ const finalizarEnvio = () => {
           </div>
 
           <!-- Filas de los reportes mensuales (ordenados del mes mayor al menor) -->
-          <div class="space-y-3">
+          <div v-if="reportesDisponiblesOrdenados.length > 0" class="space-y-3">
             <div 
               v-for="rep in reportesDisponiblesOrdenados" 
               :key="rep.id"
@@ -808,6 +798,20 @@ const finalizarEnvio = () => {
                 </span>
               </div>
             </div>
+          </div>
+
+          <!-- Mensaje cuando NO hay reportes creados -->
+          <div 
+            v-else 
+            class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50/70"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400 mx-auto mb-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="text-sm font-semibold text-gray-700">No tienes reportes mensuales creados todavía</p>
+            <p class="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+              A medida que vayas creando tus reportes de progreso mensuales en el sistema, aparecerán en esta sección para que puedas seleccionarlos y adjuntarlos a tu informe final.
+            </p>
           </div>
 
           <!-- Mensaje de error para reportes mensuales -->
@@ -902,7 +906,13 @@ const finalizarEnvio = () => {
 
           <!-- TABLA PRINCIPAL DEL PRESUPUESTO -->
           <div class="border border-gray-300 rounded-xl overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
+            <div v-if="columnasMeses.length === 0" class="py-8 px-6 text-center bg-gray-50/60">
+              <p class="text-sm font-semibold text-gray-700">No hay meses disponibles en el presupuesto todavía</p>
+              <p class="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                Las columnas del presupuesto se generarán automáticamente a medida que vayas creando y registrando tus reportes mensuales.
+              </p>
+            </div>
+            <div v-else class="overflow-x-auto">
               <table class="w-full border-collapse">
                 <!-- ENCABEZADO AZUL MARINO (#010C67) -->
                 <thead>
