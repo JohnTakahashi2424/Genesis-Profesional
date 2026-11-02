@@ -128,6 +128,40 @@ class HistorialProgresoController extends Controller
             }
         }
 
+        // Garantizar que cualquier informe final registrado esté presente en el historial
+        try {
+            $informesReales = \App\Models\InformeFinal::where('user_id', (int)$userId)->get();
+            $huboNuevos = false;
+            foreach ($informesReales as $inf) {
+                $existe = HistorialProgreso::paraUsuario((int)$userId)
+                    ->where(function ($q) use ($inf) {
+                        $q->where('titulo', 'LIKE', '%Informe Final%')
+                          ->orWhere('accion_url', 'LIKE', "%/informe-final/{$inf->id}%");
+                    })
+                    ->first();
+                if (!$existe) {
+                    HistorialProgreso::create([
+                        'user_id' => $inf->user_id,
+                        'categoria' => 'reportes',
+                        'titulo' => 'Envío de Informe Final',
+                        'descripcion' => "Envío de informe final de pasantía para {$inf->institucion}",
+                        'fecha_exacta' => $inf->created_at ?? now(),
+                        'accion_texto' => 'Ver informe final',
+                        'accion_url' => '/reportes/informe-final/' . $inf->id,
+                        'progreso' => 100,
+                    ]);
+                    $huboNuevos = true;
+                }
+            }
+            if ($huboNuevos) {
+                $items = HistorialProgreso::paraUsuario((int)$userId)
+                    ->orderByDesc('fecha_exacta')
+                    ->get();
+            }
+        } catch (\Throwable $eInf) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo sincronizar historial de informe final: ' . $eInf->getMessage());
+        }
+
         $items = $this->calcularProgresosCronologicos($items);
 
         return response()->json([

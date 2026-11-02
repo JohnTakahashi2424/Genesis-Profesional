@@ -246,11 +246,15 @@ const mapPathToItem = (path) => {
   return 'inicio'
 }
 
-const navegarA = (item) => {
+const navegarA = (item, subvista = null) => {
   itemActivo.value = item
-  if (item === 'reportes' && localStorage.getItem('genesis_ver_informe_final') === 'true') {
-    reportesVistaInicial.value = 'informe_final_detalle'
-  } else if (item !== 'reportes') {
+  if (item === 'reportes') {
+    if (subvista === 'informe_final_detalle' || localStorage.getItem('genesis_ver_informe_final') === 'true') {
+      reportesVistaInicial.value = 'informe_final_detalle'
+    } else {
+      reportesVistaInicial.value = 'tabla'
+    }
+  } else {
     reportesVistaInicial.value = 'tabla'
   }
   const currentPath = window.location.pathname

@@ -158,43 +158,52 @@ const eliminarNotificacion = async (id) => {
 
 // Navegar al recurso asociado desde el detalle (ej. al reporte)
 const irAlRecurso = (enlace) => {
+  const notif = notificacionSeleccionada.value
   volverALista()
-  const titulo = (notificacionSeleccionada.value?.titulo || '').toLowerCase()
-  const mensaje = (notificacionSeleccionada.value?.mensaje || '').toLowerCase()
-  const url = (enlace || '').toLowerCase()
+
+  const titulo = (notif?.titulo || '').toLowerCase()
+  const mensaje = (notif?.mensaje || '').toLowerCase()
+  const url = (enlace || notif?.enlace || '').toLowerCase()
+
+  const textoCompleto = `${titulo} ${mensaje} ${url}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 
   // Detectar si la notificación es relativa a un Informe Final
-  const esInformeFinal = url.includes('informe-final') ||
-    url.includes('informe_final') ||
-    titulo.includes('informe final') ||
-    titulo.includes('reporte final') ||
-    mensaje.includes('informe final') ||
-    mensaje.includes('reporte final')
+  const esInformeFinal = textoCompleto.includes('informe final') ||
+    textoCompleto.includes('reporte final') ||
+    textoCompleto.includes('informe-final') ||
+    textoCompleto.includes('informe_final') ||
+    (textoCompleto.includes('final') && (textoCompleto.includes('informe') || textoCompleto.includes('reporte')))
 
   if (esInformeFinal) {
     localStorage.setItem('genesis_ver_informe_final', 'true')
-    const matchId = url.match(/(\d+)/)
+    const matchId = url.match(/(\d+)/) || mensaje.match(/(\d+)/)
     if (matchId && matchId[1]) {
       localStorage.setItem('genesis_ver_informe_final_id', matchId[1])
     }
+    window.dispatchEvent(new CustomEvent('abrir-informe-final-detalle', {
+      detail: { id: matchId ? matchId[1] : null }
+    }))
     emit('navegar', 'reportes')
     return
   }
 
-  if (!enlace) {
+  const urlFinal = enlace || notif?.enlace || ''
+  if (!urlFinal) {
     emit('navegar', 'reportes')
     return
   }
 
-  if (enlace.includes('reporte')) {
-    const matchId = enlace.match(/reportes\/(\d+)/)
+  if (urlFinal.includes('reporte')) {
+    const matchId = urlFinal.match(/reportes\/(\d+)/)
     if (matchId && matchId[1]) {
       localStorage.setItem('genesis_ver_reporte_id', matchId[1])
     }
     emit('navegar', 'reportes')
-  } else if (enlace.includes('perfil') || enlace.includes('cv')) {
+  } else if (urlFinal.includes('perfil') || urlFinal.includes('cv')) {
     emit('navegar', 'perfil')
-  } else if (enlace.includes('historial')) {
+  } else if (urlFinal.includes('historial')) {
     emit('navegar', 'historial')
   } else {
     emit('navegar', 'reportes')

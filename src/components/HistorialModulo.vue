@@ -375,21 +375,30 @@ const ejecutarAccion = (item) => {
   const titulo = (item.titulo || '').toLowerCase()
   const descripcion = (item.descripcion || '').toLowerCase()
   const url = (item.accion_url || '').toLowerCase()
+  const accion = (item.accion_texto || '').toLowerCase()
+  const categoria = (item.categoria || '').toLowerCase()
+
+  const textoCompleto = `${titulo} ${descripcion} ${url} ${accion} ${categoria}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 
   // Detectar si la acción corresponde a un Informe Final
-  const esInformeFinal = url.includes('informe-final') ||
-    url.includes('informe_final') ||
-    titulo.includes('informe final') ||
-    titulo.includes('reporte final') ||
-    descripcion.includes('informe final') ||
-    descripcion.includes('reporte final')
+  const esInformeFinal = textoCompleto.includes('informe final') ||
+    textoCompleto.includes('reporte final') ||
+    textoCompleto.includes('informe-final') ||
+    textoCompleto.includes('informe_final') ||
+    (textoCompleto.includes('final') && (textoCompleto.includes('informe') || textoCompleto.includes('reporte'))) ||
+    Number(item.progreso) === 100
 
   if (esInformeFinal) {
     localStorage.setItem('genesis_ver_informe_final', 'true')
-    const matchId = url.match(/(\d+)/)
+    const matchId = url.match(/(\d+)/) || descripcion.match(/(\d+)/)
     if (matchId && matchId[1]) {
       localStorage.setItem('genesis_ver_informe_final_id', matchId[1])
     }
+    window.dispatchEvent(new CustomEvent('abrir-informe-final-detalle', {
+      detail: { id: matchId ? matchId[1] : null }
+    }))
     emit('navegar', 'reportes')
     return
   }

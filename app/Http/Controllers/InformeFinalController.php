@@ -431,7 +431,7 @@ class InformeFinalController extends Controller
                     tipo: 'reporte',
                     origenTipo: 'sistema',
                     remitenteNombre: 'Notificaciones',
-                    enlace: '/reportes'
+                    enlace: '/reportes/informe-final/' . $informe->id
                 );
             } catch (\Throwable $e) {
                 Log::warning('No se pudo registrar notificación/historial para informe final: ' . $e->getMessage());
@@ -651,7 +651,7 @@ class InformeFinalController extends Controller
                 tipo: $esObservado ? 'observacion' : 'reporte',
                 origenTipo: $esObservado ? 'usuario' : 'sistema',
                 remitenteNombre: $esObservado ? 'Jenny Flores' : 'Notificaciones',
-                enlace: '/reportes'
+                enlace: '/reportes/informe-final/' . $informe->id
             );
 
             HistorialProgreso::registrar(
@@ -660,7 +660,7 @@ class InformeFinalController extends Controller
                 titulo: $tituloNotif,
                 descripcion: $mensajeNotif,
                 accionTexto: 'Ver informe final',
-                accionUrl: '/reportes',
+                accionUrl: '/reportes/informe-final/' . $informe->id,
                 progreso: 100
             );
         } catch (\Throwable $e) {
