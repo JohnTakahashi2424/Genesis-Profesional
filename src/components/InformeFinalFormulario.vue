@@ -538,22 +538,22 @@ const finalizarEnvio = () => {
     <!-- ========================================================================= -->
     <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto">
       
-      <!-- ENCABEZADO INSTITUCIONAL UGB (40% más grande: 140px alto x 172.87px ancho, idéntico al reporte mensual) -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8 pb-6 border-b border-slate-100">
+      <!-- ENCABEZADO INSTITUCIONAL UGB (Tamaño prominente y uniforme) -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
         <!-- Logo UGB -->
         <div class="shrink-0 flex items-center justify-center">
           <img 
             src="/images/Logo_para_reportes_mensuales.png" 
             alt="Universidad Gerardo Barrios" 
-            style="width: 172.87px; height: 140px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
+            style="width: 300px; height: 240px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
             @error="(e) => e.target.style.display = 'none'"
           />
         </div>
         <div class="text-center">
-          <h2 style="font-family:'Lora',serif; font-size: 26px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
+          <h2 style="font-family:'Lora',serif; font-size: 28px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
             FACULTAD DE CIENCIA Y TECNOLOGÍA
           </h2>
-          <p class="text-sm font-semibold text-[#010C67] text-center mt-1">
+          <p class="text-base font-semibold text-[#010C67] text-center mt-1">
             Trabajo de Graduación Modalidad Pasantía
           </p>
           <p class="text-sm font-medium text-[#1E3A8A] text-center mt-0.5">

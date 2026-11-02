@@ -1149,24 +1149,24 @@ onUnmounted(() => {
       <!-- CONTENEDOR PRINCIPAL CON BORDE AZUL CLARO (Como en las capturas 2, 3 y 4) -->
       <div class="bg-white rounded-2xl border border-blue-400 p-8 sm:p-10 shadow-sm max-w-4xl mx-auto">
         
-        <!-- ENCABEZADO INSTITUCIONAL DE LA FACULTAD -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8 pb-6 border-b border-slate-100">
-          <!-- Logo UGB (40% más grande: 140px alto x 172.87px ancho) -->
+        <!-- ENCABEZADO INSTITUCIONAL DE LA FACULTAD (Tamaño prominente y uniforme) -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
+          <!-- Logo UGB -->
           <div class="shrink-0 flex items-center justify-center">
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width: 172.87px; height: 140px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
+              style="width: 300px; height: 240px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
 
           <!-- Títulos Oficiales de la Facultad -->
           <div class="text-center">
-            <h2 style="font-family:'Lora',serif; font-size: 26px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
+            <h2 style="font-family:'Lora',serif; font-size: 28px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
               FACULTAD DE CIENCIA Y TECNOLOGÍA
             </h2>
-            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-1">
+            <h3 class="text-base font-semibold text-[#010C67] text-center mt-1">
               Trabajo de Graduación Modalidad Pasantía
             </h3>
             <p class="text-sm font-medium text-[#1E3A8A] text-center mt-0.5">
@@ -1667,24 +1667,24 @@ onUnmounted(() => {
           </span>
         </div>
 
-        <!-- ENCABEZADO: LOGO + TÍTULOS OFICIALES -->
-        <div class="flex items-start gap-8 mb-8 pb-4">
-          <!-- Logo UGB (40% más grande: 140px alto x 172.87px ancho) -->
+        <!-- ENCABEZADO: LOGO + TÍTULOS OFICIALES (Tamaño prominente y uniforme) -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
+          <!-- Logo UGB -->
           <div class="shrink-0 flex items-center justify-center">
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width: 172.87px; height: 140px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
+              style="width: 300px; height: 240px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
 
           <!-- Títulos Oficiales de la Facultad -->
-          <div class="flex-1 text-center pr-28">
-            <h2 style="font-family:'Lora',serif; font-size: 26px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
+          <div class="text-center">
+            <h2 style="font-family:'Lora',serif; font-size: 28px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
               FACULTAD DE CIENCIA Y TECNOLOGÍA
             </h2>
-            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-1">
+            <h3 class="text-base font-semibold text-[#010C67] text-center mt-1">
               Trabajo de Graduación Modalidad Pasantía
             </h3>
             <p class="text-sm font-medium text-[#010C67] text-center mt-1">
