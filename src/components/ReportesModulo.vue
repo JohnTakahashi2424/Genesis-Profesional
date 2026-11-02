@@ -900,15 +900,9 @@ onUnmounted(() => {
         <!-- LISTA VACÍA -->
         <div v-else-if="reportesMostrados.length === 0" class="py-16 text-center">
           <h3 class="text-base font-semibold text-slate-700 mb-1">No hay reportes registrados aún</h3>
-          <p class="text-slate-500 text-xs mb-4 max-w-sm mx-auto">
+          <p class="text-slate-500 text-xs max-w-sm mx-auto">
             Comienza redactando tu primer reporte mensual de pasantía para dar seguimiento a tus actividades.
           </p>
-          <button 
-            @click="abrirNuevoReporte"
-            class="px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white text-xs font-semibold rounded-full shadow-sm cursor-pointer transition-all"
-          >
-            + Crear primer reporte
-          </button>
         </div>
 
         <!-- FILAS DE REPORTES (Con separación generosa y tarjetas blancas puras #FFFFFF sobre fondo gris) -->
