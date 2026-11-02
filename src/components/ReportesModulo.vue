@@ -37,6 +37,8 @@ const handleEventoAbrirInformeFinal = async (e) => {
 watch(() => props.vistaInicial, async (val) => {
   if (val === 'informe_final_detalle') {
     await abrirInformeFinalDetalleDirecto(props.informeFinalId)
+  } else if (val === 'informe_final') {
+    vistaActual.value = 'informe_final'
   } else if (val) {
     vistaActual.value = val
   }
@@ -862,6 +864,13 @@ onMounted(async () => {
   window.addEventListener('click', cerrarDropdownsAlClickFuera)
   window.addEventListener('abrir-informe-final-detalle', handleEventoAbrirInformeFinal)
   await cargarReportes()
+
+  // 0. Crear informe final si fue invocado desde el panel
+  if (props.vistaInicial === 'informe_final' || localStorage.getItem('genesis_crear_informe_final') === 'true') {
+    localStorage.removeItem('genesis_crear_informe_final')
+    vistaActual.value = 'informe_final'
+    return
+  }
 
   // 1. Abrir informe final si fue invocado desde Historial, Notificaciones o Panel
   const verInformeFinal = localStorage.getItem('genesis_ver_informe_final')

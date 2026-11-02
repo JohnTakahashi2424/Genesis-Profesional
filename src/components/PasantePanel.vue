@@ -18,8 +18,9 @@ const itemActivo = ref('inicio')
 const reportesVistaInicial = ref('tabla')
 
 const abrirInformeFinal = () => {
+  localStorage.setItem('genesis_crear_informe_final', 'true')
   reportesVistaInicial.value = 'informe_final'
-  navegarA('reportes')
+  navegarA('reportes', 'informe_final')
 }
 
 // Extraer el primer nombre para el saludo del banner
@@ -253,7 +254,12 @@ let canalNotifPanel = null
 const navegarA = (item, subvista = null, targetId = null) => {
   itemActivo.value = item
   if (item === 'reportes') {
-    if (subvista === 'informe_final_detalle' || localStorage.getItem('genesis_ver_informe_final') === 'true') {
+    if (subvista === 'informe_final' || localStorage.getItem('genesis_crear_informe_final') === 'true') {
+      reportesVistaInicial.value = 'informe_final'
+      reportesInformeFinalId.value = null
+      reportesDetalleId.value = null
+      localStorage.removeItem('genesis_crear_informe_final')
+    } else if (subvista === 'informe_final_detalle' || localStorage.getItem('genesis_ver_informe_final') === 'true') {
       reportesVistaInicial.value = 'informe_final_detalle'
       reportesInformeFinalId.value = targetId || localStorage.getItem('genesis_ver_informe_final_id') || null
       reportesDetalleId.value = null

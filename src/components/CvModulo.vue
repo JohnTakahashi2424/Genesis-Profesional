@@ -767,7 +767,7 @@ const eliminarCv = async (cvId) => {
               <!-- Cuerpo del CV -->
               <div class="p-5 space-y-3.5 bg-white text-gray-900 text-[11px] leading-relaxed">
                 <!-- Contacto y Educación / Idiomas -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100 min-w-0 w-full">
                   <div class="space-y-1">
                     <p class="flex items-center gap-1.5 font-bold">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -816,7 +816,7 @@ const eliminarCv = async (cvId) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-2.33 4.67-3.6 7-3.6s7 1.27 7 3.6V19z"/></svg>
                     <span :style="{ color: formCv.diseno.color }">Sobre mí:</span>
                   </p>
-                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.perfil.sobreMi }}</p>
+                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.perfil.sobreMi }}</p>
                 </div>
 
                 <!-- Conocimientos y Valores profesionales -->
@@ -826,14 +826,14 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Conocimientos:</span>
                     </p>
-                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.conocimientos }}</p>
+                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.objetivos.conocimientos }}</p>
                   </div>
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Valores profesionales:</span>
                     </p>
-                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.valores }}</p>
+                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.objetivos.valores }}</p>
                   </div>
                 </div>
 
@@ -844,14 +844,14 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Mi objetivo:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.objetivos.objetivo }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.objetivos.objetivo }}</p>
                   </div>
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Habilidades:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.habilidades }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.habilidades }}</p>
                   </div>
                 </div>
 
@@ -862,14 +862,14 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h6v2H9V4zm9 16H6V8h12v12z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Certificados:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.certificados }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.certificados }}</p>
                   </div>
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Logros:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.logros }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.logros }}</p>
                   </div>
                 </div>
 
@@ -879,7 +879,7 @@ const eliminarCv = async (cvId) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                     <span :style="{ color: formCv.diseno.color }">Proyectos de beneficio social:</span>
                   </p>
-                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.proyectos }}</p>
+                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.proyectos }}</p>
                 </div>
               </div>
             </div>

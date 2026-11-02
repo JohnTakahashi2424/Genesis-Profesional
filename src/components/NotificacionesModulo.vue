@@ -25,9 +25,11 @@ const cargando = ref(false)
 const eliminandoId = ref(null)
 
 // Cargar notificaciones desde la API de Laravel (Base de datos real)
-const cargarNotificaciones = async () => {
+const cargarNotificaciones = async (silencioso = false) => {
   try {
-    cargando.value = true
+    if (!silencioso && notificaciones.value.length === 0) {
+      cargando.value = true
+    }
     const userId = usuario.value?.id || usuario.value?.user_id || ''
     const token = localStorage.getItem('genesis_token')
     
@@ -65,7 +67,9 @@ const cargarNotificaciones = async () => {
     }
   } catch (e) {
     console.error('Error al cargar notificaciones:', e)
-    notificaciones.value = []
+    if (!silencioso && notificaciones.value.length === 0) {
+      notificaciones.value = []
+    }
   } finally {
     cargando.value = false
   }
@@ -90,12 +94,12 @@ let canalNotifBroadcast = null
 let intervaloNotifPolling = null
 
 const handleEventoNotificaciones = () => {
-  cargarNotificaciones()
+  cargarNotificaciones(true)
 }
 
 const handleStorageNotif = (e) => {
   if (e.key === 'genesis_notificaciones_updated' || e.key === 'genesis_historial_updated') {
-    cargarNotificaciones()
+    cargarNotificaciones(true)
   }
 }
 
@@ -109,17 +113,17 @@ onMounted(() => {
     try {
       canalNotifBroadcast = new BroadcastChannel('genesis_notificaciones_sync')
       canalNotifBroadcast.onmessage = () => {
-        cargarNotificaciones()
+        cargarNotificaciones(true)
       }
     } catch (e) {
       console.warn('BroadcastChannel notificaciones no disponible:', e)
     }
   }
 
-  // Comprobación periódica para vista en vivo y entre pestañas
+  // Comprobación periódica silenciosa en segundo plano (sin parpadeos ni recargas invasivas)
   intervaloNotifPolling = setInterval(() => {
-    cargarNotificaciones()
-  }, 5000)
+    cargarNotificaciones(true)
+  }, 10000)
 })
 
 onUnmounted(() => {
