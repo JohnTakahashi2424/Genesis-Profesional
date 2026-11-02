@@ -590,18 +590,16 @@ const seleccionarOrden = (orden) => {
               <span class="text-xs text-black font-black">▲</span>
             </button>
 
-            <!-- LISTA DE LOS 7 BOTONES DE ACCESO DIRECTO -->
+            <!-- LISTA DE LOS 7 INDICADORES ORIENTATIVOS (GUÍA VISUAL ESTÁTICA) -->
             <div class="space-y-3">
-              <button
+              <div
                 v-for="ind in catalogoIndicadores"
                 :key="ind.clave"
-                type="button"
-                @click="ingresarASeccion(ind)"
-                class="w-full text-center px-2 py-2.5 bg-white rounded-xl text-[11px] leading-tight font-medium text-slate-800 hover:bg-slate-50 hover:shadow-xs transition duration-150 cursor-pointer block"
+                class="w-full text-center px-2 py-2.5 bg-white rounded-xl text-[11px] leading-tight font-medium text-slate-800 select-none block shadow-2xs"
                 :class="ind.borderClass"
               >
                 {{ ind.titulo }}
-              </button>
+              </div>
             </div>
           </div>
         </div>

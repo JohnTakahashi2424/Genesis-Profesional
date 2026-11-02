@@ -38,7 +38,7 @@ const enviando = ref(false)
 
 // Notificación de éxito estilo Toast (como en Captura 4)
 const toastExitoVisible = ref(false)
-const toastMensaje = ref('El reporte ha sido enviado de manera exitosa.')
+const toastMensaje = ref('Reporte enviado exitosamente')
 
 // Notificación de feedback general (errores / avisos)
 const feedbackMensaje = ref('')
@@ -395,7 +395,7 @@ const abrirInformeFinal = () => {
 }
 
 const handleInformeFinalGuardado = () => {
-  toastMensaje.value = 'El informe final ha sido enviado de manera exitosa y se encuentra en revisión.'
+  toastMensaje.value = 'Reporte enviado exitosamente'
   toastExitoVisible.value = true
   cargarReportes()
   setTimeout(() => {
@@ -668,7 +668,7 @@ const enviarReporte = async () => {
     await cargarReportes()
 
     // Mostrar modal / toast de éxito de la Captura 4
-    toastMensaje.value = 'El reporte ha sido enviado de manera exitosa.'
+    toastMensaje.value = 'Reporte enviado exitosamente'
     toastExitoVisible.value = true
 
     // Regresar a la tabla

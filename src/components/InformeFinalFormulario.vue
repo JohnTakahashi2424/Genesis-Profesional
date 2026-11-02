@@ -11,7 +11,7 @@ const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 const cargando = ref(true)
 const enviando = ref(false)
 const mensajeError = ref('')
-const exitoModal = ref(false)
+const toastExitoVisible = ref(false)
 
 // Nombre del estudiante autenticado desde sesión
 const nombreInicial = usuario.value?.nombres
@@ -108,43 +108,19 @@ const ordenarPorMesMayorAMenor = (lista) => {
 
 const reportesDisponibles = ref([
   {
-    id: 5,
-    mes: 'Diciembre',
-    periodo: '01 Dic – 31 Dic 2026',
-    actividades_desarrolladas: 1,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 4,
-    mes: 'Noviembre',
-    periodo: '01 Nov – 30 Nov 2026',
-    actividades_desarrolladas: 1,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 3,
-    mes: 'Octubre',
-    periodo: '01 Oct – 30 Oct 2026',
-    actividades_desarrolladas: 1,
-    estado: 'En revisión',
+    id: 1,
+    mes: 'Enero',
+    periodo: '01 Ene – 27 Ene 2026',
+    actividades_desarrolladas: 12,
+    estado: 'Aprobado',
     seleccionado: false
   },
   {
     id: 2,
-    mes: 'Septiembre',
-    periodo: '01 Sept – 30 Sept 2026',
-    actividades_desarrolladas: 3,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 1,
-    mes: 'Agosto',
-    periodo: '01 Ago – 31 Ago 2026',
-    actividades_desarrolladas: 2,
-    estado: 'En revisión',
+    mes: 'Febrero',
+    periodo: '01 Febr – 27 Febr 2026',
+    actividades_desarrolladas: 12,
+    estado: 'Aprobado',
     seleccionado: false
   }
 ])
@@ -214,58 +190,80 @@ const eliminarAnexo = (index) => {
 // ----------------------------------------------------
 // SECCIÓN 3: Presupuesto Dinámico (Filas y Columnas)
 // ----------------------------------------------------
-// Columnas de meses dinámicas (por defecto de enero a julio según la captura)
-const columnasMeses = ref(['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Junio', 'Jul.'])
+// Mapeo cronológico de abreviaturas y nombres de meses
+const mapaMesesAbrev = {
+  1: 'Ene.', 2: 'Feb.', 3: 'Mar.', 4: 'Abr.', 5: 'May.', 6: 'Junio',
+  7: 'Jul.', 8: 'Agos.', 9: 'Sept.', 10: 'Oct.', 11: 'Nov.', 12: 'Dic.'
+}
+
+const mapaMesesNombres = {
+  'ene.': 'enero', 'feb.': 'febrero', 'mar.': 'marzo', 'abr.': 'abril',
+  'may.': 'mayo', 'junio': 'junio', 'jul.': 'julio', 'agos.': 'agosto',
+  'sept.': 'septiembre', 'oct.': 'octubre', 'nov.': 'noviembre', 'dic.': 'diciembre'
+}
+
+// Columnas de meses dinámicas (por defecto según los reportes mensuales creados)
+const columnasMeses = ref(['Ene.', 'Feb.'])
 
 // Filas de gastos dinámicas
 const filasPresupuesto = ref([
   {
     gasto: 'Comida',
-    montos: { 'Ene.': 0, 'Feb.': 0, 'Mar.': 0, 'Abr.': 0, 'May.': 0, 'Junio': 0, 'Jul.': 0 }
+    montos: { 'Ene.': '', 'Feb.': '' }
   },
   {
     gasto: 'Pasaje',
-    montos: { 'Ene.': 0, 'Feb.': 0, 'Mar.': 0, 'Abr.': 0, 'May.': 0, 'Junio': 0, 'Jul.': 0 }
+    montos: { 'Ene.': '', 'Feb.': '' }
   }
 ])
 
-// Modal para agregar una nueva columna
-const modalColumnaAbierto = ref(false)
-const nuevaColumnaNombre = ref('')
+// Actualiza las columnas dinámicamente según la cantidad y orden de reportes mensuales
+const actualizarColumnasPresupuesto = () => {
+  if (!reportesDisponibles.value || reportesDisponibles.value.length === 0) {
+    columnasMeses.value = ['Ene.', 'Feb.']
+    return
+  }
 
-const abrirModalNuevaColumna = () => {
-  nuevaColumnaNombre.value = ''
-  modalColumnaAbierto.value = true
-}
+  // Ordenar cronológicamente ascendente (desde el primer reporte hasta el último)
+  const reportesAsc = [...reportesDisponibles.value].sort((a, b) => {
+    return obtenerScoreMes(a) - obtenerScoreMes(b)
+  })
 
-const agregarColumna = () => {
-  const nombre = nuevaColumnaNombre.value.trim()
-  if (!nombre) return
-  if (!columnasMeses.value.includes(nombre)) {
-    columnasMeses.value.push(nombre)
-    filasPresupuesto.value.forEach(fila => {
-      if (fila.montos[nombre] === undefined) {
-        fila.montos[nombre] = 0
+  const cols = []
+  reportesAsc.forEach(rep => {
+    const score = obtenerScoreMes(rep)
+    const mesNum = score % 100
+    const abrev = mapaMesesAbrev[mesNum] || rep.mes
+    if (abrev && !cols.includes(abrev)) {
+      cols.push(abrev)
+    }
+  })
+
+  columnasMeses.value = cols.length > 0 ? cols : ['Ene.', 'Feb.']
+
+  // Garantizar que cada fila mantenga o inicialice sus columnas
+  filasPresupuesto.value.forEach(fila => {
+    if (!fila.montos) fila.montos = {}
+    columnasMeses.value.forEach(col => {
+      if (fila.montos[col] === undefined) {
+        fila.montos[col] = ''
       }
     })
-  }
-  modalColumnaAbierto.value = false
-  nuevaColumnaNombre.value = ''
+  })
 }
 
-const eliminarColumna = (colName) => {
-  if (columnasMeses.value.length <= 1) return
-  columnasMeses.value = columnasMeses.value.filter(c => c !== colName)
-  filasPresupuesto.value.forEach(fila => {
-    delete fila.montos[colName]
-  })
+// Verifica si el usuario ha ingresado un valor numérico real
+const tieneMontoIngresado = (val) => {
+  if (val === null || val === undefined || val === '') return false
+  const str = String(val).trim()
+  return str !== '' && str !== '0'
 }
 
 // Agregar nueva fila de gasto con el botón (+) circular
 const agregarFilaGasto = () => {
   const nuevosMontos = {}
   columnasMeses.value.forEach(col => {
-    nuevosMontos[col] = 0
+    nuevosMontos[col] = ''
   })
   filasPresupuesto.value.push({
     gasto: '',
@@ -279,31 +277,52 @@ const eliminarFilaGasto = (index) => {
   }
 }
 
-// Calcular total por fila
+// Calcular total por fila con soporte completo de centavos (ej: 25.15)
 const calcularTotalFila = (fila) => {
   let suma = 0
+  let hayValores = false
   columnasMeses.value.forEach(col => {
-    const val = parseFloat(fila.montos[col]) || 0
-    suma += val
+    const raw = String(fila.montos?.[col] ?? '').trim().replace(',', '.')
+    const val = parseFloat(raw)
+    if (!isNaN(val) && val > 0) {
+      suma += val
+      hayValores = true
+    }
   })
-  return Math.round(suma)
+  if (!hayValores || suma === 0) return '000'
+  return Number.isInteger(suma) ? String(suma) : suma.toFixed(2)
 }
 
-// Calcular gran total consolidado
+// Calcular gran total consolidado con soporte completo de centavos
 const granTotalPresupuesto = computed(() => {
   let total = 0
+  let hayValores = false
   filasPresupuesto.value.forEach(fila => {
-    total += calcularTotalFila(fila)
+    columnasMeses.value.forEach(col => {
+      const raw = String(fila.montos?.[col] ?? '').trim().replace(',', '.')
+      const val = parseFloat(raw)
+      if (!isNaN(val) && val > 0) {
+        total += val
+        hayValores = true
+      }
+    })
   })
-  return Math.round(total)
+  if (!hayValores || total === 0) return '000'
+  return Number.isInteger(total) ? String(total) : total.toFixed(2)
 })
 
-// Subtítulo dinámico para el presupuesto
+// Subtítulo dinámico para el presupuesto: 'Presupuesto de [primer mes] a [último mes]'
 const subtituloPresupuesto = computed(() => {
   if (columnasMeses.value.length === 0) return 'Presupuesto'
-  const primerMes = columnasMeses.value[0]
-  const ultimoMes = columnasMeses.value[columnasMeses.value.length - 1]
-  return `Presupuesto de ${primerMes.toLowerCase()} a ${ultimoMes.toLowerCase()}`
+  const primerCol = columnasMeses.value[0].toLowerCase()
+  const ultimoCol = columnasMeses.value[columnasMeses.value.length - 1].toLowerCase()
+  const primerMes = mapaMesesNombres[primerCol] || primerCol
+  const ultimoMes = mapaMesesNombres[ultimoCol] || ultimoCol
+
+  if (primerMes === ultimoMes) {
+    return `Presupuesto de ${primerMes}`
+  }
+  return `Presupuesto de ${primerMes} a ${ultimoMes}`
 })
 
 // ----------------------------------------------------
@@ -333,6 +352,7 @@ const cargarDatosIniciales = async () => {
         }))
         reportesDisponibles.value = ordenarPorMesMayorAMenor(mapeados)
       }
+      actualizarColumnasPresupuesto()
     }
   } catch (e) {
     console.info('Usando configuración estándar de maqueta para informe final.')
@@ -343,6 +363,7 @@ const cargarDatosIniciales = async () => {
 
 onMounted(() => {
   cargarDatosIniciales()
+  actualizarColumnasPresupuesto()
 })
 
 // ----------------------------------------------------
@@ -447,7 +468,7 @@ const enviarInforme = async () => {
         localStorage.setItem('genesis_historial_updated', Date.now().toString())
       } catch (e) {}
 
-      exitoModal.value = true
+      toastExitoVisible.value = true
     } else {
       mensajeError.value = res.data?.mensaje || 'Ocurrió un error al registrar el informe final.'
     }
@@ -460,7 +481,7 @@ const enviarInforme = async () => {
 }
 
 const finalizarEnvio = () => {
-  exitoModal.value = false
+  toastExitoVisible.value = false
   emit('guardado')
   emit('volver')
 }
@@ -863,25 +884,15 @@ const finalizarEnvio = () => {
               <table class="w-full border-collapse">
                 <!-- ENCABEZADO AZUL MARINO (#010C67) -->
                 <thead>
-                  <tr class="bg-[#010C67] text-white text-xs font-semibold">
+                  <tr class="bg-[#010C67] text-white text-xs font-semibold select-none">
                     <th class="py-3 px-4 text-left min-w-[120px]">Gasto</th>
                     <th 
                       v-for="col in columnasMeses" 
                       :key="col"
-                      class="py-3 px-2 text-center min-w-[65px] group relative"
+                      class="py-3 px-2 text-center min-w-[65px]"
                     >
-                      <div class="flex items-center justify-center gap-1">
+                      <div class="flex items-center justify-center">
                         <span>{{ col }}</span>
-                        <!-- Botón sutil para eliminar columna si hay más de 1 -->
-                        <button 
-                          v-if="columnasMeses.length > 2"
-                          @click="eliminarColumna(col)"
-                          type="button"
-                          class="opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-100 text-[10px] transition cursor-pointer ml-0.5"
-                          title="Eliminar columna"
-                        >
-                          ✕
-                        </button>
                       </div>
                     </th>
                     <th class="py-3 px-4 text-center min-w-[95px]">Total USD</th>
@@ -906,24 +917,28 @@ const finalizarEnvio = () => {
                       />
                     </td>
 
-                    <!-- Inputs por cada mes (cuadritos redondeados) -->
+                    <!-- Inputs por cada mes (cuadritos redondeados con color gris por defecto y negro al ingresar número) -->
                     <td 
                       v-for="col in columnasMeses" 
                       :key="col"
                       class="py-3 px-1.5 text-center"
                     >
                       <input 
-                        v-model.number="fila.montos[col]"
-                        type="number" 
-                        min="0"
-                        step="any"
-                        class="w-12 h-9 text-center font-medium text-gray-800 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+                        v-model="fila.montos[col]"
+                        type="text" 
+                        inputmode="decimal"
+                        placeholder="0"
+                        class="no-spinner w-12 sm:w-14 h-9 text-center text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs transition-colors"
+                        :class="tieneMontoIngresado(fila.montos[col]) ? 'text-gray-900 font-semibold' : 'text-gray-400 font-normal'"
                       />
                     </td>
 
-                    <!-- Total USD por fila (cuadrito redondeado con 000) -->
+                    <!-- Total USD por fila (cuadrito redondeado con 000 o monto con centavos ej: 25.15) -->
                     <td class="py-3 px-3 text-center">
-                      <div class="inline-flex items-center justify-center min-w-[75px] h-9 px-2 text-sm font-semibold text-gray-800 border border-gray-300 rounded-lg bg-gray-50/50 shadow-2xs">
+                      <div 
+                        class="inline-flex items-center justify-center min-w-[75px] h-9 px-2 text-sm border border-gray-300 rounded-lg bg-gray-50/50 shadow-2xs transition-colors"
+                        :class="calcularTotalFila(fila) !== '000' ? 'text-gray-900 font-semibold' : 'text-gray-400 font-normal'"
+                      >
                         {{ calcularTotalFila(fila) }}
                       </div>
                     </td>
@@ -963,9 +978,12 @@ const finalizarEnvio = () => {
                       Total
                     </td>
                     <td :colspan="columnasMeses.length"></td>
-                    <!-- Box del Total General ($000) -->
+                    <!-- Box del Total General ($000 o monto con centavos ej: $25.15) -->
                     <td class="py-4 px-3 text-center">
-                      <div class="inline-flex items-center justify-center min-w-[85px] h-10 px-3 text-sm font-bold text-gray-900 border border-gray-300 rounded-lg bg-white shadow-2xs">
+                      <div 
+                        class="inline-flex items-center justify-center min-w-[85px] h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white shadow-2xs transition-colors"
+                        :class="granTotalPresupuesto !== '000' ? 'text-gray-900 font-bold' : 'text-gray-400 font-normal'"
+                      >
                         ${{ granTotalPresupuesto }}
                       </div>
                     </td>
@@ -1012,73 +1030,67 @@ const finalizarEnvio = () => {
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL PARA AGREGAR COLUMNA AL PRESUPUESTO                                -->
+    <!-- TOAST DE ÉXITO IDÉNTICO A LA CAPTURA (ESQUINA INFERIOR DERECHA)           -->
     <!-- ========================================================================= -->
-    <div 
-      v-if="modalColumnaAbierto" 
-      class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+    <transition
+      enter-active-class="transform ease-out duration-300 transition"
+      enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
+      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+      leave-active-class="transition ease-in duration-200"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
     >
-      <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-100">
-        <h4 class="text-base font-bold text-gray-900 mb-2">
-          Agregar columna de mes
-        </h4>
-        <p class="text-xs text-gray-500 mb-4">
-          Ingresa el nombre o abreviatura de la nueva columna (ej: Agos., Sept., Extra).
-        </p>
-        <input 
-          v-model="nuevaColumnaNombre"
-          @keyup.enter="agregarColumna"
-          type="text" 
-          placeholder="Ej: Agos."
-          class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-5"
-          autofocus
-        />
-        <div class="flex justify-end gap-2">
+      <div 
+        v-if="toastExitoVisible" 
+        class="fixed bottom-6 right-6 z-50 bg-[#00C853] text-white rounded-2xl shadow-2xl p-5 w-80 sm:w-96 border border-emerald-400/40"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-2.5">
+            <!-- Icono check circular -->
+            <div class="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h4 class="text-lg font-bold tracking-tight">Enviado</h4>
+          </div>
+          <!-- Botón cerrar (X) -->
           <button 
-            @click="modalColumnaAbierto = false"
-            type="button"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+            @click="finalizarEnvio"
+            class="text-white/80 hover:text-white transition-colors cursor-pointer p-0.5"
           >
-            Cancelar
-          </button>
-          <button 
-            @click="agregarColumna"
-            type="button"
-            class="px-4 py-2 text-xs font-semibold text-white bg-[#010C67] hover:bg-[#000840] rounded-lg transition cursor-pointer shadow-xs"
-          >
-            Agregar
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
-      </div>
-    </div>
 
-    <!-- ========================================================================= -->
-    <!-- MODAL DE ÉXITO TRAS REGISTRAR EL INFORME FINAL                           -->
-    <!-- ========================================================================= -->
-    <div 
-      v-if="exitoModal" 
-      class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
-    >
-      <div class="bg-white rounded-2xl p-7 max-w-md w-full shadow-2xl text-center border border-gray-100">
-        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-2">
-          ¡Informe final enviado!
-        </h3>
-        <p class="text-sm text-gray-600 mb-6">
-          Tu informe final ha sido registrado de manera exitosa y se encuentra en revisión por el comité evaluador.
+        <p class="text-white/95 text-sm mt-2 mb-4 leading-relaxed font-normal">
+          Reporte enviado exitosamente
         </p>
-        <button 
-          @click="finalizarEnvio"
-          class="w-full py-2.5 bg-[#010C67] hover:bg-[#000840] text-white text-sm font-semibold rounded-xl shadow-md transition cursor-pointer"
-        >
-          Aceptar
-        </button>
+
+        <div class="flex justify-end">
+          <button
+            @click="finalizarEnvio"
+            class="px-5 py-1.5 border border-white rounded-lg text-xs font-semibold text-white hover:bg-white hover:text-[#00C853] transition-all cursor-pointer shadow-xs"
+          >
+            Aceptar
+          </button>
+        </div>
       </div>
-    </div>
+    </transition>
 
   </div>
 </template>
+
+<style scoped>
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+</style>

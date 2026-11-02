@@ -112,31 +112,77 @@ class InformeFinalController extends Controller
             return $b->id <=> $a->id;
         })->values();
 
-        // Si la base de datos aún no tiene reportes para este usuario, preparar sugerencias
-        $reportesFormateados = $reportesDisponibles->map(function ($rep) {
-            return [
-                'id' => $rep->id,
-                'mes' => $rep->mes,
-                'periodo' => $rep->periodo,
-                'actividades_desarrolladas' => $rep->actividades_desarrolladas,
-                'estado' => $rep->estado,
-                'aprobado' => strtolower($rep->estado) === 'aprobado',
-            ];
-        });
+        // Si la base de datos aún no tiene reportes para este usuario, preparar sugerencias según la maqueta
+        if ($reportesDisponibles->isEmpty()) {
+            $reportesFormateados = collect([
+                [
+                    'id' => 1,
+                    'mes' => 'Enero',
+                    'periodo' => '01 Ene – 27 Ene 2026',
+                    'actividades_desarrolladas' => 12,
+                    'estado' => 'Aprobado',
+                    'aprobado' => true,
+                ],
+                [
+                    'id' => 2,
+                    'mes' => 'Febrero',
+                    'periodo' => '01 Febr – 27 Febr 2026',
+                    'actividades_desarrolladas' => 12,
+                    'estado' => 'Aprobado',
+                    'aprobado' => true,
+                ],
+            ]);
+        } else {
+            $reportesFormateados = $reportesDisponibles->map(function ($rep) {
+                return [
+                    'id' => $rep->id,
+                    'mes' => $rep->mes,
+                    'periodo' => $rep->periodo,
+                    'actividades_desarrolladas' => $rep->actividades_desarrolladas,
+                    'estado' => $rep->estado,
+                    'aprobado' => strtolower($rep->estado) === 'aprobado',
+                ];
+            });
+        }
 
-        // Configuración por defecto del presupuesto dinámico según la maqueta
-        $columnasDefecto = ['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Junio', 'Jul.'];
+        // Construir columnas del presupuesto desde el primer reporte mensual hasta el último
+        $mesesAbrev = [
+            1 => 'Ene.', 2 => 'Feb.', 3 => 'Mar.', 4 => 'Abr.',
+            5 => 'May.', 6 => 'Junio', 7 => 'Jul.', 8 => 'Agos.',
+            9 => 'Sept.', 10 => 'Oct.', 11 => 'Nov.', 12 => 'Dic.'
+        ];
+        $mesesIdentificados = [];
+        foreach ($reportesFormateados as $rep) {
+            $m = strtolower(trim((string)$rep['mes']));
+            foreach ($mesesNum as $k => $num) {
+                if (str_starts_with($m, $k)) {
+                    $mesesIdentificados[$num] = true;
+                    break;
+                }
+            }
+        }
+        ksort($mesesIdentificados);
+        $columnasDinamicas = [];
+        foreach (array_keys($mesesIdentificados) as $mesNum) {
+            if (isset($mesesAbrev[$mesNum])) {
+                $columnasDinamicas[] = $mesesAbrev[$mesNum];
+            }
+        }
+        if (empty($columnasDinamicas)) {
+            $columnasDinamicas = ['Ene.', 'Feb.'];
+        }
+
         $itemsDefecto = [
             [
                 'gasto' => 'Comida',
                 'orden' => 1,
-                'montos' => array_fill_keys($columnasDefecto, 0),
+                'montos' => array_fill_keys($columnasDinamicas, 0),
                 'total' => 0,
             ],
             [
                 'gasto' => 'Pasaje',
                 'orden' => 2,
-                'montos' => array_fill_keys($columnasDefecto, 0),
+                'montos' => array_fill_keys($columnasDinamicas, 0),
                 'total' => 0,
             ],
         ];
@@ -149,7 +195,7 @@ class InformeFinalController extends Controller
                 'nombre_pasante' => $nombreCompleto,
                 'institucion' => $institucionSugerida,
                 'reportes_disponibles' => $reportesFormateados,
-                'presupuesto_columnas_sugeridas' => $columnasDefecto,
+                'presupuesto_columnas_sugeridas' => $columnasDinamicas,
                 'presupuesto_items_sugeridos' => $itemsDefecto,
             ]
         ]);
