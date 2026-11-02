@@ -141,12 +141,15 @@ const cargarEstadoPasantia = async () => {
   try {
     const userId = usuario.value?.id || usuario.value?.user_id || 0
     const correo = usuario.value?.correo || usuario.value?.email || ''
+    const token = localStorage.getItem('genesis_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
     const res = await axios.get('/api/pasante/estado', {
       params: { 
         user_id: userId,
         correo
-      }
+      },
+      headers
     })
     if (res.data) {
       if (res.data.pasantia && res.data.pasantia.fases) {
@@ -164,9 +167,9 @@ const cargarEstadoPasantia = async () => {
     // Comprobación adicional en vivo (para cambios inmediatos entre componentes)
     try {
       const [cvRes, repRes, infRes] = await Promise.allSettled([
-        axios.get(`/api/cv/obtener/${userId}`, { params: { correo } }),
-        axios.get('/api/reportes', { params: { user_id: userId } }),
-        axios.get('/api/informes-finales', { params: { user_id: userId } })
+        axios.get(`/api/cv/obtener/${userId}`, { params: { correo }, headers }),
+        axios.get('/api/reportes', { params: { user_id: userId }, headers }),
+        axios.get('/api/informes-finales', { params: { user_id: userId }, headers })
       ])
 
       const tieneCv = (cvRes.status === 'fulfilled' && cvRes.value?.data?.cvs && cvRes.value.data.cvs.length > 0)
