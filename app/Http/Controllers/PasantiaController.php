@@ -19,13 +19,17 @@ class PasantiaController extends Controller
     public function obtenerEstado(Request $request)
     {
         $userId = $request->query('user_id') ?? $request->user()?->id;
-        $correo = $request->query('correo');
+        $correo = $request->query('correo') ?? $request->query('user_email') ?? $request->query('email');
 
         $user = null;
         if ($userId) {
             $user = User::find($userId);
-        } elseif ($correo) {
-            $user = User::where('correo_institucional', strtolower(trim($correo)))->first();
+        }
+        if (!$user && $correo) {
+            $c = strtolower(trim($correo));
+            $user = User::whereRaw('LOWER(correo_institucional) = ?', [$c])
+                ->orWhereRaw('LOWER(email) = ?', [$c])
+                ->first();
         }
 
         if (!$user) {
