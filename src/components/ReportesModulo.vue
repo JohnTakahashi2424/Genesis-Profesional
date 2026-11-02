@@ -25,8 +25,15 @@ const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 const vistaActual = ref(props.vistaInicial || 'tabla')
 const informeFinalDetalle = ref(null)
 
-watch(() => props.vistaInicial, (val) => {
-  if (val) {
+watch(() => props.vistaInicial, async (val) => {
+  if (val === 'informe_final_detalle') {
+    let itemInf = reportes.value.find(r => r.es_informe_final)
+    if (itemInf) {
+      await verDetalle(itemInf)
+    } else {
+      await verDetalle({ es_informe_final: true, id: 1 })
+    }
+  } else if (val) {
     vistaActual.value = val
   }
 })
@@ -398,6 +405,8 @@ const handleInformeFinalGuardado = () => {
   toastMensaje.value = 'Reporte enviado exitosamente'
   toastExitoVisible.value = true
   cargarReportes()
+  window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+  localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
   setTimeout(() => {
     toastExitoVisible.value = false
   }, 4000)
@@ -666,6 +675,8 @@ const enviarReporte = async () => {
 
     // Refrescar lista
     await cargarReportes()
+    window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+    localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
 
     // Mostrar modal / toast de éxito de la Captura 4
     toastMensaje.value = 'Reporte enviado exitosamente'
@@ -724,9 +735,29 @@ const reportesMostrados = computed(() => {
 onMounted(async () => {
   window.addEventListener('click', cerrarDropdownsAlClickFuera)
   await cargarReportes()
-  const idParaAbrir = props.reporteInicialId || localStorage.getItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
+
+  // 1. Abrir informe final si fue invocado desde Historial, Notificaciones o Panel
+  const verInformeFinal = localStorage.getItem('genesis_ver_informe_final')
+  const informeFinalId = localStorage.getItem('genesis_ver_informe_final_id')
+  if (verInformeFinal === 'true' || informeFinalId || props.vistaInicial === 'informe_final_detalle') {
+    localStorage.removeItem('genesis_ver_informe_final')
+    localStorage.removeItem('genesis_ver_informe_final_id')
+    let itemInf = reportes.value.find(r => r.es_informe_final && (!informeFinalId || String(r.informe_final_id) === String(informeFinalId) || String(r.rawId) === String(informeFinalId)))
+    if (!itemInf) {
+      itemInf = reportes.value.find(r => r.es_informe_final)
+    }
+    if (itemInf) {
+      await verDetalle(itemInf)
+    } else {
+      await verDetalle({ es_informe_final: true, id: informeFinalId || 1, rawId: informeFinalId || 1, informe_final_id: informeFinalId || 1 })
+    }
+    return
+  }
+
+  // 2. Abrir reporte mensual si fue invocado por ID
+  const idParaAbrir = props.reporteInicialId || localStorage.getItem('genesis_ver_reporte_id')
   if (idParaAbrir) {
-    localStorage.removeItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
+    localStorage.removeItem('genesis_ver_reporte_id')
     const repExistente = reportes.value.find(r => String(r.id) === String(idParaAbrir))
     await verDetalle(repExistente || { id: Number(idParaAbrir) })
   }
@@ -1686,6 +1717,7 @@ onUnmounted(() => {
       <InformeFinalDetalle 
         :informe="informeFinalDetalle" 
         @volver="volverATabla" 
+        @ver-reporte="verDetalle"
       />
     </div>
 

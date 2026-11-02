@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   informe: {
@@ -154,8 +154,35 @@ const anexosList = computed(() => {
   if (props.informe?.anexos && Array.isArray(props.informe.anexos) && props.informe.anexos.length > 0) {
     return props.informe.anexos
   }
-  return []
+  return [
+    { nombre: 'Archivo 1', tipo: 'archivo' },
+    { nombre: 'Archivo 2', tipo: 'archivo' }
+  ]
 })
+
+// Determina si un anexo es imagen para desplegarla directamente
+const esImagen = (anx) => {
+  if (!anx) return false
+  if (anx.es_imagen === true || anx.es_imagen === 'true') return true
+  const nombre = (anx.nombre || '').toLowerCase()
+  const url = (anx.url || anx.preview || '').toLowerCase()
+  const tipo = (anx.tipo || '').toLowerCase()
+
+  if (url.startsWith('data:image/')) return true
+  const extensionesImg = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.bmp', '.avif']
+  if (extensionesImg.some(ext => nombre.endsWith(ext) || url.includes(ext))) return true
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'image'].includes(tipo) || tipo.startsWith('image/')) return true
+  return false
+}
+
+// Lightbox para ampliar imágenes de los anexos
+const imagenLightbox = ref(null)
+const abrirLightbox = (src) => {
+  if (src) imagenLightbox.value = src
+}
+const cerrarLightbox = () => {
+  imagenLightbox.value = null
+}
 
 // Helpers para separar rango y año de fechas
 const formatearRangoPeriodo = (periodo) => {
@@ -378,46 +405,74 @@ const verReporteMensual = (rep) => {
         </div>
 
         <!-- ===================================================================== -->
-        <!-- SECCIÓN: ANEXOS (GRID 2x2 DE TARJETAS DE IMAGEN SEGÚN LA MAQUETA)     -->
+        <!-- SECCIÓN: ANEXOS (IMÁGENES REALES O ARCHIVOS DE ASPECTO GRIS)          -->
         <!-- ===================================================================== -->
         <div class="pt-4">
           <h3 class="text-base font-serif font-bold text-gray-900 mb-4">
             Anexos
           </h3>
 
-          <!-- Grid 2x2 de tarjetas de imagen / archivos -->
-          <div class="grid grid-cols-2 gap-6 max-w-lg">
+          <!-- Grid de tarjetas de imagen / archivos -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-2xl">
             <div 
-              v-for="anx in anexosList" 
-              :key="anx.id || anx.nombre"
-              class="flex flex-col items-center justify-center p-3 rounded-2xl transition hover:opacity-95"
+              v-for="(anx, idx) in anexosList" 
+              :key="idx"
+              class="flex flex-col items-center justify-center p-2 rounded-2xl transition hover:opacity-95"
             >
-              <!-- Icono vectorial exacto del archivo con imagen y esquina doblada -->
-              <svg class="w-32 h-40 sm:w-40 sm:h-48 text-[#8E939B] drop-shadow-xs" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Hoja con esquina doblada tipo dog-ear -->
-                <path d="M12 0H112L160 48V188C160 194.627 154.627 200 148 200H12C5.37258 200 0 194.627 0 188V12C0 5.37258 5.37258 0 12 0Z" fill="currentColor"/>
-                <!-- Sol / Círculo blanco superior izquierdo -->
-                <circle cx="56" cy="112" r="14" fill="white"/>
-                <!-- Montaña / Pico izquierdo blanco -->
-                <path d="M28 166L66 116L104 166H28Z" fill="white"/>
-                <!-- Montaña / Pico derecho blanco -->
-                <path d="M86 166L116 128L146 166H86Z" fill="white"/>
-              </svg>
+              <!-- CASO 1: SI ES IMAGEN -> MOSTRAR LA IMAGEN COMO TAL -->
+              <div 
+                v-if="esImagen(anx)" 
+                @click="abrirLightbox(anx.url || anx.preview)"
+                class="w-32 h-40 sm:w-40 sm:h-48 rounded-xl overflow-hidden border border-gray-300 shadow-sm bg-gray-50 flex items-center justify-center cursor-pointer hover:shadow-md transition"
+                title="Clic para ampliar imagen"
+              >
+                <img 
+                  :src="anx.url || anx.preview" 
+                  :alt="anx.nombre || 'Anexo'" 
+                  class="w-full h-full object-cover"
+                />
+              </div>
 
-              <!-- Nombre del archivo si existe enlace de descarga -->
+              <!-- CASO 2: SI ES ARCHIVO (NO IMAGEN) -> MOSTRAR LA IMAGEN CON ASPECTO GRIS (HOJA VECTORIAL) -->
+              <div 
+                v-else 
+                class="flex flex-col items-center justify-center"
+              >
+                <svg class="w-32 h-40 sm:w-40 sm:h-48 text-[#8E939B] drop-shadow-xs" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Hoja con esquina doblada tipo dog-ear -->
+                  <path d="M12 0H112L160 48V188C160 194.627 154.627 200 148 200H12C5.37258 200 0 194.627 0 188V12C0 5.37258 5.37258 0 12 0Z" fill="currentColor"/>
+                  <!-- Sol / Círculo blanco superior izquierdo -->
+                  <circle cx="56" cy="112" r="14" fill="white"/>
+                  <!-- Montaña / Pico izquierdo blanco -->
+                  <path d="M28 166L66 116L104 166H28Z" fill="white"/>
+                  <!-- Montaña / Pico derecho blanco -->
+                  <path d="M86 166L116 128L146 166H86Z" fill="white"/>
+                </svg>
+              </div>
+
+              <!-- Nombre del archivo o enlace de descarga -->
               <a 
-                v-if="anx.url" 
+                v-if="anx.url && !anx.url.startsWith('data:')" 
                 :href="anx.url" 
                 target="_blank" 
                 download
-                class="mt-2 text-xs font-semibold text-blue-700 hover:underline truncate max-w-xs"
+                class="mt-2 text-xs font-semibold text-blue-700 hover:underline truncate max-w-[140px] text-center block"
+                :title="anx.nombre"
               >
                 {{ anx.nombre }}
               </a>
+              <span 
+                v-else
+                class="mt-2 text-xs font-semibold text-gray-800 truncate max-w-[140px] text-center block"
+                :title="anx.nombre"
+              >
+                {{ anx.nombre }}
+              </span>
             </div>
           </div>
         </div>
 
+        <!-- ===================================================================== -->
         <!-- ===================================================================== -->
         <!-- SECCIÓN: PRESUPUESTO                                                  -->
         <!-- ===================================================================== -->

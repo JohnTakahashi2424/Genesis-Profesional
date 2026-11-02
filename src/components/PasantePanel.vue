@@ -129,14 +129,14 @@ watch(fotoUsuario, (newVal) => {
 const pasantidaInfo = ref({
   fase_actual: 'Fase 1',
   fases: {
-    fase_1: { nombre: 'Fase 1: Currículum', estado: 'completado' },
-    fase_2: { nombre: 'Fase 2: Aceptado', estado: 'completado' },
+    fase_1: { nombre: 'Fase 1: Currículum', estado: 'pendiente' },
+    fase_2: { nombre: 'Fase 2: Aceptado', estado: 'pendiente' },
     fase_3: { nombre: 'Fase 3: Prácticas', estado: 'pendiente' },
     fase_4: { nombre: 'Fase 4: Informe final', estado: 'pendiente' }
   }
 })
 
-// Cargar estado de la pasantía y datos frescos del usuario desde la API
+// Cargar estado de la pasantía y datos frescos del usuario desde la API con reactividad en vivo
 const cargarEstadoPasantia = async () => {
   try {
     const userId = usuario.value?.id || usuario.value?.user_id || 0
@@ -149,7 +149,7 @@ const cargarEstadoPasantia = async () => {
       }
     })
     if (res.data) {
-      if (res.data.pasantia) {
+      if (res.data.pasantia && res.data.pasantia.fases) {
         pasantidaInfo.value = res.data.pasantia
       }
       if (res.data.usuario) {
@@ -161,10 +161,20 @@ const cargarEstadoPasantia = async () => {
       }
     }
 
+    // Comprobación adicional en vivo (para cambios inmediatos entre componentes)
     try {
-      const cvRes = await axios.get(`/api/cv/obtener/${userId}`, { params: { correo } })
-      if (cvRes.data && cvRes.data.cvs && cvRes.data.cvs.length > 0) {
-        const cv = cvRes.data.cvs[0]
+      const [cvRes, repRes, infRes] = await Promise.allSettled([
+        axios.get(`/api/cv/obtener/${userId}`, { params: { correo } }),
+        axios.get('/api/reportes', { params: { user_id: userId } }),
+        axios.get('/api/informes-finales', { params: { user_id: userId } })
+      ])
+
+      const tieneCv = (cvRes.status === 'fulfilled' && cvRes.value?.data?.cvs && cvRes.value.data.cvs.length > 0)
+        || !!localStorage.getItem('genesis_cv')
+        || pasantidaInfo.value?.fases?.fase_1?.estado === 'completado'
+
+      if (cvRes.status === 'fulfilled' && cvRes.value?.data?.cvs && cvRes.value.data.cvs.length > 0) {
+        const cv = cvRes.value.data.cvs[0]
         const fotoBD = cv.foto_url || cv.foto || cv.avatar
         if (fotoBD) {
           const fotoNorm = normalizarUrlFoto(fotoBD)
@@ -174,8 +184,48 @@ const cargarEstadoPasantia = async () => {
           localStorage.setItem('genesis_usuario', JSON.stringify(usuario.value))
         }
       }
-    } catch (e) {
-      console.warn('No se pudo cargar foto CV en panel:', e)
+
+      const listaReportes = (repRes.status === 'fulfilled' && Array.isArray(repRes.value?.data?.data))
+        ? repRes.value.data.data
+        : []
+      const tieneReporte = listaReportes.length > 0 || pasantidaInfo.value?.fases?.fase_2?.estado === 'completado'
+
+      const listaInformes = (infRes.status === 'fulfilled' && Array.isArray(infRes.value?.data?.data))
+        ? infRes.value.data.data
+        : []
+      const tieneInformeFinal = listaInformes.length > 0 
+        || pasantidaInfo.value?.fases?.fase_4?.estado === 'en_revision' 
+        || pasantidaInfo.value?.fases?.fase_4?.estado === 'completado'
+
+      // Aplicar coherencia en vivo de estados y colores según especificación:
+      // - Inicial: Todas en grises y pendientes.
+      // - Al crear CV: Fase 1 completado (verde).
+      // - Al crear reporte por 1ra vez: Fase 2 completado (verde), Fase 3 completado (amarillo en revisión).
+      // - Al subir reporte final: Fase 3 completado (verde), Fase 4 completado (amarillo en revisión).
+      if (!pasantidaInfo.value.fases) {
+        pasantidaInfo.value.fases = {
+          fase_1: { nombre: 'Fase 1: Currículum', estado: 'pendiente' },
+          fase_2: { nombre: 'Fase 2: Aceptado', estado: 'pendiente' },
+          fase_3: { nombre: 'Fase 3: Prácticas', estado: 'pendiente' },
+          fase_4: { nombre: 'Fase 4: Informe final', estado: 'pendiente' }
+        }
+      }
+
+      pasantidaInfo.value.fases.fase_1.estado = tieneCv ? 'completado' : 'pendiente'
+      pasantidaInfo.value.fases.fase_2.estado = (tieneReporte || tieneInformeFinal) ? 'completado' : 'pendiente'
+
+      if (tieneInformeFinal) {
+        pasantidaInfo.value.fases.fase_3.estado = 'completado'
+        pasantidaInfo.value.fases.fase_4.estado = 'en_revision'
+      } else if (tieneReporte) {
+        pasantidaInfo.value.fases.fase_3.estado = 'en_revision'
+        pasantidaInfo.value.fases.fase_4.estado = 'pendiente'
+      } else {
+        pasantidaInfo.value.fases.fase_3.estado = 'pendiente'
+        pasantidaInfo.value.fases.fase_4.estado = 'pendiente'
+      }
+    } catch (eLive) {
+      console.warn('Error al verificar estado en vivo:', eLive)
     }
   } catch (err) {
     console.warn('Usando estado inicial de pasantía:', err)
@@ -195,7 +245,9 @@ const mapPathToItem = (path) => {
 
 const navegarA = (item) => {
   itemActivo.value = item
-  if (item !== 'reportes') {
+  if (item === 'reportes' && localStorage.getItem('genesis_ver_informe_final') === 'true') {
+    reportesVistaInicial.value = 'informe_final_detalle'
+  } else if (item !== 'reportes') {
     reportesVistaInicial.value = 'tabla'
   }
   const currentPath = window.location.pathname
@@ -225,6 +277,8 @@ onMounted(async () => {
   })
 
   window.addEventListener('focus', cargarContadorNotificaciones)
+  window.addEventListener('pasantia-actualizada', cargarEstadoPasantia)
+  window.addEventListener('storage', cargarEstadoPasantia)
 
   // Sondeo en tiempo real cada 30 segundos
   intervalNotificaciones = setInterval(() => {
@@ -475,7 +529,7 @@ const handleLogout = () => {
             </h2>
           </div>
 
-          <!-- 4 Fases Horizontales -->
+          <!-- 4 Fases Horizontales con Estados Dinámicos en Vivo -->
           <div class="grid grid-cols-4 gap-4 text-center items-start">
             
             <!-- Fase 1: Currículum -->
@@ -486,8 +540,17 @@ const handleLogout = () => {
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 1: Currículum</span>
-              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_1?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
                 ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
+                Pendiente
               </span>
             </div>
 
@@ -495,12 +558,21 @@ const handleLogout = () => {
             <div class="flex flex-col items-center">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 25 21" fill="none">
-                  <path d="M24.1466 12.1559V16.945C24.1466 17.7876 23.765 18.5958 23.0858 19.1916C22.4065 19.7874 21.4852 20.1222 20.5246 20.1222H3.62199C2.66138 20.1222 1.74011 19.7874 1.06086 19.1916C0.381602 18.5958 0 17.7876 0 16.945V12.1559L0.667654 12.4493C4.20625 14.0127 8.1133 14.8269 12.0754 14.8265C16.0375 14.8261 19.9444 14.0112 23.4826 12.4472L24.1466 12.1559ZM14.488 0C15.4486 0 16.3698 0.334738 17.0491 0.930576C17.7284 1.52641 18.11 2.33454 18.11 3.17719V4.23625H20.5246C21.4852 4.23625 22.4065 4.57099 23.0858 5.16682C23.765 5.76266 24.1466 6.57079 24.1466 7.41343V9.78785L22.3996 10.5546C19.2739 11.9368 15.829 12.6732 12.3287 12.7073C8.82851 12.7415 5.3658 12.0725 2.20579 10.7516L1.42465 10.4127L0 9.78785V7.41343C0 6.57079 0.381602 5.76266 1.06086 5.16682C1.74011 4.57099 2.66138 4.23625 3.62199 4.23625H6.03665V3.17719C6.03665 2.33454 6.41825 1.52641 7.09751 0.930576C7.77676 0.334738 8.69803 0 9.65864 0H14.488ZM12.0733 8.47249C11.7531 8.47249 11.446 8.58407 11.2196 8.78269C10.9932 8.9813 10.866 9.25068 10.866 9.53156C10.8652 9.67063 10.8956 9.80849 10.9556 9.93724C11.0155 10.066 11.1038 10.1831 11.2153 10.282C11.3269 10.3808 11.4595 10.4594 11.6057 10.5133C11.7519 10.5671 11.9087 10.5952 12.0673 10.5959C12.2258 10.5966 12.383 10.5699 12.5298 10.5173C12.6765 10.4647 12.8101 10.3873 12.9227 10.2895C13.0354 10.1916 13.125 10.0753 13.1864 9.94703C13.2478 9.8188 13.2798 9.68122 13.2806 9.54215C13.2806 8.94695 12.7398 8.47249 12.0733 8.47249ZM14.488 2.11812H9.65864C9.33844 2.11812 9.03135 2.2297 8.80493 2.42832C8.57851 2.62693 8.45131 2.8963 8.45131 3.17719V4.23625H15.6953V3.17719C15.6953 2.8963 15.5681 2.62693 15.3417 2.42832C15.1153 2.2297 14.8082 2.11812 14.488 2.11812Z" fill="black"/>
+                  <path d="M24.1466 12.1559V16.945C24.1466 17.7876 23.765 18.5958 23.0858 19.1916C22.4065 19.7874 21.4852 20.1222H3.62199C2.66138 20.1222 1.74011 19.7874 1.06086 19.1916C0.381602 18.5958 0 17.7876 0 16.945V12.1559L0.667654 12.4493C4.20625 14.0127 8.1133 14.8269 12.0754 14.8265C16.0375 14.8261 19.9444 14.0112 23.4826 12.4472L24.1466 12.1559ZM14.488 0C15.4486 0 16.3698 0.334738 17.0491 0.930576C17.7284 1.52641 18.11 2.33454 18.11 3.17719V4.23625H20.5246C21.4852 4.23625 22.4065 4.57099 23.0858 5.16682C23.765 5.76266 24.1466 6.57079 24.1466 7.41343V9.78785L22.3996 10.5546C19.2739 11.9368 15.829 12.6732 12.3287 12.7073C8.82851 12.7415 5.3658 12.0725 2.20579 10.7516L1.42465 10.4127L0 9.78785V7.41343C0 6.57079 0.381602 5.76266 1.06086 5.16682C1.74011 4.57099 2.66138 4.23625 3.62199 4.23625H6.03665V3.17719C6.03665 2.33454 6.41825 1.52641 7.09751 0.930576C7.77676 0.334738 8.69803 0 9.65864 0H14.488ZM12.0733 8.47249C11.7531 8.47249 11.446 8.58407 11.2196 8.78269C10.9932 8.9813 10.866 9.25068 10.866 9.53156C10.8652 9.67063 10.8956 9.80849 10.9556 9.93724C11.0155 10.066 11.1038 10.1831 11.2153 10.282C11.3269 10.3808 11.4595 10.4594 11.6057 10.5133C11.7519 10.5671 11.9087 10.5952 12.0673 10.5959C12.2258 10.5966 12.383 10.5699 12.5298 10.5173C12.6765 10.4647 12.8101 10.3873 12.9227 10.2895C13.0354 10.1916 13.125 10.0753 13.1864 9.94703C13.2478 9.8188 13.2798 9.68122 13.2806 9.54215C13.2806 8.94695 12.7398 8.47249 12.0733 8.47249ZM14.488 2.11812H9.65864C9.33844 2.11812 9.03135 2.2297 8.80493 2.42832C8.57851 2.62693 8.45131 2.8963 8.45131 3.17719V4.23625H15.6953V3.17719C15.6953 2.8963 15.5681 2.62693 15.3417 2.42832C15.1153 2.2297 14.8082 2.11812 14.488 2.11812Z" fill="black"/>
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 2: Aceptado</span>
-              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_2?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
                 ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
+                Pendiente
               </span>
             </div>
 
@@ -512,7 +584,22 @@ const handleLogout = () => {
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 3: Prácticas</span>
-              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_3?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else-if="pasantidaInfo.fases?.fase_3?.estado === 'en_revision'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFC071] text-gray-900 shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
                 Pendiente
               </span>
             </div>
@@ -521,11 +608,26 @@ const handleLogout = () => {
             <div @click="abrirInformeFinal" class="flex flex-col items-center cursor-pointer group">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
-                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 18.8269 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
+                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 4: Informe final</span>
-              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_4?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else-if="pasantidaInfo.fases?.fase_4?.estado === 'en_revision'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFC071] text-gray-900 shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
                 Pendiente
               </span>
             </div>

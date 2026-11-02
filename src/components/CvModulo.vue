@@ -501,6 +501,9 @@ const guardarCvFinal = async () => {
         u.foto_url = formCv.value.perfil.fotoUrl
         localStorage.setItem('genesis_usuario', JSON.stringify(u))
       }
+      localStorage.setItem('genesis_cv', 'true')
+      window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+      localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
       mostrandoWizard.value = false
       await cargarCvs()
       // Redirigir automáticamente al Inicio

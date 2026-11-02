@@ -159,6 +159,28 @@ const eliminarNotificacion = async (id) => {
 // Navegar al recurso asociado desde el detalle (ej. al reporte)
 const irAlRecurso = (enlace) => {
   volverALista()
+  const titulo = (notificacionSeleccionada.value?.titulo || '').toLowerCase()
+  const mensaje = (notificacionSeleccionada.value?.mensaje || '').toLowerCase()
+  const url = (enlace || '').toLowerCase()
+
+  // Detectar si la notificación es relativa a un Informe Final
+  const esInformeFinal = url.includes('informe-final') ||
+    url.includes('informe_final') ||
+    titulo.includes('informe final') ||
+    titulo.includes('reporte final') ||
+    mensaje.includes('informe final') ||
+    mensaje.includes('reporte final')
+
+  if (esInformeFinal) {
+    localStorage.setItem('genesis_ver_informe_final', 'true')
+    const matchId = url.match(/(\d+)/)
+    if (matchId && matchId[1]) {
+      localStorage.setItem('genesis_ver_informe_final_id', matchId[1])
+    }
+    emit('navegar', 'reportes')
+    return
+  }
+
   if (!enlace) {
     emit('navegar', 'reportes')
     return

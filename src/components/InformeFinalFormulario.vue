@@ -174,12 +174,26 @@ const handleDrop = (event) => {
 
 const procesarArchivos = (files) => {
   files.forEach(file => {
-    anexos.value.push({
+    const ext = file.name.split('.').pop().toLowerCase()
+    const esImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext) || file.type.startsWith('image/')
+    const anexoObj = {
       file,
       nombre: file.name,
       tamano: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-      tipo: file.type
-    })
+      tipo: ext || file.type,
+      es_imagen: esImg,
+      url: '',
+      preview: ''
+    }
+    if (esImg) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        anexoObj.url = e.target.result
+        anexoObj.preview = e.target.result
+      }
+      reader.readAsDataURL(file)
+    }
+    anexos.value.push(anexoObj)
   })
 }
 
@@ -429,12 +443,18 @@ const enviarInforme = async () => {
     }))
     formData.append('presupuesto_items', JSON.stringify(itemsFormateados))
 
-    // Adjuntar archivos anexos
+    // Adjuntar archivos anexos y sus metadatos
     anexos.value.forEach((anx, i) => {
       if (anx.file) {
         formData.append(`archivos[${i}]`, anx.file)
       }
     })
+    formData.append('anexos_meta', JSON.stringify(anexos.value.map(a => ({
+      nombre: a.nombre,
+      tipo: a.tipo,
+      es_imagen: a.es_imagen,
+      url: a.url && a.url.startsWith('data:') ? a.url : ''
+    }))))
 
     const config = {
       headers: {
@@ -466,6 +486,8 @@ const enviarInforme = async () => {
           timestamp: Date.now()
         }))
         localStorage.setItem('genesis_historial_updated', Date.now().toString())
+        window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+        localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
       } catch (e) {}
 
       toastExitoVisible.value = true

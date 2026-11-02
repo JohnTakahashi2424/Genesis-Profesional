@@ -372,6 +372,28 @@ const ingresarASeccion = (ind) => {
 
 // Acción de navegación al hacer clic en "Ver reporte", "Ver perfil", etc.
 const ejecutarAccion = (item) => {
+  const titulo = (item.titulo || '').toLowerCase()
+  const descripcion = (item.descripcion || '').toLowerCase()
+  const url = (item.accion_url || '').toLowerCase()
+
+  // Detectar si la acción corresponde a un Informe Final
+  const esInformeFinal = url.includes('informe-final') ||
+    url.includes('informe_final') ||
+    titulo.includes('informe final') ||
+    titulo.includes('reporte final') ||
+    descripcion.includes('informe final') ||
+    descripcion.includes('reporte final')
+
+  if (esInformeFinal) {
+    localStorage.setItem('genesis_ver_informe_final', 'true')
+    const matchId = url.match(/(\d+)/)
+    if (matchId && matchId[1]) {
+      localStorage.setItem('genesis_ver_informe_final_id', matchId[1])
+    }
+    emit('navegar', 'reportes')
+    return
+  }
+
   if (item.accion_url && item.accion_url.includes('reporte')) {
     const match = item.accion_url.match(/reportes\/(\d+)/)
     if (match && match[1]) {
