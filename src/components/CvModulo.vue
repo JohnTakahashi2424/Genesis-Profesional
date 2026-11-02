@@ -640,16 +640,6 @@ const eliminarCv = async (cvId) => {
           <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             Bienvenido a Génesis Profesional - Completa tu perfil profesional
           </h3>
-          <button 
-            type="button" 
-            @click="cancelarWizard" 
-            class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-1 transition-colors cursor-pointer" 
-            aria-label="Cerrar"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         <div class="p-6 sm:p-8 text-center">
@@ -954,46 +944,48 @@ const eliminarCv = async (cvId) => {
         v-else
         class="relative w-full max-w-[850px] bg-white rounded-[22px] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]"
       >
-        <!-- Modal Verde "Perfil completado" superpuesto si esta activo (Captura 1) -->
+        <!-- Modal Verde "Perfil completado" superpuesto si esta activo (Captura 2) -->
         <div 
           v-if="mostrandoModalExito"
-          class="absolute inset-0 z-30 flex items-center justify-center p-6 bg-black/40 backdrop-blur-[1px]"
+          class="absolute inset-0 z-30 flex items-start justify-center pt-12 sm:pt-14 px-4 bg-black/15 pointer-events-auto"
         >
-          <div class="relative w-full max-w-[480px] bg-[#10A957] text-white rounded-[22px] p-8 shadow-2xl">
-            <!-- Botón Cerrar ✕ -->
-            <button 
-              @click="mostrandoModalExito = false"
-              class="absolute top-4 right-4 text-white hover:opacity-80 p-1 cursor-pointer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <!-- Título con icono elipse y check -->
-            <div class="flex items-center gap-2.5 mb-3 text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 text-white shrink-0">
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-                <path d="M8.5 12.5L11 15L15.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <h3 class="text-2xl sm:text-3xl font-bold font-serif text-white tracking-tight" style="font-family: 'Lora', Georgia, serif;">
-                Perfil completado
-              </h3>
+          <div class="relative w-full max-w-[310px] bg-[#00A843] text-white rounded-2xl px-5 py-4 shadow-2xl">
+            <!-- Header con Icono + Título + Botón Cerrar ✕ -->
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-5 h-5 text-white shrink-0">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  <path d="M8.5 12.5L11 15L15.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3 class="text-base font-bold text-white tracking-tight">
+                  Perfil completado
+                </h3>
+              </div>
+              <button 
+                type="button"
+                @click="mostrandoModalExito = false"
+                class="text-white/80 hover:text-white p-0.5 cursor-pointer leading-none transition-opacity"
+                aria-label="Cerrar"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <!-- Subtítulo -->
-            <p class="text-sm sm:text-base font-bold font-sans text-white mb-6 leading-snug text-left pl-8 max-w-[380px]">
-              Su cv ah sido cargado con éxito, verifique sus datos antes de finalizar.
+            <p class="text-xs text-white text-center font-normal leading-relaxed mb-3">
+              Su cv ha sido cargado con éxito. Verifique sus datos antes de finalizar.
             </p>
 
-            <!-- Botón Ver cv (Centrado) -->
-            <div class="flex justify-center pt-1">
+            <!-- Botón Aceptar (Pill redondeado con borde blanco) -->
+            <div class="flex justify-center">
               <button
+                type="button"
                 @click="verCvVistaPrevia"
-                class="px-8 py-2 rounded-[16px] border border-white text-white font-medium text-base sm:text-lg hover:bg-white/10 transition-all cursor-pointer inline-flex items-center justify-center min-w-[140px]"
-                style="font-family: 'Lora', Georgia, serif;"
+                class="px-5 py-1 rounded-full border border-white text-white font-medium text-xs hover:bg-white/10 transition-all cursor-pointer bg-transparent"
               >
-                Ver cv
+                Aceptar
               </button>
             </div>
           </div>

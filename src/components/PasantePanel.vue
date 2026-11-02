@@ -179,19 +179,19 @@ const handleLogout = () => {
 <template>
   <div class="flex min-h-screen bg-[#f4f5f7] font-sans antialiased text-gray-900 select-none">
      <!-- SIDEBAR NAVEGACIÓN (IZQUIERDA) — Con línea de sombra definida -->
-    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[3px_0_0px_0px_rgba(0,0,0,0.08)] relative z-20 flex flex-col justify-between shrink-0 select-none min-h-screen">
+    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[3px_0_0px_0px_rgba(0,0,0,0.08)] relative z-20 flex flex-col shrink-0 select-none min-h-screen">
       <div>
         <!-- Logo UGB Centrado -->
-        <div class="pt-8 pb-6 flex justify-center">
-          <img src="/images/logo_ugb.png" alt="Logo UGB" class="h-24 w-auto object-contain" />
+        <div class="pt-6 pb-4 flex justify-center">
+          <img src="/images/logo_ugb.png" alt="Logo UGB" class="h-20 w-auto object-contain" />
         </div>
 
         <!-- Menú de Navegación principal -->
-        <nav class="mt-2 space-y-3">
-          <!-- Inicio (Activo: barra rectangular azul marino completa) -->
+        <nav class="mt-1 space-y-1">
+          <!-- 1. Inicio (Activo: barra rectangular azul marino completa) -->
           <button 
             @click="navegarA('inicio')"
-            class="w-full flex items-center gap-4 px-8 py-3.5 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'inicio' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 19 22" fill="none" class="shrink-0">
@@ -202,10 +202,10 @@ const handleLogout = () => {
             <span>Inicio</span>
           </button>
 
-          <!-- Perfil -->
+          <!-- 2. Perfil -->
           <button 
             @click="navegarA('perfil')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'perfil' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 33 33" fill="none" class="shrink-0">
@@ -214,10 +214,10 @@ const handleLogout = () => {
             <span>Perfil</span>
           </button>
 
-          <!-- Reportes -->
+          <!-- 3. Reportes -->
           <button 
             @click="reportesVistaInicial = 'tabla'; navegarA('reportes')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'reportes' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 25 25" fill="none" class="shrink-0">
@@ -228,10 +228,33 @@ const handleLogout = () => {
             <span>Reportes</span>
           </button>
 
-          <!-- Historial de progreso -->
+          <!-- 4. Notificaciones (Con badge rojo numérico idéntico a la maqueta) -->
+          <button 
+            @click="navegarA('notificaciones')"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
+            :class="itemActivo === 'notificaciones' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
+          >
+            <div class="relative shrink-0 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 25 25" fill="none" class="shrink-0">
+                <g clip-path="url(#clip0_8495_654_panel)">
+                  <path d="M5 10.0001C4.99932 8.4418 5.48404 6.92198 6.38682 5.65182C7.28959 4.38166 8.56559 3.42425 10.0375 2.9126C9.9805 2.55549 10.0017 2.19026 10.0995 1.84212C10.1974 1.49397 10.3696 1.1712 10.6043 0.896075C10.839 0.620946 11.1306 0.40001 11.4589 0.248511C11.7873 0.0970111 12.1446 0.0185547 12.5063 0.0185547C12.8679 0.0185547 13.2252 0.0970111 13.5536 0.248511C13.882 0.40001 14.1735 0.620946 14.4082 0.896075C14.6429 1.1712 14.8152 1.49397 14.913 1.84212C15.0108 2.19026 15.032 2.55549 14.975 2.9126C16.4446 3.42634 17.7179 4.38466 18.6183 5.65464C19.5187 6.92462 20.0016 8.44332 20 10.0001V17.5001L23.75 20.0001V21.2501H1.25V20.0001L5 17.5001V10.0001ZM15 22.5001C15 23.1631 14.7366 23.799 14.2678 24.2679C13.7989 24.7367 13.163 25.0001 12.5 25.0001C11.837 25.0001 11.2011 24.7367 10.7322 24.2679C10.2634 23.799 10 23.1631 10 22.5001H15Z" fill="currentColor"/>
+                </g>
+                <defs>
+                  <clipPath id="clip0_8495_654_panel">
+                    <rect width="25" height="25" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+              <!-- Badge rojo con contador '3' posicionado en la esquina inferior derecha de la campana -->
+              <span class="absolute -bottom-1 -right-1 bg-[#cc0000] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none pointer-events-none shadow-sm">3</span>
+            </div>
+            <span>Notificaciones</span>
+          </button>
+
+          <!-- 5. Historial de progreso -->
           <button 
             @click="navegarA('historial')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'historial' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 27 27" fill="none" class="shrink-0">
@@ -245,10 +268,10 @@ const handleLogout = () => {
             </div>
           </button>
 
-          <!-- Análisis IA -->
+          <!-- 6. Análisis IA -->
           <button 
             @click="navegarA('ia')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'ia' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" class="shrink-0">
@@ -260,10 +283,10 @@ const handleLogout = () => {
             </div>
           </button>
 
-          <!-- Configuración -->
+          <!-- 7. Configuración -->
           <button 
             @click="navegarA('configuracion')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'configuracion' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 34 34" fill="none" class="shrink-0">
@@ -272,41 +295,20 @@ const handleLogout = () => {
             <span>Configuración</span>
           </button>
 
-          <!-- Notificaciones (Idéntico a la maqueta) -->
+          <!-- 8. Cerrar sesión (Integrado directamente en el menú de navegación para encajar sin corte) -->
           <button 
-            @click="navegarA('notificaciones')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
-            :class="itemActivo === 'notificaciones' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
+            @click="handleLogout"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium text-black hover:bg-gray-50 transition-all cursor-pointer rounded-none text-left"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 25 25" fill="none" class="shrink-0">
-              <g clip-path="url(#clip0_8495_654_panel)">
-                <path d="M5 10.0001C4.99932 8.4418 5.48404 6.92198 6.38682 5.65182C7.28959 4.38166 8.56559 3.42425 10.0375 2.9126C9.9805 2.55549 10.0017 2.19026 10.0995 1.84212C10.1974 1.49397 10.3696 1.1712 10.6043 0.896075C10.839 0.620946 11.1306 0.40001 11.4589 0.248511C11.7873 0.0970111 12.1446 0.0185547 12.5063 0.0185547C12.8679 0.0185547 13.2252 0.0970111 13.5536 0.248511C13.882 0.40001 14.1735 0.620946 14.4082 0.896075C14.6429 1.1712 14.8152 1.49397 14.913 1.84212C15.0108 2.19026 15.032 2.55549 14.975 2.9126C16.4446 3.42634 17.7179 4.38466 18.6183 5.65464C19.5187 6.92462 20.0016 8.44332 20 10.0001V17.5001L23.75 20.0001V21.2501H1.25V20.0001L5 17.5001V10.0001ZM15 22.5001C15 23.1631 14.7366 23.799 14.2678 24.2679C13.7989 24.7367 13.163 25.0001 12.5 25.0001C11.837 25.0001 11.2011 24.7367 10.7322 24.2679C10.2634 23.799 10 23.1631 10 22.5001H15Z" fill="currentColor"/>
-              </g>
-              <defs>
-                <clipPath id="clip0_8495_654_panel">
-                  <rect width="25" height="25" fill="white"/>
-                </clipPath>
-              </defs>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 23 23" fill="none" class="shrink-0">
+              <path d="M20.125 2.875H2.875C2.08437 2.875 1.4375 3.52187 1.4375 4.3125V18.6875C1.4375 19.4781 2.08437 20.125 2.875 20.125H20.125C20.9156 20.125 21.5625 19.4781 21.5625 18.6875V4.3125C21.5625 3.52187 20.9156 2.875 20.125 2.875ZM20.125 10.7812H12.7937L15.3812 8.19375L14.375 7.1875L10.0625 11.5L14.375 15.8125L15.3812 14.8063L12.7937 12.2188H20.125V18.6875H8.625V4.3125H20.125V10.7812Z" fill="currentColor"/>
             </svg>
-            <span>Notificaciones</span>
+            <div class="leading-tight text-left">
+              <div>Cerrar</div>
+              <div>sesión</div>
+            </div>
           </button>
         </nav>
-      </div>
-
-      <!-- Cerrar sesión (Abajo en 2 líneas) -->
-      <div class="py-6">
-        <button 
-          @click="handleLogout"
-          class="w-full flex items-center gap-4 px-8 py-2 text-[18px] font-medium text-black hover:bg-gray-50 transition-all cursor-pointer rounded-none text-left"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 23 23" fill="none" class="shrink-0">
-            <path d="M20.125 2.875H2.875C2.08437 2.875 1.4375 3.52187 1.4375 4.3125V18.6875C1.4375 19.4781 2.08437 20.125 2.875 20.125H20.125C20.9156 20.125 21.5625 19.4781 21.5625 18.6875V4.3125C21.5625 3.52187 20.9156 2.875 20.125 2.875ZM20.125 10.7812H12.7937L15.3812 8.19375L14.375 7.1875L10.0625 11.5L14.375 15.8125L15.3812 14.8063L12.7937 12.2188H20.125V18.6875H8.625V4.3125H20.125V10.7812Z" fill="currentColor"/>
-          </svg>
-          <div class="leading-tight text-left">
-            <div>Cerrar</div>
-            <div>sesión</div>
-          </div>
-        </button>
       </div>
     </aside>
 
