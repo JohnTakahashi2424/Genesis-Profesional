@@ -374,7 +374,7 @@ class InformeFinalController extends Controller
                     descripcion: "Se ha registrado el {$tituloProgreso} para la institución {$informe->institucion}.",
                     accionTexto: 'Ver informe final',
                     accionUrl: '/reportes/informe-final/' . $informe->id,
-                    progreso: $esEnvio ? 90 : 70
+                    progreso: 100
                 );
 
                 // 5. Crear notificación automática en el sistema
@@ -615,7 +615,7 @@ class InformeFinalController extends Controller
                 descripcion: $mensajeNotif,
                 accionTexto: 'Ver informe final',
                 accionUrl: '/reportes',
-                progreso: $esAprobado ? 100 : 85
+                progreso: 100
             );
         } catch (\Throwable $e) {
             Log::warning('No se pudo generar notificación de cambio de estado de informe final: ' . $e->getMessage());

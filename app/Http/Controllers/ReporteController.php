@@ -222,25 +222,38 @@ class ReporteController extends Controller
 
             // 3. Registrar actividad en el Historial de Progreso del estudiante
             try {
-                $esEnvio = ($validated['estado'] ?? '') === 'Enviado';
-                $titulo = $esEnvio ? 'Envío de reporte' : 'Creación de reporte';
-                // El progreso arrastra el acumulado de reportes aprobados previos (o 0 si es el primero)
+                // Cada reporte mensual incrementa un 10% hasta un límite de 70% (7 reportes)
                 $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual((int)$userId);
+
+                // Registrar Creación de reporte
                 \App\Models\HistorialProgreso::registrar(
                     userId: (int)$userId,
                     categoria: 'reportes',
-                    titulo: $titulo,
-                    descripcion: "{$titulo} del mes de {$validated['mes']}",
+                    titulo: 'Creación de reporte',
+                    descripcion: "Creación de reporte del mes de {$validated['mes']}",
                     accionTexto: 'Ver reporte',
                     accionUrl: '/reportes/' . $reporte->id,
-                    progreso: $progresoActual
+                    progreso: $progresoActual,
+                    fechaExacta: now()->subMinutes(1)->toDateTimeString()
+                );
+
+                // Registrar Envío de reporte
+                \App\Models\HistorialProgreso::registrar(
+                    userId: (int)$userId,
+                    categoria: 'reportes',
+                    titulo: 'Envío de reporte',
+                    descripcion: "Envío de reporte del mes de {$validated['mes']}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: '/reportes/' . $reporte->id,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->toDateTimeString()
                 );
 
                 // 4. Crear Notificación de acción propia para el usuario
                 \App\Models\Notificacion::crearNotificacion(
                     userId: (int)$userId,
-                    titulo: $esEnvio ? 'Reporte enviado' : 'Reporte creado',
-                    mensaje: "El reporte del mes de {$validated['mes']} ha sido " . ($esEnvio ? 'enviado exitosamente.' : 'creado correctamente.'),
+                    titulo: 'Reporte enviado',
+                    mensaje: "El reporte del mes de {$validated['mes']} ha sido enviado exitosamente.",
                     tipo: 'reporte',
                     origenTipo: 'sistema',
                     remitenteNombre: 'Notificaciones',

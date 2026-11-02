@@ -640,6 +640,30 @@ const enviarReporte = async () => {
       await axios.post('/api/reportes', payload, { headers })
     }
 
+    // Notificar en tiempo real a otras pestañas y ventanas abiertas (Historial de progreso)
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const canalSync = new BroadcastChannel('genesis_historial_sync')
+        canalSync.postMessage({
+          tipo: 'reporte_creado',
+          mes: payload.mes,
+          timestamp: Date.now()
+        })
+        canalSync.close()
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel no disponible:', e)
+    }
+
+    try {
+      localStorage.setItem('genesis_historial_evento', JSON.stringify({
+        tipo: 'reporte_creado',
+        mes: payload.mes,
+        timestamp: Date.now()
+      }))
+      localStorage.setItem('genesis_historial_updated', Date.now().toString())
+    } catch (e) {}
+
     // Refrescar lista
     await cargarReportes()
 

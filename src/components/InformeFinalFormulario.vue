@@ -425,6 +425,28 @@ const enviarInforme = async () => {
     const res = await axios.post('/api/informes-finales', formData, config)
 
     if (res.data && res.data.exito) {
+      // Notificar en tiempo real a otras pestañas y ventanas abiertas (Historial de progreso)
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const canalSync = new BroadcastChannel('genesis_historial_sync')
+          canalSync.postMessage({
+            tipo: 'informe_final_creado',
+            timestamp: Date.now()
+          })
+          canalSync.close()
+        }
+      } catch (e) {
+        console.warn('BroadcastChannel no disponible:', e)
+      }
+
+      try {
+        localStorage.setItem('genesis_historial_evento', JSON.stringify({
+          tipo: 'informe_final_creado',
+          timestamp: Date.now()
+        }))
+        localStorage.setItem('genesis_historial_updated', Date.now().toString())
+      } catch (e) {}
+
       exitoModal.value = true
     } else {
       mensajeError.value = res.data?.mensaje || 'Ocurrió un error al registrar el informe final.'

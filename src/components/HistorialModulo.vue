@@ -63,11 +63,80 @@ const catalogoIndicadores = [
 // Listado reactivo de actividades desde la base de datos (tiempo real)
 const itemsHistorial = ref([])
 const cargando = ref(false)
+const nuevosItemsIds = ref(new Set())
+
+let canalBroadcast = null
+let intervalPolling = null
+
+// Normalización matemática estricta del progreso según el modelo de pasantías:
+// - Cada reporte mensual incrementa un 10% hasta un límite del 70% (7 reportes).
+// - El informe final o reporte final autocompleta la barra al 100%.
+// - Cada tarjeta histórica conserva el progreso que se tenía en ese momento exacto.
+const normalizarProgresos = (lista) => {
+  if (!Array.isArray(lista) || lista.length === 0) return []
+
+  // Orden cronológico ascendente (antiguos primero) para calcular la acumulación cronológica
+  const listaAsc = [...lista].sort((a, b) => {
+    const tA = new Date(a.fecha_exacta_raw || 0).getTime()
+    const tB = new Date(b.fecha_exacta_raw || 0).getTime()
+    return tA - tB
+  })
+
+  const reportesVistos = {}
+  let contadorReportes = 0
+  let ultimoProgreso = 0
+
+  listaAsc.forEach(item => {
+    const textoCompleto = `${item.titulo || ''} ${item.descripcion || ''} ${item.accion_url || ''}`.toLowerCase()
+
+    // 1. Reporte o Informe final -> 100%
+    if (textoCompleto.includes('final')) {
+      ultimoProgreso = 100
+      item.progreso = 100
+      return
+    }
+
+    // 2. ¿Es reporte mensual?
+    const esReporte = ['reportes', 'reportes_aprobados', 'reportes_rechazados'].includes(item.categoria) ||
+      textoCompleto.includes('reporte')
+
+    if (esReporte) {
+      let claveReporte = null
+      const matchMes = textoCompleto.match(/mes de ([a-záéíóúñ]+)/i)
+      const matchId = (item.accion_url || '').match(/reportes\/(\d+)/i)
+
+      if (matchMes) {
+        claveReporte = 'mes_' + matchMes[1].trim().toLowerCase()
+      } else if (matchId) {
+        claveReporte = 'id_' + matchId[1]
+      } else {
+        claveReporte = 'fecha_' + (item.fecha_agrupada || item.id)
+      }
+
+      if (!reportesVistos[claveReporte]) {
+        contadorReportes++
+        const prog = Math.min(70, Math.max(10, contadorReportes * 10))
+        reportesVistos[claveReporte] = prog
+      }
+
+      item.progreso = reportesVistos[claveReporte]
+      ultimoProgreso = item.progreso
+    } else {
+      // Actividades que no son reportes (CV, perfil, fotografía, etc.)
+      item.progreso = ultimoProgreso > 0 ? ultimoProgreso : (Number(item.progreso) || 0)
+    }
+  })
+
+  return listaAsc
+}
 
 // Cargar actividades desde la base de datos asegurando que no se omita ningún elemento del diseño
-const cargarHistorialDesdeApi = async () => {
+// Soporta actualización silenciosa sin spinner molesto para tiempo real entre ventanas
+const cargarHistorialDesdeApi = async (silencioso = false) => {
   try {
-    cargando.value = true
+    if (!silencioso && itemsHistorial.value.length === 0) {
+      cargando.value = true
+    }
     const userId = usuario.value?.id || usuario.value?.user_id || usuario.value?.usuario_id
     const token = localStorage.getItem('genesis_token')
     
@@ -81,7 +150,7 @@ const cargarHistorialDesdeApi = async () => {
 
     const res = await axios.get('/api/historial-progreso', config)
     if (res.data && Array.isArray(res.data.items)) {
-      itemsHistorial.value = res.data.items.map(item => ({
+      const itemsMapeados = res.data.items.map(item => ({
         id: item.id,
         fecha_agrupada: item.fecha_agrupada || item.fecha,
         fecha_exacta_raw: item.fecha_exacta || item.created_at,
@@ -94,12 +163,29 @@ const cargarHistorialDesdeApi = async () => {
         progreso: Number(item.progreso) || 0,
         categoria: item.categoria || 'reportes'
       }))
-    } else {
+
+      // Detectar nuevos ítems para destacarlos visualmente en vivo
+      if (itemsHistorial.value.length > 0) {
+        const idsPrevios = new Set(itemsHistorial.value.map(i => i.id))
+        const nuevos = itemsMapeados.filter(i => !idsPrevios.has(i.id))
+        if (nuevos.length > 0) {
+          nuevos.forEach(i => nuevosItemsIds.value.add(i.id))
+          setTimeout(() => {
+            nuevos.forEach(i => nuevosItemsIds.value.delete(i.id))
+          }, 4500)
+        }
+      }
+
+      // Aplicar cálculo de progreso progresivo
+      itemsHistorial.value = normalizarProgresos(itemsMapeados)
+    } else if (!silencioso) {
       itemsHistorial.value = []
     }
   } catch (e) {
     console.error('Error al cargar historial desde la API:', e)
-    itemsHistorial.value = []
+    if (!silencioso && itemsHistorial.value.length === 0) {
+      itemsHistorial.value = []
+    }
   } finally {
     cargando.value = false
   }
@@ -112,13 +198,67 @@ const handleClickAfuera = (e) => {
   }
 }
 
+// Manejador de evento storage entre ventanas
+const manejarStorageSync = (e) => {
+  if (e.key === 'genesis_historial_evento' || e.key === 'genesis_historial_updated') {
+    cargarHistorialDesdeApi(true)
+  }
+}
+
+// Manejador al volver a la pestaña/ventana
+const manejarFocoVentana = () => {
+  cargarHistorialDesdeApi(true)
+}
+
+const manejarVisibilidad = () => {
+  if (document.visibilityState === 'visible') {
+    cargarHistorialDesdeApi(true)
+  }
+}
+
 onMounted(() => {
   cargarHistorialDesdeApi()
   window.addEventListener('click', handleClickAfuera)
+
+  // 1. Sincronización en vivo mediante BroadcastChannel (comunicación instantánea entre pestañas/ventanas)
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      canalBroadcast = new BroadcastChannel('genesis_historial_sync')
+      canalBroadcast.onmessage = (event) => {
+        if (event.data?.tipo === 'reporte_creado' || event.data?.tipo === 'informe_final_creado' || event.data?.tipo === 'historial_actualizado') {
+          cargarHistorialDesdeApi(true)
+        }
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel no disponible:', e)
+    }
+  }
+
+  // 2. Sincronización mediante evento de almacenamiento localStorage
+  window.addEventListener('storage', manejarStorageSync)
+
+  // 3. Sincronización reactiva al cambiar de ventana o regresar a la pestaña
+  window.addEventListener('focus', manejarFocoVentana)
+  document.addEventListener('visibilitychange', manejarVisibilidad)
+
+  // 4. Polling periódico silencioso en segundo plano cada 3 segundos
+  intervalPolling = setInterval(() => {
+    cargarHistorialDesdeApi(true)
+  }, 3000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', handleClickAfuera)
+  window.removeEventListener('storage', manejarStorageSync)
+  window.removeEventListener('focus', manejarFocoVentana)
+  document.removeEventListener('visibilitychange', manejarVisibilidad)
+
+  if (canalBroadcast) {
+    canalBroadcast.close()
+  }
+  if (intervalPolling) {
+    clearInterval(intervalPolling)
+  }
 })
 
 // Ordenamiento de actividades: 'recientes' (descendente) o 'antiguos' (ascendente)
@@ -318,16 +458,27 @@ const seleccionarOrden = (orden) => {
                   <div
                     v-for="item in items"
                     :key="item.id"
-                    class="bg-white rounded-xl px-5 py-3.5 transition-all duration-150 shadow-2xs hover:shadow-xs"
-                    :class="obtenerBordeTarjeta(item.categoria)"
+                    class="bg-white rounded-xl px-5 py-3.5 transition-all duration-500 shadow-2xs hover:shadow-xs relative"
+                    :class="[
+                      obtenerBordeTarjeta(item.categoria),
+                      nuevosItemsIds.has(item.id) ? 'ring-2 ring-[#00529C] bg-blue-50/30 shadow-md animate-pulse' : ''
+                    ]"
                   >
                     <div class="grid grid-cols-12 gap-3 items-center">
                       
                       <!-- 1. Título y descripción de la actividad -->
                       <div class="col-span-12 md:col-span-5">
-                        <h3 class="text-sm font-semibold text-slate-800 leading-snug">
-                          {{ item.titulo }}
-                        </h3>
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-sm font-semibold text-slate-800 leading-snug">
+                            {{ item.titulo }}
+                          </h3>
+                          <span 
+                            v-if="nuevosItemsIds.has(item.id)" 
+                            class="inline-flex items-center px-1.5 py-0.2 text-[10px] font-bold bg-[#000B58] text-white rounded-md tracking-wider uppercase shadow-xs animate-bounce"
+                          >
+                            Nuevo
+                          </span>
+                        </div>
                         <p class="text-xs text-slate-500 mt-0.5 leading-tight">
                           {{ item.descripcion }}
                         </p>
@@ -350,12 +501,15 @@ const seleccionarOrden = (orden) => {
                         </button>
                       </div>
 
-                      <!-- 4. Barra de Progreso Cápsula con acumulado -->
-                      <div class="col-span-3 md:col-span-2 flex items-center justify-start">
+                      <!-- 4. Barra de Progreso Cápsula con acumulado progresivo -->
+                      <div 
+                        class="col-span-3 md:col-span-2 flex items-center justify-start"
+                        :title="`Progreso acumulado: ${item.progreso}%`"
+                      >
                         <div class="w-28 sm:w-32 h-3.5 bg-white rounded-full border border-gray-300 p-[1px] overflow-hidden shadow-2xs">
                           <div
-                            class="h-full bg-[#00529C] rounded-full transition-all duration-300"
-                            :style="{ width: `${Math.max(4, Math.min(100, Number(item.progreso) || 0))}%` }"
+                            class="h-full bg-[#00529C] rounded-full transition-all duration-700 ease-out"
+                            :style="{ width: `${item.progreso > 0 ? Math.max(6, Math.min(100, Number(item.progreso) || 0)) : 0}%` }"
                           ></div>
                         </div>
                       </div>
