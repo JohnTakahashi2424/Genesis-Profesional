@@ -217,7 +217,7 @@ const verReporteMensual = (rep) => {
     </div>
 
     <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE AZUL CLARO Y LÍNEA DE SOMBRA DEFINIDA -->
-    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto">
+    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto overflow-hidden">
       
       <!-- ENCABEZADO INSTITUCIONAL UGB (Tamaño prominente y uniforme) -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
@@ -254,7 +254,7 @@ const verReporteMensual = (rep) => {
       <div class="space-y-6">
         
         <!-- FILA 1: Nombre del pasante e Institución (2 Columnas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
           
           <!-- Nombre del pasante -->
           <div>
@@ -271,7 +271,7 @@ const verReporteMensual = (rep) => {
             <h3 class="text-sm font-bold text-gray-900 mb-1">
               Institución dónde se realizó la pasantía
             </h3>
-            <p class="text-sm text-gray-700 font-normal">
+            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]">
               {{ informe.institucion || 'Empresas CASS' }}
             </p>
           </div>
@@ -283,7 +283,7 @@ const verReporteMensual = (rep) => {
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Presentación
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
             {{ informe.presentacion || defaultPresentacion }}
           </p>
         </div>
@@ -293,7 +293,7 @@ const verReporteMensual = (rep) => {
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Generalidades
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
             {{ informe.generalidades || defaultGeneralidades }}
           </p>
         </div>
@@ -303,7 +303,7 @@ const verReporteMensual = (rep) => {
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Procedimiento para el proceso de la pasantía<span class="text-red-500">*</span>
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
             {{ informe.procedimiento_pasantia || defaultProcedimiento }}
           </p>
         </div>
@@ -313,7 +313,7 @@ const verReporteMensual = (rep) => {
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la empresa
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
             {{ informe.descripcion_empresa || defaultDescripcionEmpresa }}
           </p>
         </div>
@@ -323,7 +323,7 @@ const verReporteMensual = (rep) => {
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la pasantía
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
             {{ informe.descripcion_pasantia || defaultDescripcionPasantia }}
           </p>
         </div>

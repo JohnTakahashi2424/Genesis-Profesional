@@ -1650,7 +1650,7 @@ onUnmounted(() => {
       </div>
 
       <!-- TARJETA PRINCIPAL CON BORDE AZUL Y ESQUINAS REDONDEADAS -->
-      <div class="relative bg-white rounded-[20px] border border-[#2563EB]/40 p-8 sm:p-12 shadow-sm max-w-5xl mx-auto">
+      <div class="relative bg-white rounded-[20px] border border-[#2563EB]/40 p-8 sm:p-12 shadow-sm max-w-5xl mx-auto overflow-hidden">
         
         <!-- BADGE DE ESTADO EN LA ESQUINA SUPERIOR DERECHA DE LA TARJETA -->
         <div class="absolute top-8 right-8">
@@ -1716,15 +1716,15 @@ onUnmounted(() => {
         <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
         <div class="mb-6">
           <!-- FILA 1: Área de pasantía + Nombre del pasante + Mes -->
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5 min-w-0">
             <div class="md:col-span-4">
               <span class="block text-sm font-bold text-slate-900 mb-1">Área de pasantía</span>
-              <span class="text-sm text-slate-700">{{ reporteDetalle.area_pasantia || 'UX/UI' }}</span>
+              <span class="text-sm text-slate-700 break-words [overflow-wrap:anywhere]">{{ reporteDetalle.area_pasantia || 'UX/UI' }}</span>
             </div>
 
             <div class="md:col-span-5">
               <span class="block text-sm font-bold text-slate-900 mb-1">Nombre del pasante</span>
-              <span class="text-sm text-slate-700">{{ reporteDetalle.nombre_pasante || '' }}</span>
+              <span class="text-sm text-slate-700 break-words [overflow-wrap:anywhere]">{{ reporteDetalle.nombre_pasante || '' }}</span>
             </div>
 
             <div class="md:col-span-3">
@@ -1734,7 +1734,7 @@ onUnmounted(() => {
           </div>
 
           <!-- FILA 2: Fecha Inicio + Fecha Finalización con píldoras de calendario -->
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5 min-w-0">
             <div class="md:col-span-4">
               <span class="block text-sm font-bold text-slate-900 mb-1.5">Fecha Inicio</span>
               <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 border border-[#3b82f6] rounded-[8px] bg-white text-[#2563eb] text-sm font-normal">
@@ -1766,7 +1766,7 @@ onUnmounted(() => {
           <!-- FILA 3: Objetivo -->
           <div class="mb-6">
             <span class="block text-sm font-bold text-slate-900 mb-1">Objetivo</span>
-            <p class="text-sm text-slate-700 leading-relaxed">
+            <p class="text-sm text-slate-700 leading-relaxed break-words break-all [overflow-wrap:anywhere]">
               {{ reporteDetalle.objetivo || 'documentar las actividades desarrolladas en la empresa' }}
             </p>
           </div>
@@ -1776,25 +1776,25 @@ onUnmounted(() => {
         <div class="mb-6">
           <h4 class="text-sm font-bold text-slate-900 mb-3">Actividades realizadas</h4>
           <div class="w-full overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full table-fixed text-left text-xs border-collapse">
               <thead class="border-b border-slate-300 text-slate-900 font-bold">
                 <tr>
-                  <th class="py-2.5 pr-4 w-12 text-left font-bold">Nº</th>
-                  <th class="py-2.5 px-4 w-1/4 text-left font-bold">Actividad</th>
-                  <th class="py-2.5 px-4 w-32 text-left font-bold whitespace-nowrap">Fecha</th>
-                  <th class="py-2.5 pl-4 text-left font-bold">Resultado de aprendizaje</th>
+                  <th class="py-2.5 pr-3 w-10 text-left font-bold">Nº</th>
+                  <th class="py-2.5 px-3 w-[44%] text-left font-bold">Actividad</th>
+                  <th class="py-2.5 px-3 w-28 text-left font-bold whitespace-nowrap">Fecha</th>
+                  <th class="py-2.5 pl-3 text-left font-bold">Resultado de aprendizaje</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="divide-y divide-slate-100">
                 <tr 
                   v-for="(act, idx) in (reporteDetalle.actividades || [])" 
                   :key="idx"
                   class="align-top"
                 >
-                  <td class="py-4 pr-4 font-normal text-slate-600">{{ act.numero ?? (idx + 1) }}</td>
-                  <td class="py-4 px-4 font-normal text-slate-600 leading-relaxed">{{ act.actividad || act.actividad_realizada }}</td>
-                  <td class="py-4 px-4 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
-                  <td class="py-4 pl-4 font-normal text-slate-600 leading-relaxed">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
+                  <td class="py-4 pr-3 font-normal text-slate-600 select-none">{{ act.numero ?? (idx + 1) }}</td>
+                  <td class="py-4 px-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{{ act.actividad || act.actividad_realizada }}</td>
+                  <td class="py-4 px-3 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
+                  <td class="py-4 pl-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
                 </tr>
               </tbody>
             </table>

@@ -565,7 +565,7 @@ const finalizarEnvio = () => {
     <!-- ========================================================================= -->
     <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE AZUL CLARO Y LÍNEA DE SOMBRA DEFINIDA -->
     <!-- ========================================================================= -->
-    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto">
+    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto overflow-hidden">
       
       <!-- ENCABEZADO INSTITUCIONAL UGB (Tamaño prominente y uniforme) -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
