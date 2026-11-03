@@ -257,21 +257,21 @@ const verReporteMensual = (rep) => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
           
           <!-- Nombre del pasante -->
-          <div>
+          <div class="min-w-0">
             <h3 class="text-sm font-bold text-gray-900 mb-1">
               Nombre del pasante
             </h3>
-            <p class="text-sm text-gray-700 font-normal">
+            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
               {{ informe.nombre_pasante || 'Dallana Lucia Campos Garcia' }}
             </p>
           </div>
 
           <!-- Institución dónde se realizó la pasantía -->
-          <div>
+          <div class="min-w-0">
             <h3 class="text-sm font-bold text-gray-900 mb-1">
               Institución dónde se realizó la pasantía
             </h3>
-            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]">
+            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
               {{ informe.institucion || 'Empresas CASS' }}
             </p>
           </div>
@@ -279,51 +279,51 @@ const verReporteMensual = (rep) => {
         </div>
 
         <!-- Presentación -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Presentación
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.presentacion || defaultPresentacion }}
           </p>
         </div>
 
         <!-- Generalidades -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Generalidades
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.generalidades || defaultGeneralidades }}
           </p>
         </div>
 
         <!-- Procedimiento para el proceso de la pasantía* -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Procedimiento para el proceso de la pasantía<span class="text-red-500">*</span>
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.procedimiento_pasantia || defaultProcedimiento }}
           </p>
         </div>
 
         <!-- Descripción de la empresa -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la empresa
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.descripcion_empresa || defaultDescripcionEmpresa }}
           </p>
         </div>
 
         <!-- Descripción de la pasantía -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la pasantía
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.descripcion_pasantia || defaultDescripcionPasantia }}
           </p>
         </div>

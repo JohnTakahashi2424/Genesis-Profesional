@@ -1791,7 +1791,7 @@ onUnmounted(() => {
           <!-- FILA 3: Objetivo -->
           <div class="mb-6">
             <span class="block text-sm font-bold text-slate-900 mb-1">Objetivo</span>
-            <p class="text-sm text-slate-700 leading-relaxed break-words break-all [overflow-wrap:anywhere]">
+            <p class="text-sm text-slate-700 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
               {{ reporteDetalle.objetivo || 'documentar las actividades desarrolladas en la empresa' }}
             </p>
           </div>
@@ -1817,9 +1817,9 @@ onUnmounted(() => {
                   class="align-top"
                 >
                   <td class="py-4 pr-3 font-normal text-slate-600 select-none">{{ act.numero ?? (idx + 1) }}</td>
-                  <td class="py-4 px-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{{ act.actividad || act.actividad_realizada }}</td>
+                  <td class="py-4 px-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">{{ act.actividad || act.actividad_realizada }}</td>
                   <td class="py-4 px-3 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
-                  <td class="py-4 pl-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
+                  <td class="py-4 pl-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
                 </tr>
               </tbody>
             </table>

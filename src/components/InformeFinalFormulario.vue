@@ -602,10 +602,10 @@ const finalizarEnvio = () => {
       <div class="space-y-5">
         
         <!-- FILA 1: Nombre del pasante y Institución (2 Columnas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 min-w-0">
           
           <!-- Nombre del pasante* -->
-          <div>
+          <div class="min-w-0">
             <label class="block text-sm font-medium text-gray-900 mb-1.5">
               Nombre del pasante<span class="text-red-500">*</span>
             </label>
@@ -628,7 +628,7 @@ const finalizarEnvio = () => {
           </div>
 
           <!-- Institución dónde se realizó la pasantía* -->
-          <div>
+          <div class="min-w-0">
             <label class="block text-sm font-medium text-gray-900 mb-1.5">
               Institución dónde se realizó la pasantía<span class="text-red-500">*</span>
             </label>
