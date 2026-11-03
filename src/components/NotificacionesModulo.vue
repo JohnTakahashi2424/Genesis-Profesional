@@ -226,6 +226,43 @@ const eliminarNotificacion = async (id) => {
 }
 
 // Navegar al recurso asociado desde el detalle (ej. al reporte)
+// Determinar si la notificación seleccionada debe mostrar el botón "ver reporte"
+// Notificaciones de bienvenida o generales no tienen reporte asociado y solo muestran el mensaje
+const debeMostrarBotonRecurso = computed(() => {
+  const notif = notificacionSeleccionada.value
+  if (!notif) return false
+
+  const titulo = (notif.titulo || '').toLowerCase()
+  const tipo = (notif.tipo || '').toLowerCase()
+  const mensaje = (notif.mensaje || '').toLowerCase()
+
+  // Si es de bienvenida o general sin reporte, no mostrar el botón
+  if (
+    titulo.includes('bienvenid') || 
+    tipo === 'general' || 
+    tipo === 'bienvenida' || 
+    mensaje.includes('bienvenido') || 
+    mensaje.includes('cuenta ha sido creada')
+  ) {
+    return false
+  }
+
+  // Solo mostrar si está explícitamente asociada a reportes, observaciones o informe final
+  if (
+    titulo.includes('reporte') || 
+    titulo.includes('informe') || 
+    titulo.includes('observaci') ||
+    tipo === 'reporte' ||
+    tipo === 'observacion' ||
+    tipo === 'informe_final' ||
+    (notif.enlace && notif.enlace.includes('reporte'))
+  ) {
+    return true
+  }
+
+  return false
+})
+
 const irAlRecurso = (enlace) => {
   const notif = notificacionSeleccionada.value
   volverALista()
@@ -350,8 +387,8 @@ const irAlRecurso = (enlace) => {
           {{ notificacionSeleccionada.mensaje }}
         </div>
 
-        <!-- BOTÓN VER REPORTE (AZUL CON ÍCONO DE OJO EN LA ESQUINA INFERIOR IZQUIERDA) -->
-        <div class="mt-5 flex items-center justify-start">
+        <!-- BOTÓN VER REPORTE (Solo visible si la notificación está asociada a un reporte, oculto en bienvenidas) -->
+        <div v-if="debeMostrarBotonRecurso" class="mt-5 flex items-center justify-start">
           <button
             @click="irAlRecurso(notificacionSeleccionada.enlace || 'reportes')"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00529C] hover:bg-[#004280] text-white rounded-lg text-sm font-medium shadow-xs transition cursor-pointer"

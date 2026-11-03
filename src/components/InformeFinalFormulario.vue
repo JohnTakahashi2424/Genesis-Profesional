@@ -249,6 +249,48 @@ const actualizarColumnasPresupuesto = () => {
   })
 }
 
+// Bloquear teclas no numéricas (solo permite dígitos, punto, coma y teclas de navegación)
+const permitirSoloNumerosYPuntuacion = (e) => {
+  const teclasPermitidas = [
+    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'
+  ]
+  if (teclasPermitidas.includes(e.key) || e.ctrlKey || e.metaKey) {
+    return
+  }
+  if (!/[0-9.,]/.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
+// Validación y filtrado en vivo: solo acepta dígitos (0-9), punto (.) y coma (,)
+// Cualquier otro carácter (letras, símbolos, etc.) se remueve de inmediato
+const filtrarMontoEnVivo = (fila, col, e) => {
+  const inputEl = e.target
+  let valor = inputEl.value
+
+  // Remover cualquier carácter no numérico excepto punto y coma
+  valor = valor.replace(/[^0-9.,]/g, '')
+
+  // Permitir únicamente un único separador decimal (punto o coma)
+  let primerSeparador = -1
+  let filtrado = ''
+  for (let i = 0; i < valor.length; i++) {
+    const c = valor[i]
+    if (c === '.' || c === ',') {
+      if (primerSeparador === -1) {
+        primerSeparador = i
+        filtrado += c
+      }
+    } else {
+      filtrado += c
+    }
+  }
+
+  fila.montos[col] = filtrado
+  inputEl.value = filtrado
+}
+
 // Verifica si el usuario ha ingresado un valor numérico real
 const tieneMontoIngresado = (val) => {
   if (val === null || val === undefined || val === '') return false
@@ -949,14 +991,16 @@ const finalizarEnvio = () => {
                       />
                     </td>
 
-                    <!-- Inputs por cada mes (cuadritos redondeados con color gris por defecto y negro al ingresar número) -->
+                    <!-- Inputs por cada mes (con validación en vivo que solo acepta números, puntos y comas) -->
                     <td 
                       v-for="col in columnasMeses" 
                       :key="col"
                       class="py-3 px-1.5 text-center"
                     >
                       <input 
-                        v-model="fila.montos[col]"
+                        :value="fila.montos[col]"
+                        @keydown="permitirSoloNumerosYPuntuacion($event)"
+                        @input="filtrarMontoEnVivo(fila, col, $event)"
                         type="text" 
                         inputmode="decimal"
                         placeholder="0"
