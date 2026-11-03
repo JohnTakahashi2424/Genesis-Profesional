@@ -28,6 +28,7 @@ const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 // Vistas del módulo: 'tabla', 'formulario', 'detalle', 'informe_final', 'informe_final_detalle'
 const vistaActual = ref(props.vistaInicial || 'tabla')
 const informeFinalDetalle = ref(null)
+const origenDetalleReporte = ref(null)
 
 const handleEventoAbrirInformeFinal = async (e) => {
   const id = e?.detail?.id
@@ -554,6 +555,9 @@ const verDetalle = async (item) => {
   }
 
   // Manejo de Reportes Mensuales regulares
+  if (vistaActual.value === 'informe_final_detalle') {
+    origenDetalleReporte.value = 'informe_final_detalle'
+  }
   cargando.value = true
   try {
     const token = localStorage.getItem('genesis_token')
@@ -578,7 +582,27 @@ const volverATabla = () => {
   dropdownMesAbierto.value = false
   dropdownEstadoAbierto.value = false
   informeFinalDetalle.value = null
+  origenDetalleReporte.value = null
   vistaActual.value = 'tabla'
+}
+
+const volverDesdeDetalle = () => {
+  dropdownAreaAbierto.value = false
+  dropdownMesAbierto.value = false
+  dropdownEstadoAbierto.value = false
+  if (origenDetalleReporte.value === 'informe_final_detalle' && informeFinalDetalle.value) {
+    vistaActual.value = 'informe_final_detalle'
+    origenDetalleReporte.value = null
+    reporteDetalle.value = null
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  volverATabla()
+}
+
+const verReporteDesdeInformeFinal = (rep) => {
+  origenDetalleReporte.value = 'informe_final_detalle'
+  verDetalle(rep)
 }
 
 const editarReporteDesdeDetalle = () => {
@@ -1627,13 +1651,14 @@ onUnmounted(() => {
       <!-- BARRA SUPERIOR: ← Reportes/Mes + BOTÓN EDITAR -->
       <div class="mb-4 flex items-center justify-between max-w-5xl mx-auto">
         <button 
-          @click="volverATabla"
+          @click="volverDesdeDetalle"
           class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-[#000B58] transition-colors cursor-pointer"
         >
           <svg class="w-4 h-4 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          <span>Reportes/{{ reporteDetalle.mes || 'Detalle' }}</span>
+          <span v-if="origenDetalleReporte === 'informe_final_detalle'">Reportes/Informe final/{{ reporteDetalle.mes || 'Detalle' }}</span>
+          <span v-else>Reportes/{{ reporteDetalle.mes || 'Detalle' }}</span>
         </button>
 
         <!-- Botón Editar ✎ con bordes redondeados y borde fino -->
@@ -1819,7 +1844,7 @@ onUnmounted(() => {
       <div class="max-w-5xl mx-auto flex justify-end mt-6">
         <button 
           type="button"
-          @click="volverATabla"
+          @click="volverDesdeDetalle"
           class="w-[140px] py-2.5 rounded-[12px] bg-[#000854] hover:bg-[#00063d] text-white text-sm font-medium transition-all shadow-md cursor-pointer text-center"
         >
           Aceptar
@@ -1845,7 +1870,7 @@ onUnmounted(() => {
       <InformeFinalDetalle 
         :informe="informeFinalDetalle" 
         @volver="volverATabla" 
-        @ver-reporte="verDetalle"
+        @ver-reporte="verReporteDesdeInformeFinal"
       />
     </div>
 
