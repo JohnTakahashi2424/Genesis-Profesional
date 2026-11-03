@@ -1,0 +1,1014 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Génesis Profesional - API Documentation",
+        "description": "API RESTful oficial de la plataforma Génesis Profesional para el Trabajo de Graduación Modalidad Pasantía (Facultad de Ciencia y Tecnología - Universidad Gerardo Barrios). Desarrollada con Laravel 12 y PostgreSQL.",
+        "contact": {
+            "name": "Equipo de Desarrollo Génesis Profesional",
+            "email": "soporte@genesisprofesional.ugb.edu.sv"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Servidor API Actual (Proxy Netlify / Local)"
+        },
+        {
+            "url": "https://genesis-profesional.onrender.com",
+            "description": "Servidor de Producción (Render)"
+        },
+        {
+            "url": "http://localhost:8080",
+            "description": "Servidor Local de Desarrollo"
+        }
+    ],
+    "paths": {
+        "/api/auth/login": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Iniciar sesión y obtener token JWT",
+                "description": "Valida que el correo pertenezca al dominio institucional @ugb.edu.sv y que la contraseña coincida con el hash Bcrypt.",
+                "operationId": "loginUsuario",
+                "requestBody": {
+                    "description": "Credenciales de acceso",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "correo",
+                                    "contrasena"
+                                ],
+                                "properties": {
+                                    "correo": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usss003024@ugb.edu.sv"
+                                    },
+                                    "contrasena": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Password123#"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Autenticación exitosa con Token JWT",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                                        },
+                                        "usuario": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Credenciales incorrectas"
+                    },
+                    "404": {
+                        "description": "Usuario no registrado"
+                    },
+                    "422": {
+                        "description": "Error de validación (dominio no institucional)"
+                    }
+                }
+            }
+        },
+        "/api/auth/registro": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Registrar nuevo usuario estudiante",
+                "description": "Comprueba que el correo institucional y el código de estudiante existan previamente en el padrón UGB antes de crear el usuario.",
+                "operationId": "registroEstudiante",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nombres",
+                                    "apellidos",
+                                    "correo_institucional",
+                                    "codigo_estudiante",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "nombres": {
+                                        "type": "string",
+                                        "example": "Dallana Lucia"
+                                    },
+                                    "apellidos": {
+                                        "type": "string",
+                                        "example": "Campos Garcia"
+                                    },
+                                    "correo_institucional": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usss003024@ugb.edu.sv"
+                                    },
+                                    "codigo_estudiante": {
+                                        "type": "string",
+                                        "example": "USSS003024"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "ClaveSegura2026#"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "ClaveSegura2026#"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Usuario registrado exitosamente"
+                    },
+                    "422": {
+                        "description": "Validación fallida o no existe en padrón de estudiantes UGB"
+                    }
+                }
+            }
+        },
+        "/api/auth/enviar-codigo": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Enviar código de 6 dígitos para recuperación de contraseña",
+                "description": "Envía un código de recuperación vía API REST Brevo (puerto HTTP seguro) para cambiar la contraseña.",
+                "operationId": "enviarCodigoRecuperacion",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "correo"
+                                ],
+                                "properties": {
+                                    "correo": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usss003024@ugb.edu.sv"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Código de recuperación enviado exitosamente"
+                    },
+                    "404": {
+                        "description": "Correo institucional no encontrado"
+                    },
+                    "422": {
+                        "description": "Formato de correo no válido"
+                    }
+                }
+            }
+        },
+        "/api/auth/verificar-codigo": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Verificar código de 6 dígitos",
+                "description": "Comprueba que el código de 6 dígitos ingresado coincida y no haya expirado.",
+                "operationId": "verificarCodigoRecuperacion",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "correo",
+                                    "codigo"
+                                ],
+                                "properties": {
+                                    "correo": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usss003024@ugb.edu.sv"
+                                    },
+                                    "codigo": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Código válido"
+                    },
+                    "400": {
+                        "description": "Código incorrecto o expirado"
+                    }
+                }
+            }
+        },
+        "/api/auth/recuperar": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Restablecer contraseña con código validado",
+                "description": "Actualiza la contraseña del usuario encriptándola con Bcrypt y regresa inmediatamente para login.",
+                "operationId": "restablecerContrasena",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "correo",
+                                    "codigo",
+                                    "contrasena",
+                                    "contrasena_confirmation"
+                                ],
+                                "properties": {
+                                    "correo": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usss003024@ugb.edu.sv"
+                                    },
+                                    "codigo": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    },
+                                    "contrasena": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NuevaPassword2026#"
+                                    },
+                                    "contrasena_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NuevaPassword2026#"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contraseña actualizada exitosamente"
+                    },
+                    "422": {
+                        "description": "Validación de contraseñas fallida"
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Cerrar sesión del usuario",
+                "operationId": "cerrarSesion",
+                "responses": {
+                    "200": {
+                        "description": "Sesión cerrada correctamente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes": {
+            "get": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Listar reportes mensuales del pasante",
+                "description": "Devuelve los reportes registrados con conteo de actividades y soporte para filtros por búsqueda y estado.",
+                "operationId": "listarReportes",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Buscar por mes o área",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "description": "Filtrar por estado",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "mes",
+                        "in": "query",
+                        "description": "Filtrar por mes",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de reportes obtenida exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Crear un nuevo reporte mensual",
+                "description": "Registra un reporte mensual con sus actividades realizadas y evidencias fotográficas.",
+                "operationId": "crearReporteMensual",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "area_pasantia",
+                                    "nombre_pasante",
+                                    "mes",
+                                    "fecha_inicio",
+                                    "fecha_fin",
+                                    "objetivo",
+                                    "actividades"
+                                ],
+                                "properties": {
+                                    "area_pasantia": {
+                                        "type": "string",
+                                        "example": "Desarrollo Backend"
+                                    },
+                                    "nombre_pasante": {
+                                        "type": "string",
+                                        "example": "Juanito Rodriguez"
+                                    },
+                                    "mes": {
+                                        "type": "string",
+                                        "example": "Julio"
+                                    },
+                                    "fecha_inicio": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-01"
+                                    },
+                                    "fecha_fin": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-31"
+                                    },
+                                    "objetivo": {
+                                        "type": "string",
+                                        "example": "Implementación de endpoints y documentación OpenAPI"
+                                    },
+                                    "actividades": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "numero": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "actividad": {
+                                                    "type": "string",
+                                                    "example": "Configuración de Swagger en Laravel"
+                                                },
+                                                "fecha": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-07-04"
+                                                },
+                                                "resultado_aprendizaje": {
+                                                    "type": "string",
+                                                    "example": "Dominio de especificación OpenAPI 3.0"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "evidencias": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Reporte mensual creado exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación (campos requeridos faltantes)"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/formulario-inicial": {
+            "get": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Obtener datos sugeridos para nuevo reporte mensual",
+                "operationId": "obtenerFormularioInicialReporte",
+                "responses": {
+                    "200": {
+                        "description": "Datos de pasante y mes sugerido obtenidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/{id}": {
+            "get": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Ver detalle completo de un reporte mensual",
+                "operationId": "obtenerDetalleReporte",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del reporte",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detalle del reporte y lista de actividades"
+                    },
+                    "404": {
+                        "description": "Reporte no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Actualizar un reporte mensual existente",
+                "operationId": "actualizarReporteMensual",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del reporte",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reporte actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Reporte no encontrado"
+                    },
+                    "422": {
+                        "description": "Validación fallida"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Eliminar un reporte mensual",
+                "operationId": "eliminarReporteMensual",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del reporte",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reporte eliminado exitosamente"
+                    },
+                    "404": {
+                        "description": "Reporte no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reportes/{id}/estado": {
+            "patch": {
+                "tags": [
+                    "Reportes Mensuales"
+                ],
+                "summary": "Cambiar estado de revisión de un reporte",
+                "operationId": "cambiarEstadoReporte",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del reporte",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "estado"
+                                ],
+                                "properties": {
+                                    "estado": {
+                                        "type": "string",
+                                        "example": "Aprobado",
+                                        "enum": [
+                                            "En revisión",
+                                            "Aprobado",
+                                            "Rechazado"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Estado actualizado exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/informes-finales": {
+            "get": {
+                "tags": [
+                    "Informe Final"
+                ],
+                "summary": "Listar informes finales registrados",
+                "operationId": "listarInformesFinales",
+                "responses": {
+                    "200": {
+                        "description": "Lista de informes finales obtenida exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Informe Final"
+                ],
+                "summary": "Crear y enviar el informe final de pasantía",
+                "description": "Registra el informe final integrando datos de empresa, procedimiento, descripción y presupuesto matricial.",
+                "operationId": "crearInformeFinal",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nombre_pasante",
+                                    "institucion",
+                                    "presentacion",
+                                    "generalidades",
+                                    "procedimiento_pasantia",
+                                    "descripcion_empresa",
+                                    "descripcion_pasantia"
+                                ],
+                                "properties": {
+                                    "nombre_pasante": {
+                                        "type": "string",
+                                        "example": "Juanito Rodriguez"
+                                    },
+                                    "institucion": {
+                                        "type": "string",
+                                        "example": "Empresas CASS"
+                                    },
+                                    "presentacion": {
+                                        "type": "string",
+                                        "example": "Presentación del informe final de pasantía..."
+                                    },
+                                    "generalidades": {
+                                        "type": "string",
+                                        "example": "Generalidades de la institución..."
+                                    },
+                                    "procedimiento_pasantia": {
+                                        "type": "string",
+                                        "example": "Procedimiento metodológico aplicado..."
+                                    },
+                                    "descripcion_empresa": {
+                                        "type": "string",
+                                        "example": "Empresa de desarrollo de soluciones tecnológicas..."
+                                    },
+                                    "descripcion_pasantia": {
+                                        "type": "string",
+                                        "example": "Desarrollo de módulos e integraciones backend..."
+                                    },
+                                    "presupuesto_total": {
+                                        "type": "string",
+                                        "example": "$44.00"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Informe final registrado exitosamente"
+                    },
+                    "422": {
+                        "description": "Faltan campos obligatorios en el informe final"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/informes-finales/{id}": {
+            "get": {
+                "tags": [
+                    "Informe Final"
+                ],
+                "summary": "Obtener detalle completo de un informe final",
+                "description": "Devuelve narrativa, presupuesto matricial y reportes adjuntos.",
+                "operationId": "obtenerDetalleInformeFinal",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del informe final",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detalle del informe final con presupuesto y reportes"
+                    },
+                    "404": {
+                        "description": "Informe final no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificaciones/contador": {
+            "get": {
+                "tags": [
+                    "Notificaciones"
+                ],
+                "summary": "Obtener conteo de notificaciones no leídas",
+                "operationId": "conteoNotificacionesNoLeidas",
+                "responses": {
+                    "200": {
+                        "description": "Conteo de notificaciones no leídas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "exito": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "no_leidas_count": {
+                                            "type": "integer",
+                                            "example": 2
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificaciones": {
+            "get": {
+                "tags": [
+                    "Notificaciones"
+                ],
+                "summary": "Listar notificaciones del usuario",
+                "operationId": "listarNotificaciones",
+                "parameters": [
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "description": "'todos' | 'no_leidos' | 'leidos'",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "orden",
+                        "in": "query",
+                        "description": "'recientes' | 'antiguos'",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "tipo",
+                        "in": "query",
+                        "description": "Filtrar por tipo de notificación",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de notificaciones recibidas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificaciones/{id}/leer": {
+            "patch": {
+                "tags": [
+                    "Notificaciones"
+                ],
+                "summary": "Marcar notificación individual como leída",
+                "operationId": "marcarNotificacionLeida",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificación marcada como leída"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificaciones/marcar-todas-leidas": {
+            "post": {
+                "tags": [
+                    "Notificaciones"
+                ],
+                "summary": "Marcar todas las notificaciones del usuario como leídas",
+                "operationId": "marcarTodasNotificacionesLeidas",
+                "responses": {
+                    "200": {
+                        "description": "Todas las notificaciones marcadas como leídas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificaciones/{id}": {
+            "delete": {
+                "tags": [
+                    "Notificaciones"
+                ],
+                "summary": "Eliminar una notificación",
+                "operationId": "eliminarNotificacion",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificación eliminada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/historial-progreso": {
+            "get": {
+                "tags": [
+                    "Historial de Progreso"
+                ],
+                "summary": "Obtener línea de tiempo y auditoría de eventos de pasantía",
+                "operationId": "obtenerHistorialProgreso",
+                "responses": {
+                    "200": {
+                        "description": "Línea de tiempo de eventos registrada en base de datos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/pasante/estado": {
+            "get": {
+                "tags": [
+                    "Pasantía"
+                ],
+                "summary": "Consulta pública del estado oficial de pasantía",
+                "operationId": "obtenerEstadoPasante",
+                "responses": {
+                    "200": {
+                        "description": "Estado oficial de pasantía (horas, porcentaje, fase)"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Ingrese su token JWT generado en /api/auth/login",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Autenticación",
+            "description": "Endpoints de acceso, registro de pasantes y recuperación de contraseña"
+        },
+        {
+            "name": "Reportes Mensuales",
+            "description": "Gestión completa de reportes mensuales de actividades y evidencias"
+        },
+        {
+            "name": "Informe Final",
+            "description": "Gestión del informe final con presupuesto dinámico y anexos"
+        },
+        {
+            "name": "Notificaciones",
+            "description": "Centro de notificaciones y avisos automáticos de pasantía"
+        },
+        {
+            "name": "Historial de Progreso",
+            "description": "Línea de tiempo y auditoría de eventos de pasantía"
+        },
+        {
+            "name": "Pasantía",
+            "description": "Consulta del estado oficial del proceso de pasantía"
+        }
+    ]
+}

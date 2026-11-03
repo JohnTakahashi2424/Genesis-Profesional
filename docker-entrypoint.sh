@@ -28,6 +28,7 @@ if [ -n "$DB_URL" ] || [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ]; then
 fi
 
 # Iniciar servidor Laravel en el puerto asignado por Render ($PORT)
+php artisan l5-swagger:generate || true
 PORT=${PORT:-8080}
 echo "Starting Laravel server on port $PORT..."
 exec php artisan serve --host=0.0.0.0 --port=$PORT
