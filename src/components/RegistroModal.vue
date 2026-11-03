@@ -143,14 +143,12 @@ watch(() => form.value.correo, (nuevoCorreo) => {
       if (res && res.disponible) {
         errores.value.correo = ''
       } else {
-        const msg = res?.mensaje || 'Correo institucional ya registrado'
-        errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+        errores.value.correo = res?.mensaje || 'El correo institucional no está disponible para registro.'
       }
     } catch (err) {
       if (err.response && err.response.data) {
         const datos = err.response.data
-        const msg = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional ya registrado'
-        errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+        errores.value.correo = datos.mensaje || datos.message || datos.errores?.correo?.[0] || 'Error al verificar el correo.'
       }
     }
   }, 400)
@@ -312,15 +310,13 @@ const continuarAPaso2 = async () => {
       errores.value.correo = ''
       estadoFlujo.value = 2
     } else {
-      const msg = res?.mensaje || 'Correo institucional ya registrado'
-      errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+      errores.value.correo = res?.mensaje || 'El correo institucional no está disponible para registro.'
       document.getElementById('input-correo')?.focus()
     }
   } catch (err) {
     if (err.response && err.response.data) {
       const datos = err.response.data
-      const msg = datos.mensaje || datos.errores?.correo?.[0] || 'Correo institucional ya registrado'
-      errores.value.correo = msg.includes('registra') ? 'Correo institucional ya registrado' : msg
+      errores.value.correo = datos.mensaje || datos.message || datos.errores?.correo?.[0] || 'Error al verificar el correo.'
     } else {
       errores.value.correo = 'No se pudo conectar con el servidor para verificar el correo'
     }
@@ -493,6 +489,17 @@ const cerrarYIrALogin = () => {
       </div>
 
 
+
+      <!-- Alerta de Error General del Servidor -->
+      <div v-if="errorGeneral" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center justify-between gap-2 text-left">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <span class="font-medium">{{ errorGeneral }}</span>
+        </div>
+        <button type="button" @click="errorGeneral = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+      </div>
 
       <!-- ═══════════════════════════════════════ -->
       <!-- PASO 1: DATOS PERSONALES / CORREO     -->

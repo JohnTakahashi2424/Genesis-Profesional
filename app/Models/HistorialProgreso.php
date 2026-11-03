@@ -157,24 +157,13 @@ class HistorialProgreso extends Model
      * - Cada reporte aprobado incrementa la barra (ej: 14%-15% por mes).
      * - Al aprobarse el informe final o completar los meses: 100%.
      */
-    public static function calcularProgresoActual(int $userId, bool $incluirNuevoAprobado = false): int
+    public static function calcularProgresoActual(int $userId, bool $incluirNuevo = false): int
     {
-        $reportesAprobados = \App\Models\Reporte::where('user_id', $userId)
-            ->where('estado', 'Aprobado')
-            ->count();
-
-        if ($incluirNuevoAprobado) {
-            $reportesAprobados++;
-        }
-
-        // Si ya hay informe final aprobado, 100%
+        // 1. Si ya cuenta con informe final registrado, el progreso es del 100%
         try {
             if (class_exists(\App\Models\InformeFinal::class)) {
-                $informesFinalesAprobados = \App\Models\InformeFinal::where('user_id', $userId)
-                    ->where('estado', 'Aprobado')
-                    ->count();
-
-                if ($informesFinalesAprobados > 0) {
+                $informesFinales = \App\Models\InformeFinal::where('user_id', $userId)->count();
+                if ($informesFinales > 0) {
                     return 100;
                 }
             }
@@ -182,19 +171,15 @@ class HistorialProgreso extends Model
             // Silencioso
         }
 
-        // Escala progresiva para 6 a 7 meses de pasantía
-        $escala = [
-            0 => 0,
-            1 => 15,
-            2 => 30,
-            3 => 45,
-            4 => 60,
-            5 => 75,
-            6 => 88,
-            7 => 95,
-        ];
+        // 2. Conteo de reportes mensuales del estudiante
+        $conteoReportes = \App\Models\Reporte::where('user_id', $userId)->count();
 
-        return $escala[min($reportesAprobados, 7)] ?? min(100, $reportesAprobados * 14);
+        if ($incluirNuevo) {
+            $conteoReportes++;
+        }
+
+        // Cada reporte mensual suma 10% hasta un tope del 70% (7 reportes)
+        return min(70, max(0, $conteoReportes * 10));
     }
 
     /**

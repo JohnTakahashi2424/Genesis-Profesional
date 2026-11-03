@@ -72,7 +72,8 @@ const formCv = ref({
     email: usuario.value?.correo || usuario.value?.email || '',
     telefono: '',
     sobreMi: '',
-    educacion: 'Universidad Gerardo Barrios (Egresado)'
+    educacion: 'Universidad Gerardo Barrios (Egresado)',
+    link_portafolio: ''
   },
   objetivos: {
     objetivo: '',
@@ -107,6 +108,18 @@ const cargarCvs = async () => {
     })
     if (res.data && res.data.cvs) {
       cvs.value = res.data.cvs
+      if (res.data.link_portafolio && !formCv.value.perfil.link_portafolio) {
+        formCv.value.perfil.link_portafolio = res.data.link_portafolio
+      }
+    }
+    // Si no vino en el CV, consultar endpoint directo de portafolio
+    if (!formCv.value.perfil.link_portafolio) {
+      try {
+        const resPort = await axios.get(`/api/portafolio/obtener/${userId}`, { headers: getAuthHeaders() })
+        if (resPort.data?.link_portafolio) {
+          formCv.value.perfil.link_portafolio = resPort.data.link_portafolio
+        }
+      } catch (_) {}
     }
   } catch (err) {
     console.warn('Error al cargar CVs:', err)
@@ -135,7 +148,8 @@ onMounted(async () => {
         email: cv.email || usuario.value?.correo || usuario.value?.email || '',
         telefono: cv.telefono || '',
         sobreMi: formatTexto(cv.sobre_mi),
-        educacion: cv.educacion ? formatTexto(cv.educacion) : 'Universidad Gerardo Barrios (Egresado)'
+        educacion: cv.educacion ? formatTexto(cv.educacion) : 'Universidad Gerardo Barrios (Egresado)',
+        link_portafolio: cv.link_portafolio || ''
       },
       objetivos: {
         objetivo: formatTexto(cv.objetivo),
@@ -177,7 +191,8 @@ const abrirCrearCv = () => {
       email: cvExistente?.email || usuario.value?.correo || usuario.value?.email || '',
       telefono: cvExistente?.telefono || '',
       sobreMi: cvExistente?.sobre_mi ? formatTexto(cvExistente.sobre_mi) : '',
-      educacion: cvExistente?.educacion ? formatTexto(cvExistente.educacion) : 'Universidad Gerardo Barrios (Egresado)'
+      educacion: cvExistente?.educacion ? formatTexto(cvExistente.educacion) : 'Universidad Gerardo Barrios (Egresado)',
+      link_portafolio: cvExistente?.link_portafolio || formCv.value.perfil.link_portafolio || ''
     },
     objetivos: {
       objetivo: cvExistente?.objetivo ? formatTexto(cvExistente.objetivo) : '',
@@ -313,7 +328,8 @@ const buildCvHtml = () => {
         <div style="flex:1;">
           <p style="margin:0 0 4px;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Direccion: </span>${data.perfil.direccion || ''}</p>
           <p style="margin:0 0 4px;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Email: </span>${data.perfil.email || ''}</p>
-          <p style="margin:0;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Telefono: </span>${data.perfil.telefono || ''}</p>
+          <p style="margin:0 0 4px;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Telefono: </span>${data.perfil.telefono || ''}</p>
+          ${data.perfil.link_portafolio ? `<p style="margin:0;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Portafolio: </span>${data.perfil.link_portafolio}</p>` : ''}
         </div>
         <div style="flex:1;">
           <p style="margin:0 0 3px;font-weight:bold;font-size:10px;color:${color};">Educacion:</p>
@@ -371,7 +387,7 @@ const generarPdfDoc = async () => {
   try {
     const el = container.firstElementChild
     const canvas = await html2canvas(el, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       allowTaint: true,
       logging: false,
@@ -382,21 +398,21 @@ const generarPdfDoc = async () => {
 
     document.body.removeChild(container)
 
-    const imgData = canvas.toDataURL('image/png')
+    const imgData = canvas.toDataURL('image/jpeg', 0.85)
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pageW = 210
     const pageH = 297
     const imgH = (canvas.height * pageW) / canvas.width
 
     if (imgH <= pageH) {
-      pdf.addImage(imgData, 'PNG', 0, 0, pageW, imgH)
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH)
     } else {
       // Múltiples páginas si el contenido excede A4
       let posY = 0
       let remaining = imgH
       while (remaining > 0) {
         const sliceH = Math.min(remaining, pageH)
-        pdf.addImage(imgData, 'PNG', 0, -posY, pageW, imgH)
+        pdf.addImage(imgData, 'JPEG', 0, -posY, pageW, imgH)
         remaining -= sliceH
         posY += sliceH
         if (remaining > 0) pdf.addPage()
@@ -462,8 +478,19 @@ const guardarCvFinal = async () => {
       diseno: formCv.value.diseno
     }
 
+    // Verificar que el payload no exceda el límite del proxy (8MB)
+    const payloadSize = new Blob([JSON.stringify(payload)]).size
+    if (payloadSize > 7 * 1024 * 1024) {
+      console.warn('Payload CV demasiado grande:', (payloadSize / (1024 * 1024)).toFixed(2), 'MB')
+      mensajeError.value = 'El archivo PDF generado es demasiado grande. Intente con una foto de menor resolución.'
+      cargandoGuardar.value = false
+      return
+    }
+
     const res = await axios.post('/api/cv/guardar', payload, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      maxContentLength: 8 * 1024 * 1024,
+      maxBodyLength: 8 * 1024 * 1024
     })
 
     if (res.data) {
@@ -474,6 +501,9 @@ const guardarCvFinal = async () => {
         u.foto_url = formCv.value.perfil.fotoUrl
         localStorage.setItem('genesis_usuario', JSON.stringify(u))
       }
+      localStorage.setItem('genesis_cv', 'true')
+      window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+      localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
       mostrandoWizard.value = false
       await cargarCvs()
       // Redirigir automáticamente al Inicio
@@ -609,7 +639,7 @@ const eliminarCv = async (cvId) => {
         v-if="pasoActual === 0"
         class="relative w-full max-w-[580px] bg-white rounded-[22px] shadow-2xl overflow-hidden my-auto"
       >
-        <div class="bg-[#010C67] text-white px-6 py-4 text-center">
+        <div class="bg-[#010C67] text-white px-6 py-4 text-center relative shrink-0">
           <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             Bienvenido a Génesis Profesional - Completa tu perfil profesional
           </h3>
@@ -619,6 +649,17 @@ const eliminarCv = async (cvId) => {
           <h2 class="text-xl sm:text-2xl font-bold text-gray-900 font-serif mb-6" style="font-family: 'Lora', Georgia, serif;">
             Inicia la creación de tu perfil profesional
           </h2>
+
+          <!-- Alerta de Error en Paso 0 -->
+          <div v-if="mensajeError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between gap-2 text-left">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button type="button" @click="mensajeError = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+          </div>
 
           <div class="bg-[#f0f3ff] rounded-2xl p-6 text-left border border-blue-100 mb-6">
             <label class="block text-sm font-bold text-[#010C67] mb-2 flex items-center gap-2" style="font-family: 'Lora', Georgia, serif;">
@@ -671,14 +712,35 @@ const eliminarCv = async (cvId) => {
         class="relative w-full max-w-[950px] bg-white rounded-[22px] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[95vh]"
       >
         <!-- Header Banner -->
-        <div class="bg-[#010C67] text-white px-6 py-4 text-center shrink-0">
+        <div class="bg-[#010C67] text-white px-6 py-4 text-center shrink-0 relative">
           <h3 class="text-lg sm:text-xl font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             Tu perfil ya casi está listo.
           </h3>
+          <button 
+            type="button" 
+            @click="cancelarWizard" 
+            class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-1 transition-colors cursor-pointer" 
+            aria-label="Cerrar"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <!-- Contenido Vista Previa -->
         <div class="p-6 md:p-8 overflow-y-auto flex-1 space-y-6">
+          <!-- Alerta de Error al Guardar CV -->
+          <div v-if="mensajeError" class="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between gap-2 text-left shadow-xs">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button type="button" @click="mensajeError = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+          </div>
+
           <h2 class="text-center text-xl font-serif text-gray-800 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             Vista previa
           </h2>
@@ -705,7 +767,7 @@ const eliminarCv = async (cvId) => {
               <!-- Cuerpo del CV -->
               <div class="p-5 space-y-3.5 bg-white text-gray-900 text-[11px] leading-relaxed">
                 <!-- Contacto y Educación / Idiomas -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100 min-w-0 w-full">
                   <div class="space-y-1">
                     <p class="flex items-center gap-1.5 font-bold">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -721,6 +783,11 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Teléfono:</span>
                       <span class="font-normal text-gray-800 ml-0.5">{{ formCv.perfil.telefono }}</span>
+                    </p>
+                    <p v-if="formCv.perfil.link_portafolio" class="flex items-center gap-1.5 font-bold">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18C5 19.94 8.13 22 12 22C15.87 22 19 19.94 19 17.18V13.18L12 17.09L5 13.18Z"/></svg>
+                      <span :style="{ color: formCv.diseno.color }">Portafolio:</span>
+                      <span class="font-normal text-gray-800 ml-0.5 truncate max-w-[160px]">{{ formCv.perfil.link_portafolio }}</span>
                     </p>
                   </div>
 
@@ -749,7 +816,7 @@ const eliminarCv = async (cvId) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-2.33 4.67-3.6 7-3.6s7 1.27 7 3.6V19z"/></svg>
                     <span :style="{ color: formCv.diseno.color }">Sobre mí:</span>
                   </p>
-                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.perfil.sobreMi }}</p>
+                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.perfil.sobreMi }}</p>
                 </div>
 
                 <!-- Conocimientos y Valores profesionales -->
@@ -759,14 +826,14 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Conocimientos:</span>
                     </p>
-                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.conocimientos }}</p>
+                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.objetivos.conocimientos }}</p>
                   </div>
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Valores profesionales:</span>
                     </p>
-                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.valores }}</p>
+                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.objetivos.valores }}</p>
                   </div>
                 </div>
 
@@ -777,14 +844,14 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Mi objetivo:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.objetivos.objetivo }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.objetivos.objetivo }}</p>
                   </div>
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Habilidades:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.habilidades }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.habilidades }}</p>
                   </div>
                 </div>
 
@@ -795,14 +862,14 @@ const eliminarCv = async (cvId) => {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h6v2H9V4zm9 16H6V8h12v12z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Certificados:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.certificados }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.certificados }}</p>
                   </div>
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Logros:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.logros }}</p>
+                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.logros }}</p>
                   </div>
                 </div>
 
@@ -812,7 +879,7 @@ const eliminarCv = async (cvId) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                     <span :style="{ color: formCv.diseno.color }">Proyectos de beneficio social:</span>
                   </p>
-                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.proyectos }}</p>
+                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-word] min-w-0 max-w-full">{{ formCv.logros.proyectos }}</p>
                 </div>
               </div>
             </div>
@@ -880,59 +947,71 @@ const eliminarCv = async (cvId) => {
         v-else
         class="relative w-full max-w-[850px] bg-white rounded-[22px] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]"
       >
-        <!-- Modal Verde "Perfil completado" superpuesto si esta activo (Captura 1) -->
+        <!-- Modal Verde "Perfil completado" superpuesto si esta activo (Captura 2) -->
         <div 
           v-if="mostrandoModalExito"
-          class="absolute inset-0 z-30 flex items-center justify-center p-6 bg-black/40 backdrop-blur-[1px]"
+          class="absolute inset-0 z-30 flex items-start justify-center pt-12 sm:pt-14 px-4 bg-black/15 pointer-events-auto"
         >
-          <div class="relative w-full max-w-[480px] bg-[#10A957] text-white rounded-[22px] p-8 shadow-2xl">
-            <!-- Botón Cerrar ✕ -->
-            <button 
-              @click="mostrandoModalExito = false"
-              class="absolute top-4 right-4 text-white hover:opacity-80 p-1 cursor-pointer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <!-- Título con icono elipse y check -->
-            <div class="flex items-center gap-2.5 mb-3 text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 text-white shrink-0">
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-                <path d="M8.5 12.5L11 15L15.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <h3 class="text-2xl sm:text-3xl font-bold font-serif text-white tracking-tight" style="font-family: 'Lora', Georgia, serif;">
-                Perfil completado
-              </h3>
+          <div class="relative w-full max-w-[310px] bg-[#00A843] text-white rounded-2xl px-5 py-4 shadow-2xl">
+            <!-- Header con Icono + Título + Botón Cerrar ✕ -->
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-5 h-5 text-white shrink-0">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  <path d="M8.5 12.5L11 15L15.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3 class="text-base font-bold text-white tracking-tight">
+                  Perfil completado
+                </h3>
+              </div>
+              <button 
+                type="button"
+                @click="mostrandoModalExito = false"
+                class="text-white/80 hover:text-white p-0.5 cursor-pointer leading-none transition-opacity"
+                aria-label="Cerrar"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <!-- Subtítulo -->
-            <p class="text-sm sm:text-base font-bold font-sans text-white mb-6 leading-snug text-left pl-8 max-w-[380px]">
-              Su cv ah sido cargado con éxito, verifique sus datos antes de finalizar.
+            <p class="text-xs text-white text-center font-normal leading-relaxed mb-3">
+              Su cv ha sido cargado con éxito. Verifique sus datos antes de finalizar.
             </p>
 
-            <!-- Botón Ver cv (Centrado) -->
-            <div class="flex justify-center pt-1">
+            <!-- Botón Aceptar (Pill redondeado con borde blanco) -->
+            <div class="flex justify-center">
               <button
+                type="button"
                 @click="verCvVistaPrevia"
-                class="px-8 py-2 rounded-[16px] border border-white text-white font-medium text-base sm:text-lg hover:bg-white/10 transition-all cursor-pointer inline-flex items-center justify-center min-w-[140px]"
-                style="font-family: 'Lora', Georgia, serif;"
+                class="px-5 py-1 rounded-full border border-white text-white font-medium text-xs hover:bg-white/10 transition-all cursor-pointer bg-transparent"
               >
-                Ver cv
+                Aceptar
               </button>
             </div>
           </div>
         </div>
 
         <!-- Header Banner Dinámico por Paso -->
-        <div class="bg-[#010C67] text-white px-6 py-4 text-center shrink-0">
+        <div class="bg-[#010C67] text-white px-6 py-4 text-center shrink-0 relative">
           <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             <template v-if="pasoActual === 1">Paso 1: Configuración del diseño</template>
             <template v-else-if="pasoActual === 2">Paso 2: Información de Perfil</template>
             <template v-else-if="pasoActual === 3">Paso 3: Objetivos y valores</template>
             <template v-else-if="pasoActual === 4">Paso 4: Logros</template>
           </h3>
+          <button 
+            type="button" 
+            @click="cancelarWizard" 
+            class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-1 transition-colors cursor-pointer" 
+            aria-label="Cerrar"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <!-- Indicador de Stepper 1 - 4 -->
@@ -954,6 +1033,17 @@ const eliminarCv = async (cvId) => {
 
         <!-- Contenido principal del Paso -->
         <div class="p-6 sm:p-8 overflow-y-auto flex-1 text-left">
+          <!-- Alerta de Validación / Error en Pasos del Wizard -->
+          <div v-if="mensajeError" class="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between gap-2 text-left shadow-xs">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button type="button" @click="mensajeError = ''" class="text-red-400 hover:text-red-700 font-bold px-1 cursor-pointer">✕</button>
+          </div>
+
 
           <!-- PASO 1: DISEÑO -->
           <div v-if="pasoActual === 1" class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
@@ -1119,6 +1209,21 @@ const eliminarCv = async (cvId) => {
                     :class="intentoPasoTouched && !formCv.perfil.educacion.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;"></textarea>
                   <p v-if="intentoPasoTouched && !formCv.perfil.educacion.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-black shrink-0">
+                      <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18C5 19.94 8.13 22 12 22C15.87 22 19 19.94 19 17.18V13.18L12 17.09L5 13.18Z"/>
+                    </svg>
+                    <span>Link del portafolio</span>
+                  </label>
+                  <input 
+                    v-model="formCv.perfil.link_portafolio" 
+                    type="url" 
+                    placeholder="https://portafolio/DallanaCampoz.com"
+                    class="w-full px-4 py-2.5 rounded-[14px] bg-white border border-black text-sm text-gray-800 focus:outline-none shadow-xs"
+                    style="font-family: 'Lora', Georgia, serif;" 
+                  />
                 </div>
               </div>
             </div>

@@ -159,6 +159,23 @@ class CvController extends Controller
             ->where('id', '!=', $cv->id)
             ->delete();
 
+        // Guardar o actualizar el portafolio si se envió desde el formulario del CV
+        $linkPortafolio = $request->perfil['link_portafolio'] 
+            ?? $request->perfil['linkPortafolio'] 
+            ?? $request->link_portafolio 
+            ?? null;
+
+        if ($linkPortafolio !== null) {
+            try {
+                \App\Models\Portafolio::updateOrCreate(
+                    ['usuario_id' => $usuarioId],
+                    ['link_portafolio' => !empty(trim($linkPortafolio)) ? trim($linkPortafolio) : null]
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo guardar el portafolio desde CV: ' . $e->getMessage());
+            }
+        }
+
                 // Registrar en el Historial de Progreso del estudiante
         try {
             $esNuevo = !$cvId;
@@ -218,11 +235,20 @@ class CvController extends Controller
             }
         }
 
+        $portafolio = \App\Models\Portafolio::where('usuario_id', $usuarioId)->first();
+        $linkPortafolio = $portafolio ? $portafolio->link_portafolio : null;
+
         if ($cvs->isEmpty()) {
-            return response()->json(['mensaje' => 'Este usuario aÃºn no tiene CV.', 'tiene_cv' => false, 'cvs' => []], 200);
+            return response()->json([
+                'mensaje'         => 'Este usuario aÃºn no tiene CV.',
+                'tiene_cv'        => false,
+                'cvs'             => [],
+                'link_portafolio' => $linkPortafolio,
+            ], 200);
         }
 
-        $cvs->transform(function ($item) {
+        $cvs->transform(function ($item) use ($linkPortafolio) {
+            $item->link_portafolio = $linkPortafolio;
             if ($item->url_publica) {
                 if (str_starts_with($item->url_publica, '/storage/')) {
                     $item->url_publica = '/api' . $item->url_publica;
@@ -241,8 +267,9 @@ class CvController extends Controller
         });
 
         return response()->json([
-            'tiene_cv' => true,
-            'cvs'      => $cvs,
+            'tiene_cv'        => true,
+            'cvs'             => $cvs,
+            'link_portafolio' => $linkPortafolio,
         ]);
     }
 

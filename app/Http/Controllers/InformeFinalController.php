@@ -112,31 +112,55 @@ class InformeFinalController extends Controller
             return $b->id <=> $a->id;
         })->values();
 
-        // Si la base de datos aún no tiene reportes para este usuario, preparar sugerencias
+        // Mapear única y exclusivamente los reportes reales creados por este usuario
         $reportesFormateados = $reportesDisponibles->map(function ($rep) {
             return [
                 'id' => $rep->id,
                 'mes' => $rep->mes,
                 'periodo' => $rep->periodo,
-                'actividades_desarrolladas' => $rep->actividades_desarrolladas,
+                'actividades_desarrolladas' => $rep->actividades_count ?? ($rep->actividades ? $rep->actividades->count() : ($rep->actividades_desarrolladas ?? 0)),
                 'estado' => $rep->estado,
                 'aprobado' => strtolower($rep->estado) === 'aprobado',
             ];
         });
 
-        // Configuración por defecto del presupuesto dinámico según la maqueta
-        $columnasDefecto = ['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Junio', 'Jul.'];
+        // Construir columnas del presupuesto desde el primer reporte mensual hasta el último
+        $mesesAbrev = [
+            1 => 'Ene.', 2 => 'Feb.', 3 => 'Mar.', 4 => 'Abr.',
+            5 => 'May.', 6 => 'Junio', 7 => 'Jul.', 8 => 'Agos.',
+            9 => 'Sept.', 10 => 'Oct.', 11 => 'Nov.', 12 => 'Dic.'
+        ];
+        $mesesIdentificados = [];
+        foreach ($reportesFormateados as $rep) {
+            $m = strtolower(trim((string)$rep['mes']));
+            foreach ($mesesNum as $k => $num) {
+                if (str_starts_with($m, $k)) {
+                    $mesesIdentificados[$num] = true;
+                    break;
+                }
+            }
+        }
+        ksort($mesesIdentificados);
+        $columnasDinamicas = [];
+        foreach (array_keys($mesesIdentificados) as $mesNum) {
+            if (isset($mesesAbrev[$mesNum])) {
+                $columnasDinamicas[] = $mesesAbrev[$mesNum];
+            }
+        }
+        // Si no hay reportes mensuales creados aún, dejar las columnas vacías
+        // Se irán autogenerando dinámicamente a medida que el usuario suba sus reportes
+
         $itemsDefecto = [
             [
                 'gasto' => 'Comida',
                 'orden' => 1,
-                'montos' => array_fill_keys($columnasDefecto, 0),
+                'montos' => !empty($columnasDinamicas) ? array_fill_keys($columnasDinamicas, 0) : new \stdClass(),
                 'total' => 0,
             ],
             [
                 'gasto' => 'Pasaje',
                 'orden' => 2,
-                'montos' => array_fill_keys($columnasDefecto, 0),
+                'montos' => !empty($columnasDinamicas) ? array_fill_keys($columnasDinamicas, 0) : new \stdClass(),
                 'total' => 0,
             ],
         ];
@@ -149,7 +173,7 @@ class InformeFinalController extends Controller
                 'nombre_pasante' => $nombreCompleto,
                 'institucion' => $institucionSugerida,
                 'reportes_disponibles' => $reportesFormateados,
-                'presupuesto_columnas_sugeridas' => $columnasDefecto,
+                'presupuesto_columnas_sugeridas' => $columnasDinamicas,
                 'presupuesto_items_sugeridos' => $itemsDefecto,
             ]
         ]);
@@ -371,10 +395,10 @@ class InformeFinalController extends Controller
                     userId: (int)$userId,
                     categoria: 'reportes',
                     titulo: $tituloProgreso,
-                    descripcion: "Se ha registrado el {$tituloProgreso} para la institución {$informe->institucion}.",
+                    descripcion: 'Se ha enviado el informe final',
                     accionTexto: 'Ver informe final',
                     accionUrl: '/reportes/informe-final/' . $informe->id,
-                    progreso: $esEnvio ? 90 : 70
+                    progreso: 100
                 );
 
                 // 5. Crear notificación automática en el sistema
@@ -385,7 +409,7 @@ class InformeFinalController extends Controller
                     tipo: 'reporte',
                     origenTipo: 'sistema',
                     remitenteNombre: 'Notificaciones',
-                    enlace: '/reportes'
+                    enlace: '/reportes/informe-final/' . $informe->id
                 );
             } catch (\Throwable $e) {
                 Log::warning('No se pudo registrar notificación/historial para informe final: ' . $e->getMessage());
@@ -605,7 +629,7 @@ class InformeFinalController extends Controller
                 tipo: $esObservado ? 'observacion' : 'reporte',
                 origenTipo: $esObservado ? 'usuario' : 'sistema',
                 remitenteNombre: $esObservado ? 'Jenny Flores' : 'Notificaciones',
-                enlace: '/reportes'
+                enlace: '/reportes/informe-final/' . $informe->id
             );
 
             HistorialProgreso::registrar(
@@ -614,8 +638,8 @@ class InformeFinalController extends Controller
                 titulo: $tituloNotif,
                 descripcion: $mensajeNotif,
                 accionTexto: 'Ver informe final',
-                accionUrl: '/reportes',
-                progreso: $esAprobado ? 100 : 85
+                accionUrl: '/reportes/informe-final/' . $informe->id,
+                progreso: 100
             );
         } catch (\Throwable $e) {
             Log::warning('No se pudo generar notificación de cambio de estado de informe final: ' . $e->getMessage());

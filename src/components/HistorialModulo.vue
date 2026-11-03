@@ -60,119 +60,83 @@ const catalogoIndicadores = [
   }
 ]
 
-// Elementos base de la interfaz conforme a la captura visual
-const itemsBaseMock = [
-  // 01 de marzo de 2026
-  {
-    id: 'mock-1',
-    fecha_agrupada: '01 de marzo de 2026',
-    fecha_exacta_raw: '2026-03-01T08:16:03',
-    titulo: 'Envío de reporte',
-    descripcion: 'Envío de reporte del mes de febrero',
-    fecha_linea1: '01 de marzo de 2026',
-    fecha_linea2: '- 08:16:03 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 12,
-    categoria: 'reportes'
-  },
-  {
-    id: 'mock-2',
-    fecha_agrupada: '01 de marzo de 2026',
-    fecha_exacta_raw: '2026-03-01T08:00:03',
-    titulo: 'Creación de reporte',
-    descripcion: 'Creación de reporte del mes de febrero',
-    fecha_linea1: '01 de marzo de 2026',
-    fecha_linea2: '- 08:00:03 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 12,
-    categoria: 'reportes'
-  },
-  // 20 de enero de 2026
-  {
-    id: 'mock-3',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T11:49:03',
-    titulo: 'Actualización de fotografía',
-    descripcion: 'actualización de fotografía en el perfil',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '11:49:03 a.m.',
-    accion_texto: 'Ver perfil',
-    accion_url: '/perfil',
-    accion_destino: 'perfil',
-    progreso: 10,
-    categoria: 'perfil'
-  },
-  {
-    id: 'mock-4',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T11:16:03',
-    titulo: 'Reporte aprovado',
-    descripcion: 'reporte aprovado por - Jenny Flores',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '11:16:03 a.m.',
-    accion_texto: 'ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 10,
-    categoria: 'reportes_aprobados'
-  },
-  {
-    id: 'mock-5',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T08:11:08',
-    titulo: 'Envío de reporte',
-    descripcion: 'Envío de reporte del mes de enero',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '08:11:08 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 8,
-    categoria: 'reportes'
-  },
-  {
-    id: 'mock-6',
-    fecha_agrupada: '20 de enero de 2026',
-    fecha_exacta_raw: '2026-01-20T06:16:03',
-    titulo: 'Creación de reporte',
-    descripcion: 'Creación de reporte del mes de enero',
-    fecha_linea1: '20 de enero de 2026 -',
-    fecha_linea2: '06:16:03 a.m.',
-    accion_texto: 'Ver reporte',
-    accion_url: '/reportes',
-    accion_destino: 'reportes',
-    progreso: 8,
-    categoria: 'reportes'
-  },
-  // 18 de enero de 2026
-  {
-    id: 'mock-7',
-    fecha_agrupada: '18 de enero de 2026',
-    fecha_exacta_raw: '2026-01-18T08:16:03',
-    titulo: 'Actualización de cv',
-    descripcion: 'Actualización de datos personales en el cv',
-    fecha_linea1: '18 de enero de 2026 -',
-    fecha_linea2: '08:16:03 a.m.',
-    accion_texto: 'Ver perfil',
-    accion_url: '/cv',
-    accion_destino: 'cv',
-    progreso: 7,
-    categoria: 'cv'
-  }
-]
-
-// Listado reactivo de actividades
-const itemsHistorial = ref([...itemsBaseMock])
+// Listado reactivo de actividades desde la base de datos (tiempo real)
+const itemsHistorial = ref([])
 const cargando = ref(false)
+const nuevosItemsIds = ref(new Set())
+
+let canalBroadcast = null
+let intervalPolling = null
+
+// Normalización matemática estricta del progreso según el modelo de pasantías:
+// - Cada reporte mensual incrementa un 10% hasta un límite del 70% (7 reportes).
+// - El informe final o reporte final autocompleta la barra al 100%.
+// - Cada tarjeta histórica conserva el progreso que se tenía en ese momento exacto.
+const normalizarProgresos = (lista) => {
+  if (!Array.isArray(lista) || lista.length === 0) return []
+
+  // Orden cronológico ascendente (antiguos primero) para calcular la acumulación cronológica
+  const listaAsc = [...lista].sort((a, b) => {
+    const tA = new Date(a.fecha_exacta_raw || 0).getTime()
+    const tB = new Date(b.fecha_exacta_raw || 0).getTime()
+    return tA - tB
+  })
+
+  const reportesVistos = {}
+  let contadorReportes = 0
+  let ultimoProgreso = 0
+
+  listaAsc.forEach(item => {
+    const textoCompleto = `${item.titulo || ''} ${item.descripcion || ''} ${item.accion_url || ''}`.toLowerCase()
+
+    // 1. Reporte o Informe final -> 100%
+    if (textoCompleto.includes('final')) {
+      ultimoProgreso = 100
+      item.progreso = 100
+      return
+    }
+
+    // 2. ¿Es reporte mensual?
+    const esReporte = ['reportes', 'reportes_aprobados', 'reportes_rechazados'].includes(item.categoria) ||
+      textoCompleto.includes('reporte')
+
+    if (esReporte) {
+      let claveReporte = null
+      const matchMes = textoCompleto.match(/mes de ([a-záéíóúñ]+)/i)
+      const matchId = (item.accion_url || '').match(/reportes\/(\d+)/i)
+
+      if (matchMes) {
+        claveReporte = 'mes_' + matchMes[1].trim().toLowerCase()
+      } else if (matchId) {
+        claveReporte = 'id_' + matchId[1]
+      } else {
+        claveReporte = 'fecha_' + (item.fecha_agrupada || item.id)
+      }
+
+      if (!reportesVistos[claveReporte]) {
+        contadorReportes++
+        const prog = Math.min(70, Math.max(10, contadorReportes * 10))
+        reportesVistos[claveReporte] = prog
+      }
+
+      item.progreso = reportesVistos[claveReporte]
+      ultimoProgreso = item.progreso
+    } else {
+      // Actividades que no son reportes (CV, perfil, fotografía, etc.)
+      item.progreso = ultimoProgreso > 0 ? ultimoProgreso : (Number(item.progreso) || 0)
+    }
+  })
+
+  return listaAsc
+}
 
 // Cargar actividades desde la base de datos asegurando que no se omita ningún elemento del diseño
-const cargarHistorialDesdeApi = async () => {
+// Soporta actualización silenciosa sin spinner molesto para tiempo real entre ventanas
+const cargarHistorialDesdeApi = async (silencioso = false) => {
   try {
-    cargando.value = true
+    if (!silencioso && itemsHistorial.value.length === 0) {
+      cargando.value = true
+    }
     const userId = usuario.value?.id || usuario.value?.user_id || usuario.value?.usuario_id
     const token = localStorage.getItem('genesis_token')
     
@@ -185,8 +149,8 @@ const cargarHistorialDesdeApi = async () => {
     }
 
     const res = await axios.get('/api/historial-progreso', config)
-    if (res.data && Array.isArray(res.data.items) && res.data.items.length > 0) {
-      const apiItems = res.data.items.map(item => ({
+    if (res.data && Array.isArray(res.data.items)) {
+      const itemsMapeados = res.data.items.map(item => ({
         id: item.id,
         fecha_agrupada: item.fecha_agrupada || item.fecha,
         fecha_exacta_raw: item.fecha_exacta || item.created_at,
@@ -200,15 +164,28 @@ const cargarHistorialDesdeApi = async () => {
         categoria: item.categoria || 'reportes'
       }))
 
-      // Unir garantizando que no se omita ningún elemento de la imagen
-      const titulosEnApi = new Set(apiItems.map(i => `${i.titulo.toLowerCase()}_${i.fecha_agrupada}`))
-      const faltantesMock = itemsBaseMock.filter(m => !titulosEnApi.has(`${m.titulo.toLowerCase()}_${m.fecha_agrupada}`))
-      itemsHistorial.value = [...apiItems, ...faltantesMock]
-    } else {
-      itemsHistorial.value = [...itemsBaseMock]
+      // Detectar nuevos ítems para destacarlos visualmente en vivo
+      if (itemsHistorial.value.length > 0) {
+        const idsPrevios = new Set(itemsHistorial.value.map(i => i.id))
+        const nuevos = itemsMapeados.filter(i => !idsPrevios.has(i.id))
+        if (nuevos.length > 0) {
+          nuevos.forEach(i => nuevosItemsIds.value.add(i.id))
+          setTimeout(() => {
+            nuevos.forEach(i => nuevosItemsIds.value.delete(i.id))
+          }, 4500)
+        }
+      }
+
+      // Aplicar cálculo de progreso progresivo
+      itemsHistorial.value = normalizarProgresos(itemsMapeados)
+    } else if (!silencioso) {
+      itemsHistorial.value = []
     }
   } catch (e) {
-    itemsHistorial.value = [...itemsBaseMock]
+    console.error('Error al cargar historial desde la API:', e)
+    if (!silencioso && itemsHistorial.value.length === 0) {
+      itemsHistorial.value = []
+    }
   } finally {
     cargando.value = false
   }
@@ -221,13 +198,67 @@ const handleClickAfuera = (e) => {
   }
 }
 
+// Manejador de evento storage entre ventanas
+const manejarStorageSync = (e) => {
+  if (e.key === 'genesis_historial_evento' || e.key === 'genesis_historial_updated') {
+    cargarHistorialDesdeApi(true)
+  }
+}
+
+// Manejador al volver a la pestaña/ventana
+const manejarFocoVentana = () => {
+  cargarHistorialDesdeApi(true)
+}
+
+const manejarVisibilidad = () => {
+  if (document.visibilityState === 'visible') {
+    cargarHistorialDesdeApi(true)
+  }
+}
+
 onMounted(() => {
   cargarHistorialDesdeApi()
   window.addEventListener('click', handleClickAfuera)
+
+  // 1. Sincronización en vivo mediante BroadcastChannel (comunicación instantánea entre pestañas/ventanas)
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      canalBroadcast = new BroadcastChannel('genesis_historial_sync')
+      canalBroadcast.onmessage = (event) => {
+        if (event.data?.tipo === 'reporte_creado' || event.data?.tipo === 'informe_final_creado' || event.data?.tipo === 'historial_actualizado') {
+          cargarHistorialDesdeApi(true)
+        }
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel no disponible:', e)
+    }
+  }
+
+  // 2. Sincronización mediante evento de almacenamiento localStorage
+  window.addEventListener('storage', manejarStorageSync)
+
+  // 3. Sincronización reactiva al cambiar de ventana o regresar a la pestaña
+  window.addEventListener('focus', manejarFocoVentana)
+  document.addEventListener('visibilitychange', manejarVisibilidad)
+
+  // 4. Polling periódico silencioso en segundo plano cada 3 segundos
+  intervalPolling = setInterval(() => {
+    cargarHistorialDesdeApi(true)
+  }, 3000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', handleClickAfuera)
+  window.removeEventListener('storage', manejarStorageSync)
+  window.removeEventListener('focus', manejarFocoVentana)
+  document.removeEventListener('visibilitychange', manejarVisibilidad)
+
+  if (canalBroadcast) {
+    canalBroadcast.close()
+  }
+  if (intervalPolling) {
+    clearInterval(intervalPolling)
+  }
 })
 
 // Ordenamiento de actividades: 'recientes' (descendente) o 'antiguos' (ascendente)
@@ -339,14 +370,58 @@ const ingresarASeccion = (ind) => {
   }
 }
 
+// Obtener descripción de la actividad (para informe final siempre muestra exactamente "Se ha enviado el informe final")
+const obtenerDescripcionItem = (item) => {
+  const txt = `${item?.titulo || ''} ${item?.descripcion || ''} ${item?.accion_texto || ''} ${item?.accion_url || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  if (txt.includes('informe final') || txt.includes('reporte final')) {
+    return 'Se ha enviado el informe final'
+  }
+  return item?.descripcion || ''
+}
+
 // Acción de navegación al hacer clic en "Ver reporte", "Ver perfil", etc.
 const ejecutarAccion = (item) => {
+  const titulo = (item.titulo || '').toLowerCase()
+  const descripcion = (item.descripcion || '').toLowerCase()
+  const url = (item.accion_url || '').toLowerCase()
+  const accion = (item.accion_texto || '').toLowerCase()
+  const categoria = (item.categoria || '').toLowerCase()
+
+  const textoCompleto = `${titulo} ${descripcion} ${url} ${accion} ${categoria}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  // Detectar si la acción corresponde a un Informe Final
+  const esInformeFinal = textoCompleto.includes('informe final') ||
+    textoCompleto.includes('reporte final') ||
+    textoCompleto.includes('informe-final') ||
+    textoCompleto.includes('informe_final') ||
+    (textoCompleto.includes('final') && (textoCompleto.includes('informe') || textoCompleto.includes('reporte'))) ||
+    Number(item.progreso) === 100
+
+  if (esInformeFinal) {
+    localStorage.setItem('genesis_ver_informe_final', 'true')
+    let matchId = null
+    const m = url.match(/informe-final\/(\d+)/) || url.match(/reportes\/(\d+)/) || url.match(/(\d+)/) || descripcion.match(/(\d+)/)
+    if (m && m[1]) {
+      matchId = m[1]
+      localStorage.setItem('genesis_ver_informe_final_id', matchId)
+    }
+    emit('navegar', 'reportes', 'informe_final_detalle', matchId)
+    return
+  }
+
   if (item.accion_url && item.accion_url.includes('reporte')) {
     const match = item.accion_url.match(/reportes\/(\d+)/)
     if (match && match[1]) {
       localStorage.setItem('genesis_ver_reporte_id', match[1])
+      emit('navegar', 'reportes', 'detalle', match[1])
+    } else {
+      emit('navegar', 'reportes')
     }
-    emit('navegar', 'reportes')
   } else if (item.accion_url && (item.accion_url.includes('perfil') || item.accion_url.includes('cv'))) {
     emit('navegar', item.accion_destino || 'perfil')
   } else if (item.accion_destino) {
@@ -392,6 +467,19 @@ const seleccionarOrden = (orden) => {
             <span class="text-sm font-medium">Cargando historial de actividades...</span>
           </div>
 
+          <!-- Estado vacío si el usuario no tiene actividades registradas aún -->
+          <div v-else-if="itemsHistorial.length === 0" class="flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-[#000B58] mb-3">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-base font-semibold text-slate-800 mb-1">Sin actividades registradas aún</h3>
+            <p class="text-xs text-slate-500 max-w-sm">
+              Cada acción que realices en el sistema (actualizar tu perfil, crear tu currículum o enviar reportes) se reflejará automáticamente aquí en tiempo real.
+            </p>
+          </div>
+
           <!-- Estado de actividades agrupadas por fecha con línea vertical de tiempo -->
           <div v-else class="space-y-8">
             <div 
@@ -414,18 +502,29 @@ const seleccionarOrden = (orden) => {
                   <div
                     v-for="item in items"
                     :key="item.id"
-                    class="bg-white rounded-xl px-5 py-3.5 transition-all duration-150 shadow-2xs hover:shadow-xs"
-                    :class="obtenerBordeTarjeta(item.categoria)"
+                    class="bg-white rounded-xl px-5 py-3.5 transition-all duration-500 shadow-2xs hover:shadow-xs relative"
+                    :class="[
+                      obtenerBordeTarjeta(item.categoria),
+                      nuevosItemsIds.has(item.id) ? 'ring-2 ring-[#00529C] bg-blue-50/30 shadow-md animate-pulse' : ''
+                    ]"
                   >
                     <div class="grid grid-cols-12 gap-3 items-center">
                       
                       <!-- 1. Título y descripción de la actividad -->
                       <div class="col-span-12 md:col-span-5">
-                        <h3 class="text-sm font-semibold text-slate-800 leading-snug">
-                          {{ item.titulo }}
-                        </h3>
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-sm font-semibold text-slate-800 leading-snug">
+                            {{ item.titulo }}
+                          </h3>
+                          <span 
+                            v-if="nuevosItemsIds.has(item.id)" 
+                            class="inline-flex items-center px-1.5 py-0.2 text-[10px] font-bold bg-[#000B58] text-white rounded-md tracking-wider uppercase shadow-xs animate-bounce"
+                          >
+                            Nuevo
+                          </span>
+                        </div>
                         <p class="text-xs text-slate-500 mt-0.5 leading-tight">
-                          {{ item.descripcion }}
+                          {{ obtenerDescripcionItem(item) }}
                         </p>
                       </div>
 
@@ -446,12 +545,15 @@ const seleccionarOrden = (orden) => {
                         </button>
                       </div>
 
-                      <!-- 4. Barra de Progreso Cápsula con acumulado -->
-                      <div class="col-span-3 md:col-span-2 flex items-center justify-start">
+                      <!-- 4. Barra de Progreso Cápsula con acumulado progresivo -->
+                      <div 
+                        class="col-span-3 md:col-span-2 flex items-center justify-start"
+                        :title="`Progreso acumulado: ${item.progreso}%`"
+                      >
                         <div class="w-28 sm:w-32 h-3.5 bg-white rounded-full border border-gray-300 p-[1px] overflow-hidden shadow-2xs">
                           <div
-                            class="h-full bg-[#00529C] rounded-full transition-all duration-300"
-                            :style="{ width: `${Math.max(4, Math.min(100, Number(item.progreso) || 0))}%` }"
+                            class="h-full bg-[#00529C] rounded-full transition-all duration-700 ease-out"
+                            :style="{ width: `${item.progreso > 0 ? Math.max(6, Math.min(100, Number(item.progreso) || 0)) : 0}%` }"
                           ></div>
                         </div>
                       </div>
@@ -532,18 +634,16 @@ const seleccionarOrden = (orden) => {
               <span class="text-xs text-black font-black">▲</span>
             </button>
 
-            <!-- LISTA DE LOS 7 BOTONES DE ACCESO DIRECTO -->
+            <!-- LISTA DE LOS 7 INDICADORES ORIENTATIVOS (GUÍA VISUAL ESTÁTICA) -->
             <div class="space-y-3">
-              <button
+              <div
                 v-for="ind in catalogoIndicadores"
                 :key="ind.clave"
-                type="button"
-                @click="ingresarASeccion(ind)"
-                class="w-full text-center px-2 py-2.5 bg-white rounded-xl text-[11px] leading-tight font-medium text-slate-800 hover:bg-slate-50 hover:shadow-xs transition duration-150 cursor-pointer block"
+                class="w-full text-center px-2 py-2.5 bg-white rounded-xl text-[11px] leading-tight font-medium text-slate-800 select-none block shadow-2xs"
                 :class="ind.borderClass"
               >
                 {{ ind.titulo }}
-              </button>
+              </div>
             </div>
           </div>
         </div>

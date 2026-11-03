@@ -10,6 +10,36 @@ use App\Models\User;
 class NotificacionController extends Controller
 {
     /**
+     * Obtener el conteo rápido de notificaciones no leídas para el usuario autenticado.
+     * GET /api/notificaciones/contador
+     */
+    public function contador(Request $request)
+    {
+        $jwtUser = $request->attributes->get('jwt_user');
+        $userId = $jwtUser->id ?? $request->header('X-User-Id') ?? $request->query('user_id');
+
+        if (!$userId && $request->has('correo')) {
+            $userId = User::where('correo_institucional', $request->query('correo'))->value('id');
+        }
+
+        if (!$userId) {
+            return response()->json([
+                'exito' => true,
+                'user_id' => null,
+                'no_leidas_count' => 0,
+            ]);
+        }
+
+        $noLeidasCount = Notificacion::paraUsuario((int)$userId)->noLeidas()->count();
+
+        return response()->json([
+            'exito' => true,
+            'user_id' => (int)$userId,
+            'no_leidas_count' => $noLeidasCount,
+        ]);
+    }
+
+    /**
      * Obtener el listado de notificaciones del usuario autenticado.
      * Soporta los filtros de la maqueta:
      * - estado: 'todos' | 'no_leidos' | 'leidos'
@@ -41,9 +71,8 @@ class NotificacionController extends Controller
         $jwtUser = $request->attributes->get('jwt_user');
         $userId = $jwtUser->id ?? $request->header('X-User-Id') ?? $request->query('user_id');
 
-        if (!$userId) {
-            $primerUsuario = User::first();
-            $userId = $primerUsuario?->id;
+        if (!$userId && $request->has('correo')) {
+            $userId = User::where('correo_institucional', $request->query('correo'))->value('id');
         }
 
         if (!$userId) {
@@ -106,20 +135,15 @@ class NotificacionController extends Controller
         $jwtUser = $request->attributes->get('jwt_user');
         $userId = $jwtUser->id ?? $request->header('X-User-Id') ?? $request->query('user_id') ?? $request->input('user_id');
 
-        if (!$userId) {
-            $userId = User::first()?->id;
+        if (!$userId && $request->has('correo')) {
+            $userId = User::where('correo_institucional', $request->query('correo'))->value('id');
         }
 
-        if (!$userId) {
-            return response()->json([
-                'exito' => false,
-                'mensaje' => 'Usuario no autenticado.',
-            ], 401);
+        $query = Notificacion::where('id', $id);
+        if ($userId) {
+            $query->where('user_id', (int)$userId);
         }
-
-        $notificacion = Notificacion::where('id', $id)
-            ->where('user_id', (int)$userId)
-            ->first();
+        $notificacion = $query->first();
 
         if (!$notificacion) {
             return response()->json([
@@ -129,11 +153,13 @@ class NotificacionController extends Controller
         }
 
         $notificacion->marcarComoLeida();
+        $noLeidasCount = Notificacion::paraUsuario((int)$notificacion->user_id)->noLeidas()->count();
 
         return response()->json([
             'exito' => true,
             'mensaje' => 'Notificación marcada como leída.',
             'data' => $notificacion,
+            'no_leidas_count' => $noLeidasCount,
         ]);
     }
 
@@ -146,8 +172,8 @@ class NotificacionController extends Controller
         $jwtUser = $request->attributes->get('jwt_user');
         $userId = $jwtUser->id ?? $request->header('X-User-Id') ?? $request->query('user_id') ?? $request->input('user_id');
 
-        if (!$userId) {
-            $userId = User::first()?->id;
+        if (!$userId && $request->has('correo')) {
+            $userId = User::where('correo_institucional', $request->query('correo'))->value('id');
         }
 
         if (!$userId) {
@@ -164,6 +190,7 @@ class NotificacionController extends Controller
         return response()->json([
             'exito' => true,
             'mensaje' => 'Todas las notificaciones fueron marcadas como leídas.',
+            'no_leidas_count' => 0,
         ]);
     }
 
@@ -176,20 +203,15 @@ class NotificacionController extends Controller
         $jwtUser = $request->attributes->get('jwt_user');
         $userId = $jwtUser->id ?? $request->header('X-User-Id') ?? $request->query('user_id');
 
-        if (!$userId) {
-            $userId = User::first()?->id;
+        if (!$userId && $request->has('correo')) {
+            $userId = User::where('correo_institucional', $request->query('correo'))->value('id');
         }
 
-        if (!$userId) {
-            return response()->json([
-                'exito' => false,
-                'mensaje' => 'Usuario no autenticado.',
-            ], 401);
+        $query = Notificacion::where('id', $id);
+        if ($userId) {
+            $query->where('user_id', (int)$userId);
         }
-
-        $notificacion = Notificacion::where('id', $id)
-            ->where('user_id', (int)$userId)
-            ->first();
+        $notificacion = $query->first();
 
         if (!$notificacion) {
             return response()->json([
@@ -198,11 +220,15 @@ class NotificacionController extends Controller
             ], 404);
         }
 
+        $userIdNotif = $notificacion->user_id;
         $notificacion->delete();
+
+        $noLeidasCount = Notificacion::paraUsuario((int)$userIdNotif)->noLeidas()->count();
 
         return response()->json([
             'exito' => true,
             'mensaje' => 'Notificación eliminada correctamente.',
+            'no_leidas_count' => $noLeidasCount,
         ]);
     }
 
