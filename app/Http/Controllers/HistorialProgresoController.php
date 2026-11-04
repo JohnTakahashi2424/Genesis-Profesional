@@ -128,6 +128,42 @@ class HistorialProgresoController extends Controller
             }
         }
 
+        // Garantizar que cualquier informe final registrado esté presente en el historial
+        try {
+            $informesReales = \App\Models\InformeFinal::where('user_id', (int)$userId)->get();
+            $huboNuevos = false;
+            foreach ($informesReales as $inf) {
+                $existe = HistorialProgreso::paraUsuario((int)$userId)
+                    ->where(function ($q) use ($inf) {
+                        $q->where('titulo', 'LIKE', '%Informe Final%')
+                          ->orWhere('accion_url', 'LIKE', "%/informe-final/{$inf->id}%");
+                    })
+                    ->first();
+                if (!$existe) {
+                    HistorialProgreso::create([
+                        'user_id' => $inf->user_id,
+                        'categoria' => 'reportes',
+                        'titulo' => 'Envío de Informe Final',
+                        'descripcion' => 'Se ha enviado el informe final',
+                        'fecha_exacta' => $inf->created_at ?? now(),
+                        'accion_texto' => 'Ver informe final',
+                        'accion_url' => '/reportes/informe-final/' . $inf->id,
+                        'progreso' => 100,
+                    ]);
+                    $huboNuevos = true;
+                }
+            }
+            if ($huboNuevos) {
+                $items = HistorialProgreso::paraUsuario((int)$userId)
+                    ->orderByDesc('fecha_exacta')
+                    ->get();
+            }
+        } catch (\Throwable $eInf) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo sincronizar historial de informe final: ' . $eInf->getMessage());
+        }
+
+        $items = $this->calcularProgresosCronologicos($items);
+
         return response()->json([
             'exito' => true,
             'total' => $items->count(),
@@ -236,6 +272,80 @@ class HistorialProgresoController extends Controller
     /**
      * Sembrar registros base para un usuario nuevo, calcados de la interfaz
      */
+        /**
+     * Normalizar y calcular el porcentaje de progreso cronológico de cada actividad:
+     * - Reporte 1: 10%
+     * - Reporte 2: 20%
+     * - Reporte 3: 30%
+     * ...
+     * - Límite de 70% (7 reportes mensuales)
+     * - Informe Final / Reporte Final: 100%
+     * - Cada tarjeta histórica conserva el progreso que se tenía en ese momento exacto.
+     */
+    protected function calcularProgresosCronologicos($items)
+    {
+        if ($items->isEmpty()) {
+            return $items;
+        }
+
+        // Ordenar cronológicamente ascendente (antiguos primero) para calcular la acumulación histórica
+        $itemsAsc = $items->sortBy(function ($item) {
+            return $item->fecha_exacta ?? $item->created_at;
+        })->values();
+
+        $reportesIdentificados = [];
+        $contadorReportes = 0;
+        $ultimoProgreso = 0;
+
+        foreach ($itemsAsc as $item) {
+            $tituloLower = mb_strtolower($item->titulo ?? '');
+            $descLower = mb_strtolower($item->descripcion ?? '');
+            $urlLower = mb_strtolower($item->accion_url ?? '');
+            $textoCompleto = "{$tituloLower} {$descLower} {$urlLower}";
+
+            // 1. ¿Es informe o reporte final? -> 100%
+            if (str_contains($textoCompleto, 'final')) {
+                $ultimoProgreso = 100;
+                $item->progreso = 100;
+                continue;
+            }
+
+            // 2. ¿Es actividad de reporte mensual?
+            $esReporte = in_array($item->categoria, ['reportes', 'reportes_aprobados', 'reportes_rechazados'])
+                || str_contains($textoCompleto, 'reporte');
+
+            if ($esReporte) {
+                // Identificar a qué reporte mensual pertenece (por mes o por url/id)
+                $claveReporte = null;
+                if (preg_match('/mes de ([a-záéíóúñ]+)/i', $textoCompleto, $coincidencias)) {
+                    $claveReporte = 'mes_' . trim(mb_strtolower($coincidencias[1]));
+                } elseif (preg_match('/reportes\/(\d+)/i', $textoCompleto, $coincidencias)) {
+                    $claveReporte = 'id_' . $coincidencias[1];
+                } else {
+                    $claveReporte = 'fecha_' . ($item->fecha_agrupada ?? $item->id);
+                }
+
+                if (!isset($reportesIdentificados[$claveReporte])) {
+                    $contadorReportes++;
+                    $progresoReporte = min(70, max(10, $contadorReportes * 10));
+                    $reportesIdentificados[$claveReporte] = $progresoReporte;
+                }
+
+                $item->progreso = $reportesIdentificados[$claveReporte];
+                $ultimoProgreso = $item->progreso;
+            } else {
+                // Otras actividades (CV, fotografía, perfil, etc.)
+                // Mantienen el progreso alcanzado hasta ese momento (o 0 si aún no había reportes)
+                $item->progreso = $ultimoProgreso > 0 ? $ultimoProgreso : ($item->progreso ?? 0);
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Sembrar registros base para un usuario nuevo, calcados de la interfaz
+     */
     protected function sembrarActividadesIniciales(int $userId): void
     {
         $baseItems = [
@@ -247,7 +357,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-03-01 08:16:03',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 15,
+                'progreso'     => 20,
             ],
             [
                 'user_id'      => $userId,
@@ -257,7 +367,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-03-01 08:00:03',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 15,
+                'progreso'     => 20,
             ],
             [
                 'user_id'      => $userId,
@@ -267,7 +377,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-01-20 11:49:03',
                 'accion_texto' => 'Ver perfil',
                 'accion_url'   => '/perfil',
-                'progreso'     => 15,
+                'progreso'     => 10,
             ],
             [
                 'user_id'      => $userId,
@@ -277,7 +387,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-01-20 11:16:03',
                 'accion_texto' => 'ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 15,
+                'progreso'     => 10,
             ],
             [
                 'user_id'      => $userId,
@@ -287,7 +397,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-01-20 08:11:08',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 0,
+                'progreso'     => 10,
             ],
             [
                 'user_id'      => $userId,
@@ -297,7 +407,7 @@ class HistorialProgresoController extends Controller
                 'fecha_exacta' => '2026-01-20 06:16:03',
                 'accion_texto' => 'Ver reporte',
                 'accion_url'   => '/reportes',
-                'progreso'     => 0,
+                'progreso'     => 10,
             ],
         ];
 
@@ -306,4 +416,3 @@ class HistorialProgresoController extends Controller
         }
     }
 }
-

@@ -13,7 +13,6 @@ const loading = ref(false)
 const errorPaso1 = ref('')
 const errorPaso2 = ref('')
 const errorPaso3 = ref('')
-const avisoPrueba = ref('')
 
 // Paso 1: Correo
 const correo = ref('')
@@ -138,12 +137,7 @@ const handleEnviarCodigo = async () => {
     correoEnmascarado.value = res.correo_enmascarado || enmascarar(correoLimpio)
     paso.value = 2
     iniciarTemporizador(res.tiempo_expiracion_segundos || 90)
-    if (res.codigo_simulado) {
-      avisoPrueba.value = 'Código de verificación: ' + res.codigo_simulado
-      console.info('Código de recuperación:', res.codigo_simulado)
-    } else {
-      avisoPrueba.value = ''
-    }
+    
 
     // Enfocar automáticamente primera casilla en paso 2
     nextTick(() => {
@@ -217,12 +211,7 @@ const handleReenviarCodigo = async () => {
     const res = await authService.enviarCodigo(correo.value.trim().toLowerCase())
     iniciarTemporizador(res.tiempo_expiracion_segundos || 90)
     digitos.value = ['', '', '', '', '', '']
-    if (res.codigo_simulado) {
-      avisoPrueba.value = 'Código de verificación: ' + res.codigo_simulado
-      console.info('Código de recuperación:', res.codigo_simulado)
-    } else {
-      avisoPrueba.value = ''
-    }
+    
     nextTick(() => {
       const primerInput = document.getElementById('digito-0')
       if (primerInput) primerInput.focus()
@@ -310,7 +299,8 @@ const handleCambiarContrasena = async () => {
       confirmar_contrasena: confirmarContrasena.value
     })
 
-    paso.value = 4
+    // Redirigir directamente al login automáticamente al restablecer contraseña
+    emit('volver-login')
   } catch (err) {
     if (err.response && err.response.data) {
       errorPaso3.value = err.response.data.mensaje || 'No fue posible actualizar la contraseña.'
@@ -452,10 +442,7 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- Aviso de código en pruebas -->
-        <div v-if="avisoPrueba" class="mb-3 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-xs font-semibold text-center">
-          {{ avisoPrueba }}
-        </div>
+        
 
         <!-- Mensaje de error paso 2 -->
         <p v-if="errorPaso2" class="flex items-center justify-center gap-1 text-red-600 text-[11px] mb-3 font-medium">
@@ -609,28 +596,7 @@ onUnmounted(() => {
         </form>
       </div>
 
-      <!-- ========================================== -->
-      <!-- PASO 4: ÉXITO CONFIRMADO                   -->
-      <!-- ========================================== -->
-      <div v-else-if="paso === 4" class="py-4">
-        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <i class="bi bi-check-lg text-3xl"></i>
-        </div>
-        <h2 class="text-[26px] font-bold text-gray-950 tracking-tight mb-2" style="font-family: 'Lora', Georgia, serif;">
-          ¡Contraseña restablecida!
-        </h2>
-        <p class="text-[12px] text-gray-600 font-sans mb-6">
-          Tu contraseña ha sido actualizada exitosamente.<br>Ahora puedes iniciar sesión con tus nuevas credenciales.
-        </p>
-        <button
-          type="button"
-          @click="emit('volver-login')"
-          class="w-[171px] h-[51px] rounded-[18px] border border-white bg-[#010C67] hover:bg-[#01094f] active:scale-[0.98] text-white text-sm font-medium transition-all shadow-md mx-auto flex items-center justify-center cursor-pointer"
-          style="font-family: 'Lora', Georgia, serif;"
-        >
-          Iniciar sesión
-        </button>
-      </div>
+
 
     </div>
   </div>

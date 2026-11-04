@@ -11,7 +11,7 @@ const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 const cargando = ref(true)
 const enviando = ref(false)
 const mensajeError = ref('')
-const exitoModal = ref(false)
+const toastExitoVisible = ref(false)
 
 // Nombre del estudiante autenticado desde sesión
 const nombreInicial = usuario.value?.nombres
@@ -106,48 +106,7 @@ const ordenarPorMesMayorAMenor = (lista) => {
   })
 }
 
-const reportesDisponibles = ref([
-  {
-    id: 5,
-    mes: 'Diciembre',
-    periodo: '01 Dic – 31 Dic 2026',
-    actividades_desarrolladas: 1,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 4,
-    mes: 'Noviembre',
-    periodo: '01 Nov – 30 Nov 2026',
-    actividades_desarrolladas: 1,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 3,
-    mes: 'Octubre',
-    periodo: '01 Oct – 30 Oct 2026',
-    actividades_desarrolladas: 1,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 2,
-    mes: 'Septiembre',
-    periodo: '01 Sept – 30 Sept 2026',
-    actividades_desarrolladas: 3,
-    estado: 'En revisión',
-    seleccionado: false
-  },
-  {
-    id: 1,
-    mes: 'Agosto',
-    periodo: '01 Ago – 31 Ago 2026',
-    actividades_desarrolladas: 2,
-    estado: 'En revisión',
-    seleccionado: false
-  }
-])
+const reportesDisponibles = ref([])
 
 // Lista computada garantizada de mayor a menor
 const reportesDisponiblesOrdenados = computed(() => {
@@ -198,12 +157,26 @@ const handleDrop = (event) => {
 
 const procesarArchivos = (files) => {
   files.forEach(file => {
-    anexos.value.push({
+    const ext = file.name.split('.').pop().toLowerCase()
+    const esImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext) || file.type.startsWith('image/')
+    const anexoObj = {
       file,
       nombre: file.name,
       tamano: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-      tipo: file.type
-    })
+      tipo: ext || file.type,
+      es_imagen: esImg,
+      url: '',
+      preview: ''
+    }
+    if (esImg) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        anexoObj.url = e.target.result
+        anexoObj.preview = e.target.result
+      }
+      reader.readAsDataURL(file)
+    }
+    anexos.value.push(anexoObj)
   })
 }
 
@@ -214,58 +187,122 @@ const eliminarAnexo = (index) => {
 // ----------------------------------------------------
 // SECCIÓN 3: Presupuesto Dinámico (Filas y Columnas)
 // ----------------------------------------------------
-// Columnas de meses dinámicas (por defecto de enero a julio según la captura)
-const columnasMeses = ref(['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Junio', 'Jul.'])
+// Mapeo cronológico de abreviaturas y nombres de meses
+const mapaMesesAbrev = {
+  1: 'Ene.', 2: 'Feb.', 3: 'Mar.', 4: 'Abr.', 5: 'May.', 6: 'Junio',
+  7: 'Jul.', 8: 'Agos.', 9: 'Sept.', 10: 'Oct.', 11: 'Nov.', 12: 'Dic.'
+}
+
+const mapaMesesNombres = {
+  'ene.': 'enero', 'feb.': 'febrero', 'mar.': 'marzo', 'abr.': 'abril',
+  'may.': 'mayo', 'junio': 'junio', 'jul.': 'julio', 'agos.': 'agosto',
+  'sept.': 'septiembre', 'oct.': 'octubre', 'nov.': 'noviembre', 'dic.': 'diciembre'
+}
+
+// Columnas de meses dinámicas (por defecto según los reportes mensuales creados)
+const columnasMeses = ref([])
 
 // Filas de gastos dinámicas
 const filasPresupuesto = ref([
   {
     gasto: 'Comida',
-    montos: { 'Ene.': 0, 'Feb.': 0, 'Mar.': 0, 'Abr.': 0, 'May.': 0, 'Junio': 0, 'Jul.': 0 }
+    montos: {}
   },
   {
     gasto: 'Pasaje',
-    montos: { 'Ene.': 0, 'Feb.': 0, 'Mar.': 0, 'Abr.': 0, 'May.': 0, 'Junio': 0, 'Jul.': 0 }
+    montos: {}
   }
 ])
 
-// Modal para agregar una nueva columna
-const modalColumnaAbierto = ref(false)
-const nuevaColumnaNombre = ref('')
+// Actualiza las columnas dinámicamente según la cantidad y orden de reportes mensuales
+const actualizarColumnasPresupuesto = () => {
+  if (!reportesDisponibles.value || reportesDisponibles.value.length === 0) {
+    columnasMeses.value = []
+    return
+  }
 
-const abrirModalNuevaColumna = () => {
-  nuevaColumnaNombre.value = ''
-  modalColumnaAbierto.value = true
-}
+  // Ordenar cronológicamente ascendente (desde el primer reporte hasta el último)
+  const reportesAsc = [...reportesDisponibles.value].sort((a, b) => {
+    return obtenerScoreMes(a) - obtenerScoreMes(b)
+  })
 
-const agregarColumna = () => {
-  const nombre = nuevaColumnaNombre.value.trim()
-  if (!nombre) return
-  if (!columnasMeses.value.includes(nombre)) {
-    columnasMeses.value.push(nombre)
-    filasPresupuesto.value.forEach(fila => {
-      if (fila.montos[nombre] === undefined) {
-        fila.montos[nombre] = 0
+  const cols = []
+  reportesAsc.forEach(rep => {
+    const score = obtenerScoreMes(rep)
+    const mesNum = score % 100
+    const abrev = mapaMesesAbrev[mesNum] || rep.mes
+    if (abrev && !cols.includes(abrev)) {
+      cols.push(abrev)
+    }
+  })
+
+  columnasMeses.value = cols
+
+  // Garantizar que cada fila mantenga o inicialice sus columnas
+  filasPresupuesto.value.forEach(fila => {
+    if (!fila.montos) fila.montos = {}
+    columnasMeses.value.forEach(col => {
+      if (fila.montos[col] === undefined) {
+        fila.montos[col] = ''
       }
     })
-  }
-  modalColumnaAbierto.value = false
-  nuevaColumnaNombre.value = ''
+  })
 }
 
-const eliminarColumna = (colName) => {
-  if (columnasMeses.value.length <= 1) return
-  columnasMeses.value = columnasMeses.value.filter(c => c !== colName)
-  filasPresupuesto.value.forEach(fila => {
-    delete fila.montos[colName]
-  })
+// Bloquear teclas no numéricas (solo permite dígitos, punto, coma y teclas de navegación)
+const permitirSoloNumerosYPuntuacion = (e) => {
+  const teclasPermitidas = [
+    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'
+  ]
+  if (teclasPermitidas.includes(e.key) || e.ctrlKey || e.metaKey) {
+    return
+  }
+  if (!/[0-9.,]/.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
+// Validación y filtrado en vivo: solo acepta dígitos (0-9), punto (.) y coma (,)
+// Cualquier otro carácter (letras, símbolos, etc.) se remueve de inmediato
+const filtrarMontoEnVivo = (fila, col, e) => {
+  const inputEl = e.target
+  let valor = inputEl.value
+
+  // Remover cualquier carácter no numérico excepto punto y coma
+  valor = valor.replace(/[^0-9.,]/g, '')
+
+  // Permitir únicamente un único separador decimal (punto o coma)
+  let primerSeparador = -1
+  let filtrado = ''
+  for (let i = 0; i < valor.length; i++) {
+    const c = valor[i]
+    if (c === '.' || c === ',') {
+      if (primerSeparador === -1) {
+        primerSeparador = i
+        filtrado += c
+      }
+    } else {
+      filtrado += c
+    }
+  }
+
+  fila.montos[col] = filtrado
+  inputEl.value = filtrado
+}
+
+// Verifica si el usuario ha ingresado un valor numérico real
+const tieneMontoIngresado = (val) => {
+  if (val === null || val === undefined || val === '') return false
+  const str = String(val).trim()
+  return str !== '' && str !== '0'
 }
 
 // Agregar nueva fila de gasto con el botón (+) circular
 const agregarFilaGasto = () => {
   const nuevosMontos = {}
   columnasMeses.value.forEach(col => {
-    nuevosMontos[col] = 0
+    nuevosMontos[col] = ''
   })
   filasPresupuesto.value.push({
     gasto: '',
@@ -279,31 +316,52 @@ const eliminarFilaGasto = (index) => {
   }
 }
 
-// Calcular total por fila
+// Calcular total por fila con soporte completo de centavos (ej: 25.15)
 const calcularTotalFila = (fila) => {
   let suma = 0
+  let hayValores = false
   columnasMeses.value.forEach(col => {
-    const val = parseFloat(fila.montos[col]) || 0
-    suma += val
+    const raw = String(fila.montos?.[col] ?? '').trim().replace(',', '.')
+    const val = parseFloat(raw)
+    if (!isNaN(val) && val > 0) {
+      suma += val
+      hayValores = true
+    }
   })
-  return Math.round(suma)
+  if (!hayValores || suma === 0) return '000'
+  return Number.isInteger(suma) ? String(suma) : suma.toFixed(2)
 }
 
-// Calcular gran total consolidado
+// Calcular gran total consolidado con soporte completo de centavos
 const granTotalPresupuesto = computed(() => {
   let total = 0
+  let hayValores = false
   filasPresupuesto.value.forEach(fila => {
-    total += calcularTotalFila(fila)
+    columnasMeses.value.forEach(col => {
+      const raw = String(fila.montos?.[col] ?? '').trim().replace(',', '.')
+      const val = parseFloat(raw)
+      if (!isNaN(val) && val > 0) {
+        total += val
+        hayValores = true
+      }
+    })
   })
-  return Math.round(total)
+  if (!hayValores || total === 0) return '000'
+  return Number.isInteger(total) ? String(total) : total.toFixed(2)
 })
 
-// Subtítulo dinámico para el presupuesto
+// Subtítulo dinámico para el presupuesto: 'Presupuesto de [primer mes] a [último mes]'
 const subtituloPresupuesto = computed(() => {
   if (columnasMeses.value.length === 0) return 'Presupuesto'
-  const primerMes = columnasMeses.value[0]
-  const ultimoMes = columnasMeses.value[columnasMeses.value.length - 1]
-  return `Presupuesto de ${primerMes.toLowerCase()} a ${ultimoMes.toLowerCase()}`
+  const primerCol = columnasMeses.value[0].toLowerCase()
+  const ultimoCol = columnasMeses.value[columnasMeses.value.length - 1].toLowerCase()
+  const primerMes = mapaMesesNombres[primerCol] || primerCol
+  const ultimoMes = mapaMesesNombres[ultimoCol] || ultimoCol
+
+  if (primerMes === ultimoMes) {
+    return `Presupuesto de ${primerMes}`
+  }
+  return `Presupuesto de ${primerMes} a ${ultimoMes}`
 })
 
 // ----------------------------------------------------
@@ -325,17 +383,22 @@ const cargarDatosIniciales = async () => {
       if (data.nombre_pasante) form.value.nombre_pasante = data.nombre_pasante
       if (data.institucion) form.value.institucion = data.institucion
 
-      // Si la API devuelve reportes reales, usarlos ordenados de mayor a menor
-      if (Array.isArray(data.reportes_disponibles) && data.reportes_disponibles.length > 0) {
+      // Cargar única y exclusivamente los reportes reales creados en la BD
+      if (Array.isArray(data.reportes_disponibles)) {
         const mapeados = data.reportes_disponibles.map(r => ({
           ...r,
           seleccionado: false
         }))
         reportesDisponibles.value = ordenarPorMesMayorAMenor(mapeados)
+      } else {
+        reportesDisponibles.value = []
       }
+      actualizarColumnasPresupuesto()
     }
   } catch (e) {
-    console.info('Usando configuración estándar de maqueta para informe final.')
+    console.info('No se encontraron reportes o usuario nuevo.')
+    reportesDisponibles.value = []
+    actualizarColumnasPresupuesto()
   } finally {
     cargando.value = false
   }
@@ -343,6 +406,7 @@ const cargarDatosIniciales = async () => {
 
 onMounted(() => {
   cargarDatosIniciales()
+  actualizarColumnasPresupuesto()
 })
 
 // ----------------------------------------------------
@@ -408,12 +472,18 @@ const enviarInforme = async () => {
     }))
     formData.append('presupuesto_items', JSON.stringify(itemsFormateados))
 
-    // Adjuntar archivos anexos
+    // Adjuntar archivos anexos y sus metadatos
     anexos.value.forEach((anx, i) => {
       if (anx.file) {
         formData.append(`archivos[${i}]`, anx.file)
       }
     })
+    formData.append('anexos_meta', JSON.stringify(anexos.value.map(a => ({
+      nombre: a.nombre,
+      tipo: a.tipo,
+      es_imagen: a.es_imagen,
+      url: a.url && a.url.startsWith('data:') ? a.url : ''
+    }))))
 
     const config = {
       headers: {
@@ -425,7 +495,31 @@ const enviarInforme = async () => {
     const res = await axios.post('/api/informes-finales', formData, config)
 
     if (res.data && res.data.exito) {
-      exitoModal.value = true
+      // Notificar en tiempo real a otras pestañas y ventanas abiertas (Historial de progreso)
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const canalSync = new BroadcastChannel('genesis_historial_sync')
+          canalSync.postMessage({
+            tipo: 'informe_final_creado',
+            timestamp: Date.now()
+          })
+          canalSync.close()
+        }
+      } catch (e) {
+        console.warn('BroadcastChannel no disponible:', e)
+      }
+
+      try {
+        localStorage.setItem('genesis_historial_evento', JSON.stringify({
+          tipo: 'informe_final_creado',
+          timestamp: Date.now()
+        }))
+        localStorage.setItem('genesis_historial_updated', Date.now().toString())
+        window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+        localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
+      } catch (e) {}
+
+      toastExitoVisible.value = true
     } else {
       mensajeError.value = res.data?.mensaje || 'Ocurrió un error al registrar el informe final.'
     }
@@ -438,7 +532,7 @@ const enviarInforme = async () => {
 }
 
 const finalizarEnvio = () => {
-  exitoModal.value = false
+  toastExitoVisible.value = false
   emit('guardado')
   emit('volver')
 }
@@ -471,29 +565,29 @@ const finalizarEnvio = () => {
     <!-- ========================================================================= -->
     <!-- CONTENEDOR PRINCIPAL BLANCO CON BORDE AZUL CLARO Y LÍNEA DE SOMBRA DEFINIDA -->
     <!-- ========================================================================= -->
-    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto">
+    <div class="bg-white border border-[#93c5fd] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_0px_0px_rgba(0,11,88,0.16)] max-w-5xl mx-auto overflow-hidden">
       
-      <!-- ENCABEZADO INSTITUCIONAL UGB -->
-      <div class="flex flex-col items-center justify-center text-center mb-8">
-        <div class="flex items-center justify-center gap-6 mb-2">
-          <!-- Logo UGB -->
+      <!-- ENCABEZADO INSTITUCIONAL UGB (Tamaño prominente y uniforme) -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
+        <!-- Logo UGB -->
+        <div class="shrink-0 flex items-center justify-center">
           <img 
             src="/images/Logo_para_reportes_mensuales.png" 
             alt="Universidad Gerardo Barrios" 
-            class="h-16 w-auto object-contain"
+            style="width: 240px; height: 192px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
             @error="(e) => e.target.style.display = 'none'"
           />
-          <div class="text-center">
-            <h2 class="text-xl sm:text-2xl font-serif font-bold text-[#010C67] tracking-tight">
-              FACULTAD DE CIENCIA Y TECNOLOGÍA
-            </h2>
-            <p class="text-xs sm:text-sm font-semibold text-[#010C67] mt-0.5">
-              Trabajo de Graduación Modalidad Pasantía
-            </p>
-            <p class="text-xs sm:text-sm font-medium text-[#1E3A8A]">
-              Ingeniería en Sistemas y Redes Informáticas
-            </p>
-          </div>
+        </div>
+        <div class="text-center">
+          <h2 style="font-family:'Lora',serif; font-size: 28px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
+            FACULTAD DE CIENCIA Y TECNOLOGÍA
+          </h2>
+          <p class="text-base font-semibold text-[#010C67] text-center mt-1">
+            Trabajo de Graduación Modalidad Pasantía
+          </p>
+          <p class="text-sm font-medium text-[#1E3A8A] text-center mt-0.5">
+            Ingeniería en Sistemas y Redes Informáticas
+          </p>
         </div>
       </div>
 
@@ -508,10 +602,10 @@ const finalizarEnvio = () => {
       <div class="space-y-5">
         
         <!-- FILA 1: Nombre del pasante y Institución (2 Columnas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 min-w-0">
           
           <!-- Nombre del pasante* -->
-          <div>
+          <div class="min-w-0">
             <label class="block text-sm font-medium text-gray-900 mb-1.5">
               Nombre del pasante<span class="text-red-500">*</span>
             </label>
@@ -534,7 +628,7 @@ const finalizarEnvio = () => {
           </div>
 
           <!-- Institución dónde se realizó la pasantía* -->
-          <div>
+          <div class="min-w-0">
             <label class="block text-sm font-medium text-gray-900 mb-1.5">
               Institución dónde se realizó la pasantía<span class="text-red-500">*</span>
             </label>
@@ -681,8 +775,11 @@ const finalizarEnvio = () => {
             Selecciona los reportes mensuales para adjuntar<span class="text-red-500">*</span>
           </label>
 
-          <!-- Encabezado de la tabla de reportes adjuntos -->
-          <div class="border border-blue-200 rounded-xl py-3 px-6 mb-3 text-sm font-medium text-gray-500 grid grid-cols-12 gap-2 sm:gap-4 items-center bg-white">
+          <!-- Encabezado de la tabla de reportes adjuntos (solo visible si existen reportes) -->
+          <div 
+            v-if="reportesDisponiblesOrdenados.length > 0"
+            class="border border-blue-200 rounded-xl py-3 px-6 mb-3 text-sm font-medium text-gray-500 grid grid-cols-12 gap-2 sm:gap-4 items-center bg-white"
+          >
             <div class="col-span-4 text-center">Mes del reporte</div>
             <div class="col-span-3 text-center">Periodo</div>
             <div class="col-span-3 text-center">Actividades desarrolladas</div>
@@ -690,7 +787,7 @@ const finalizarEnvio = () => {
           </div>
 
           <!-- Filas de los reportes mensuales (ordenados del mes mayor al menor) -->
-          <div class="space-y-3">
+          <div v-if="reportesDisponiblesOrdenados.length > 0" class="space-y-3">
             <div 
               v-for="rep in reportesDisponiblesOrdenados" 
               :key="rep.id"
@@ -743,6 +840,20 @@ const finalizarEnvio = () => {
                 </span>
               </div>
             </div>
+          </div>
+
+          <!-- Mensaje cuando NO hay reportes creados -->
+          <div 
+            v-else 
+            class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50/70"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400 mx-auto mb-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="text-sm font-semibold text-gray-700">No tienes reportes mensuales creados todavía</p>
+            <p class="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+              A medida que vayas creando tus reportes de progreso mensuales en el sistema, aparecerán en esta sección para que puedas seleccionarlos y adjuntarlos a tu informe final.
+            </p>
           </div>
 
           <!-- Mensaje de error para reportes mensuales -->
@@ -837,29 +948,25 @@ const finalizarEnvio = () => {
 
           <!-- TABLA PRINCIPAL DEL PRESUPUESTO -->
           <div class="border border-gray-300 rounded-xl overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
+            <div v-if="columnasMeses.length === 0" class="py-8 px-6 text-center bg-gray-50/60">
+              <p class="text-sm font-semibold text-gray-700">No hay meses disponibles en el presupuesto todavía</p>
+              <p class="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                Las columnas del presupuesto se generarán automáticamente a medida que vayas creando y registrando tus reportes mensuales.
+              </p>
+            </div>
+            <div v-else class="overflow-x-auto">
               <table class="w-full border-collapse">
                 <!-- ENCABEZADO AZUL MARINO (#010C67) -->
                 <thead>
-                  <tr class="bg-[#010C67] text-white text-xs font-semibold">
+                  <tr class="bg-[#010C67] text-white text-xs font-semibold select-none">
                     <th class="py-3 px-4 text-left min-w-[120px]">Gasto</th>
                     <th 
                       v-for="col in columnasMeses" 
                       :key="col"
-                      class="py-3 px-2 text-center min-w-[65px] group relative"
+                      class="py-3 px-2 text-center min-w-[65px]"
                     >
-                      <div class="flex items-center justify-center gap-1">
+                      <div class="flex items-center justify-center">
                         <span>{{ col }}</span>
-                        <!-- Botón sutil para eliminar columna si hay más de 1 -->
-                        <button 
-                          v-if="columnasMeses.length > 2"
-                          @click="eliminarColumna(col)"
-                          type="button"
-                          class="opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-100 text-[10px] transition cursor-pointer ml-0.5"
-                          title="Eliminar columna"
-                        >
-                          ✕
-                        </button>
                       </div>
                     </th>
                     <th class="py-3 px-4 text-center min-w-[95px]">Total USD</th>
@@ -884,24 +991,30 @@ const finalizarEnvio = () => {
                       />
                     </td>
 
-                    <!-- Inputs por cada mes (cuadritos redondeados) -->
+                    <!-- Inputs por cada mes (con validación en vivo que solo acepta números, puntos y comas) -->
                     <td 
                       v-for="col in columnasMeses" 
                       :key="col"
                       class="py-3 px-1.5 text-center"
                     >
                       <input 
-                        v-model.number="fila.montos[col]"
-                        type="number" 
-                        min="0"
-                        step="any"
-                        class="w-12 h-9 text-center font-medium text-gray-800 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+                        :value="fila.montos[col]"
+                        @keydown="permitirSoloNumerosYPuntuacion($event)"
+                        @input="filtrarMontoEnVivo(fila, col, $event)"
+                        type="text" 
+                        inputmode="decimal"
+                        placeholder="0"
+                        class="no-spinner w-12 sm:w-14 h-9 text-center text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs transition-colors"
+                        :class="tieneMontoIngresado(fila.montos[col]) ? 'text-gray-900 font-semibold' : 'text-gray-400 font-normal'"
                       />
                     </td>
 
-                    <!-- Total USD por fila (cuadrito redondeado con 000) -->
+                    <!-- Total USD por fila (cuadrito redondeado con 000 o monto con centavos ej: 25.15) -->
                     <td class="py-3 px-3 text-center">
-                      <div class="inline-flex items-center justify-center min-w-[75px] h-9 px-2 text-sm font-semibold text-gray-800 border border-gray-300 rounded-lg bg-gray-50/50 shadow-2xs">
+                      <div 
+                        class="inline-flex items-center justify-center min-w-[75px] h-9 px-2 text-sm border border-gray-300 rounded-lg bg-gray-50/50 shadow-2xs transition-colors"
+                        :class="calcularTotalFila(fila) !== '000' ? 'text-gray-900 font-semibold' : 'text-gray-400 font-normal'"
+                      >
                         {{ calcularTotalFila(fila) }}
                       </div>
                     </td>
@@ -941,9 +1054,12 @@ const finalizarEnvio = () => {
                       Total
                     </td>
                     <td :colspan="columnasMeses.length"></td>
-                    <!-- Box del Total General ($000) -->
+                    <!-- Box del Total General ($000 o monto con centavos ej: $25.15) -->
                     <td class="py-4 px-3 text-center">
-                      <div class="inline-flex items-center justify-center min-w-[85px] h-10 px-3 text-sm font-bold text-gray-900 border border-gray-300 rounded-lg bg-white shadow-2xs">
+                      <div 
+                        class="inline-flex items-center justify-center min-w-[85px] h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white shadow-2xs transition-colors"
+                        :class="granTotalPresupuesto !== '000' ? 'text-gray-900 font-bold' : 'text-gray-400 font-normal'"
+                      >
                         ${{ granTotalPresupuesto }}
                       </div>
                     </td>
@@ -990,73 +1106,67 @@ const finalizarEnvio = () => {
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL PARA AGREGAR COLUMNA AL PRESUPUESTO                                -->
+    <!-- TOAST DE ÉXITO IDÉNTICO A LA CAPTURA (ESQUINA INFERIOR DERECHA)           -->
     <!-- ========================================================================= -->
-    <div 
-      v-if="modalColumnaAbierto" 
-      class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+    <transition
+      enter-active-class="transform ease-out duration-300 transition"
+      enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
+      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+      leave-active-class="transition ease-in duration-200"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
     >
-      <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-100">
-        <h4 class="text-base font-bold text-gray-900 mb-2">
-          Agregar columna de mes
-        </h4>
-        <p class="text-xs text-gray-500 mb-4">
-          Ingresa el nombre o abreviatura de la nueva columna (ej: Agos., Sept., Extra).
-        </p>
-        <input 
-          v-model="nuevaColumnaNombre"
-          @keyup.enter="agregarColumna"
-          type="text" 
-          placeholder="Ej: Agos."
-          class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-5"
-          autofocus
-        />
-        <div class="flex justify-end gap-2">
+      <div 
+        v-if="toastExitoVisible" 
+        class="fixed bottom-6 right-6 z-50 bg-[#00C853] text-white rounded-2xl shadow-2xl p-5 w-80 sm:w-96 border border-emerald-400/40"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-2.5">
+            <!-- Icono check circular -->
+            <div class="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h4 class="text-lg font-bold tracking-tight">Enviado</h4>
+          </div>
+          <!-- Botón cerrar (X) -->
           <button 
-            @click="modalColumnaAbierto = false"
-            type="button"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+            @click="finalizarEnvio"
+            class="text-white/80 hover:text-white transition-colors cursor-pointer p-0.5"
           >
-            Cancelar
-          </button>
-          <button 
-            @click="agregarColumna"
-            type="button"
-            class="px-4 py-2 text-xs font-semibold text-white bg-[#010C67] hover:bg-[#000840] rounded-lg transition cursor-pointer shadow-xs"
-          >
-            Agregar
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
-      </div>
-    </div>
 
-    <!-- ========================================================================= -->
-    <!-- MODAL DE ÉXITO TRAS REGISTRAR EL INFORME FINAL                           -->
-    <!-- ========================================================================= -->
-    <div 
-      v-if="exitoModal" 
-      class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
-    >
-      <div class="bg-white rounded-2xl p-7 max-w-md w-full shadow-2xl text-center border border-gray-100">
-        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-2">
-          ¡Informe final enviado!
-        </h3>
-        <p class="text-sm text-gray-600 mb-6">
-          Tu informe final ha sido registrado de manera exitosa y se encuentra en revisión por el comité evaluador.
+        <p class="text-white/95 text-sm mt-2 mb-4 leading-relaxed font-normal">
+          Reporte enviado exitosamente
         </p>
-        <button 
-          @click="finalizarEnvio"
-          class="w-full py-2.5 bg-[#010C67] hover:bg-[#000840] text-white text-sm font-semibold rounded-xl shadow-md transition cursor-pointer"
-        >
-          Aceptar
-        </button>
+
+        <div class="flex justify-end">
+          <button
+            @click="finalizarEnvio"
+            class="px-5 py-1.5 border border-white rounded-lg text-xs font-semibold text-white hover:bg-white hover:text-[#00C853] transition-all cursor-pointer shadow-xs"
+          >
+            Aceptar
+          </button>
+        </div>
       </div>
-    </div>
+    </transition>
 
   </div>
 </template>
+
+<style scoped>
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+</style>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Http\Requests\RegistroRequest;
@@ -131,7 +132,7 @@ class AuthController extends Controller
             ->first();
 
         $personal = null;
-        if (!$estudiante) {
+        if (!$estudiante && Schema::hasTable('personal_administrativo')) {
             $personal = DB::table('personal_administrativo')
                 ->where('correo_institucional', $correo)
                 ->first();
@@ -169,6 +170,20 @@ class AuthController extends Controller
                 'rol' => $rol,
                 'estado' => 'activo',
             ]);
+
+            // Generar notificación inicial de bienvenida vinculada al ID del nuevo usuario
+            try {
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: $user->id,
+                    titulo: 'Bienvenido a Génesis Profesional',
+                    mensaje: 'Tu cuenta ha sido creada exitosamente. Completa tu perfil profesional para dar inicio a tu proceso de pasantías.',
+                    tipo: 'general',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones'
+                );
+            } catch (\Throwable $notifEx) {
+                Log::warning('No se pudo generar notificación inicial de bienvenida: ' . $notifEx->getMessage());
+            }
 
             DB::commit();
 
@@ -246,7 +261,7 @@ class AuthController extends Controller
             ->first();
 
         $personal = null;
-        if (!$estudiante) {
+        if (!$estudiante && Schema::hasTable('personal_administrativo')) {
             $personal = DB::table('personal_administrativo')
                 ->where('correo_institucional', $correo)
                 ->first();
@@ -340,8 +355,10 @@ class AuthController extends Controller
         ];
 
         if (!$envio['exito']) {
-            $respuesta['codigo_simulado'] = $registroCodigo->codigo;
-            $respuesta['aviso_envio'] = 'Aviso: el proveedor SMTP rechazó el envío (IP dinámica de Render no autorizada en Brevo: 525 5.7.1). Código: ' . $registroCodigo->codigo;
+            return response()->json([
+                'status' => 'error',
+                'mensaje' => 'No fue posible enviar el código de verificación al correo ingresado. Por favor, intente más tarde.'
+            ], 500);
         }
 
         return response()->json($respuesta, 200);

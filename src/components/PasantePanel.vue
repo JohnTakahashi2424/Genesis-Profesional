@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 
 import CvModulo from './CvModulo.vue'
@@ -18,8 +18,9 @@ const itemActivo = ref('inicio')
 const reportesVistaInicial = ref('tabla')
 
 const abrirInformeFinal = () => {
+  localStorage.setItem('genesis_crear_informe_final', 'true')
   reportesVistaInicial.value = 'informe_final'
-  navegarA('reportes')
+  navegarA('reportes', 'informe_final')
 }
 
 // Extraer el primer nombre para el saludo del banner
@@ -57,12 +58,67 @@ const fotoUsuario = computed(() => {
   return raw ? normalizarUrlFoto(raw) : null
 })
 
+// Contador de notificaciones no leídas dinámico según ID del usuario
+const notificacionesNoLeidas = ref(0)
+let intervalNotificaciones = null
+
+const cargarContadorNotificaciones = async (conteoDirecto = null) => {
+  if (typeof conteoDirecto === 'number') {
+    notificacionesNoLeidas.value = conteoDirecto
+    return
+  }
+
+  try {
+    const userId = usuario.value?.id || usuario.value?.user_id
+    const correo = usuario.value?.correo || usuario.value?.email || ''
+    if (!userId && !correo) {
+      notificacionesNoLeidas.value = 0
+      return
+    }
+
+    const token = localStorage.getItem('genesis_token')
+    const config = {
+      params: {}
+    }
+    if (userId) config.params.user_id = userId
+    if (correo) config.params.correo = correo
+    if (token) {
+      config.headers = {
+        Authorization: `Bearer ${token}`,
+        'X-User-Id': userId
+      }
+    }
+
+    // Usar endpoint liviano /api/notificaciones/contador
+    const res = await axios.get('/api/notificaciones/contador', config)
+    if (res.data && typeof res.data.no_leidas_count === 'number') {
+      notificacionesNoLeidas.value = res.data.no_leidas_count
+    } else {
+      notificacionesNoLeidas.value = 0
+    }
+  } catch (error) {
+    // Respaldo consultando /api/notificaciones con limit 1
+    try {
+      const userId = usuario.value?.id || usuario.value?.user_id
+      const resFallback = await axios.get('/api/notificaciones', { 
+        params: { user_id: userId, limit: 1 } 
+      })
+      if (resFallback.data && typeof resFallback.data.no_leidas_count === 'number') {
+        notificacionesNoLeidas.value = resFallback.data.no_leidas_count
+      }
+    } catch (e) {
+      console.warn('Error al consultar contador de notificaciones:', error?.message)
+    }
+  }
+}
+
 watch(itemActivo, async (newVal) => {
   if (newVal === 'inicio' || newVal === 'perfil') {
     imgErrorPasante.value = false
     usuario.value = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
     await cargarEstadoPasantia()
   }
+  await cargarContadorNotificaciones()
 })
 
 watch(fotoUsuario, (newVal) => {
@@ -74,27 +130,30 @@ watch(fotoUsuario, (newVal) => {
 const pasantidaInfo = ref({
   fase_actual: 'Fase 1',
   fases: {
-    fase_1: { nombre: 'Fase 1: Currículum', estado: 'completado' },
-    fase_2: { nombre: 'Fase 2: Aceptado', estado: 'completado' },
+    fase_1: { nombre: 'Fase 1: Currículum', estado: 'pendiente' },
+    fase_2: { nombre: 'Fase 2: Aceptado', estado: 'pendiente' },
     fase_3: { nombre: 'Fase 3: Prácticas', estado: 'pendiente' },
     fase_4: { nombre: 'Fase 4: Informe final', estado: 'pendiente' }
   }
 })
 
-// Cargar estado de la pasantía y datos frescos del usuario desde la API
+// Cargar estado de la pasantía y datos frescos del usuario desde la API con reactividad en vivo
 const cargarEstadoPasantia = async () => {
   try {
     const userId = usuario.value?.id || usuario.value?.user_id || 0
     const correo = usuario.value?.correo || usuario.value?.email || ''
+    const token = localStorage.getItem('genesis_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
     const res = await axios.get('/api/pasante/estado', {
       params: { 
         user_id: userId,
         correo
-      }
+      },
+      headers
     })
     if (res.data) {
-      if (res.data.pasantia) {
+      if (res.data.pasantia && res.data.pasantia.fases) {
         pasantidaInfo.value = res.data.pasantia
       }
       if (res.data.usuario) {
@@ -106,10 +165,20 @@ const cargarEstadoPasantia = async () => {
       }
     }
 
+    // Comprobación adicional en vivo (para cambios inmediatos entre componentes)
     try {
-      const cvRes = await axios.get(`/api/cv/obtener/${userId}`, { params: { correo } })
-      if (cvRes.data && cvRes.data.cvs && cvRes.data.cvs.length > 0) {
-        const cv = cvRes.data.cvs[0]
+      const [cvRes, repRes, infRes] = await Promise.allSettled([
+        axios.get(`/api/cv/obtener/${userId}`, { params: { correo }, headers }),
+        axios.get('/api/reportes', { params: { user_id: userId }, headers }),
+        axios.get('/api/informes-finales', { params: { user_id: userId }, headers })
+      ])
+
+      const tieneCv = (cvRes.status === 'fulfilled' && cvRes.value?.data?.cvs && cvRes.value.data.cvs.length > 0)
+        || !!localStorage.getItem('genesis_cv')
+        || pasantidaInfo.value?.fases?.fase_1?.estado === 'completado'
+
+      if (cvRes.status === 'fulfilled' && cvRes.value?.data?.cvs && cvRes.value.data.cvs.length > 0) {
+        const cv = cvRes.value.data.cvs[0]
         const fotoBD = cv.foto_url || cv.foto || cv.avatar
         if (fotoBD) {
           const fotoNorm = normalizarUrlFoto(fotoBD)
@@ -119,8 +188,48 @@ const cargarEstadoPasantia = async () => {
           localStorage.setItem('genesis_usuario', JSON.stringify(usuario.value))
         }
       }
-    } catch (e) {
-      console.warn('No se pudo cargar foto CV en panel:', e)
+
+      const listaReportes = (repRes.status === 'fulfilled' && Array.isArray(repRes.value?.data?.data))
+        ? repRes.value.data.data
+        : []
+      const tieneReporte = listaReportes.length > 0 || pasantidaInfo.value?.fases?.fase_2?.estado === 'completado'
+
+      const listaInformes = (infRes.status === 'fulfilled' && Array.isArray(infRes.value?.data?.data))
+        ? infRes.value.data.data
+        : []
+      const tieneInformeFinal = listaInformes.length > 0 
+        || pasantidaInfo.value?.fases?.fase_4?.estado === 'en_revision' 
+        || pasantidaInfo.value?.fases?.fase_4?.estado === 'completado'
+
+      // Aplicar coherencia en vivo de estados y colores según especificación:
+      // - Inicial: Todas en grises y pendientes.
+      // - Al crear CV: Fase 1 completado (verde).
+      // - Al crear reporte por 1ra vez: Fase 2 completado (verde), Fase 3 completado (amarillo en revisión).
+      // - Al subir reporte final: Fase 3 completado (verde), Fase 4 completado (amarillo en revisión).
+      if (!pasantidaInfo.value.fases) {
+        pasantidaInfo.value.fases = {
+          fase_1: { nombre: 'Fase 1: Currículum', estado: 'pendiente' },
+          fase_2: { nombre: 'Fase 2: Aceptado', estado: 'pendiente' },
+          fase_3: { nombre: 'Fase 3: Prácticas', estado: 'pendiente' },
+          fase_4: { nombre: 'Fase 4: Informe final', estado: 'pendiente' }
+        }
+      }
+
+      pasantidaInfo.value.fases.fase_1.estado = tieneCv ? 'completado' : 'pendiente'
+      pasantidaInfo.value.fases.fase_2.estado = (tieneReporte || tieneInformeFinal) ? 'completado' : 'pendiente'
+
+      if (tieneInformeFinal) {
+        pasantidaInfo.value.fases.fase_3.estado = 'completado'
+        pasantidaInfo.value.fases.fase_4.estado = 'en_revision'
+      } else if (tieneReporte) {
+        pasantidaInfo.value.fases.fase_3.estado = 'en_revision'
+        pasantidaInfo.value.fases.fase_4.estado = 'pendiente'
+      } else {
+        pasantidaInfo.value.fases.fase_3.estado = 'pendiente'
+        pasantidaInfo.value.fases.fase_4.estado = 'pendiente'
+      }
+    } catch (eLive) {
+      console.warn('Error al verificar estado en vivo:', eLive)
     }
   } catch (err) {
     console.warn('Usando estado inicial de pasantía:', err)
@@ -138,10 +247,35 @@ const mapPathToItem = (path) => {
   return 'inicio'
 }
 
-const navegarA = (item) => {
+const reportesInformeFinalId = ref(null)
+const reportesDetalleId = ref(null)
+let canalNotifPanel = null
+
+const navegarA = (item, subvista = null, targetId = null) => {
   itemActivo.value = item
-  if (item !== 'reportes') {
+  if (item === 'reportes') {
+    if (subvista === 'informe_final' || localStorage.getItem('genesis_crear_informe_final') === 'true') {
+      reportesVistaInicial.value = 'informe_final'
+      reportesInformeFinalId.value = null
+      reportesDetalleId.value = null
+      localStorage.removeItem('genesis_crear_informe_final')
+    } else if (subvista === 'informe_final_detalle' || localStorage.getItem('genesis_ver_informe_final') === 'true') {
+      reportesVistaInicial.value = 'informe_final_detalle'
+      reportesInformeFinalId.value = targetId || localStorage.getItem('genesis_ver_informe_final_id') || null
+      reportesDetalleId.value = null
+    } else if (subvista === 'detalle' || targetId || localStorage.getItem('genesis_ver_reporte_id')) {
+      reportesVistaInicial.value = 'detalle'
+      reportesDetalleId.value = targetId || localStorage.getItem('genesis_ver_reporte_id') || null
+      reportesInformeFinalId.value = null
+    } else {
+      reportesVistaInicial.value = 'tabla'
+      reportesInformeFinalId.value = null
+      reportesDetalleId.value = null
+    }
+  } else {
     reportesVistaInicial.value = 'tabla'
+    reportesInformeFinalId.value = null
+    reportesDetalleId.value = null
   }
   const currentPath = window.location.pathname
   let basePath = '/pasante'
@@ -160,13 +294,49 @@ const navegarA = (item) => {
   }
 }
 
-onMounted(() => {
-  cargarEstadoPasantia()
+onMounted(async () => {
+  await cargarEstadoPasantia()
   itemActivo.value = mapPathToItem(window.location.pathname)
+  await cargarContadorNotificaciones()
 
   window.addEventListener('popstate', () => {
     itemActivo.value = mapPathToItem(window.location.pathname)
   })
+
+  window.addEventListener('focus', cargarContadorNotificaciones)
+  window.addEventListener('pasantia-actualizada', cargarEstadoPasantia)
+  window.addEventListener('notificaciones-actualizadas', cargarContadorNotificaciones)
+  window.addEventListener('storage', (e) => {
+    cargarEstadoPasantia()
+    if (e.key === 'genesis_notificaciones_updated') {
+      cargarContadorNotificaciones()
+    }
+  })
+
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      canalNotifPanel = new BroadcastChannel('genesis_notificaciones_sync')
+      canalNotifPanel.onmessage = () => {
+        cargarContadorNotificaciones()
+      }
+    } catch (e) {}
+  }
+
+  // Sondeo en tiempo real cada 15 segundos
+  intervalNotificaciones = setInterval(() => {
+    cargarContadorNotificaciones()
+  }, 15000)
+})
+
+onUnmounted(() => {
+  if (intervalNotificaciones) {
+    clearInterval(intervalNotificaciones)
+  }
+  if (canalNotifPanel) {
+    canalNotifPanel.close()
+  }
+  window.removeEventListener('focus', cargarContadorNotificaciones)
+  window.removeEventListener('notificaciones-actualizadas', cargarContadorNotificaciones)
 })
 
 const handleLogout = () => {
@@ -179,19 +349,19 @@ const handleLogout = () => {
 <template>
   <div class="flex min-h-screen bg-[#f4f5f7] font-sans antialiased text-gray-900 select-none">
      <!-- SIDEBAR NAVEGACIÓN (IZQUIERDA) — Con línea de sombra definida -->
-    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[3px_0_0px_0px_rgba(0,0,0,0.08)] relative z-20 flex flex-col justify-between shrink-0 select-none min-h-screen">
+    <aside class="w-64 bg-white border-r border-gray-200/80 shadow-[3px_0_0px_0px_rgba(0,0,0,0.08)] relative z-20 flex flex-col shrink-0 select-none min-h-screen">
       <div>
         <!-- Logo UGB Centrado -->
-        <div class="pt-8 pb-6 flex justify-center">
-          <img src="/images/logo_ugb.png" alt="Logo UGB" class="h-24 w-auto object-contain" />
+        <div class="pt-6 pb-4 flex justify-center">
+          <img src="/images/logo_ugb.png" alt="Logo UGB" class="h-20 w-auto object-contain" />
         </div>
 
         <!-- Menú de Navegación principal -->
-        <nav class="mt-2 space-y-3">
-          <!-- Inicio (Activo: barra rectangular azul marino completa) -->
+        <nav class="mt-1 space-y-1">
+          <!-- 1. Inicio (Activo: barra rectangular azul marino completa) -->
           <button 
             @click="navegarA('inicio')"
-            class="w-full flex items-center gap-4 px-8 py-3.5 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'inicio' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 19 22" fill="none" class="shrink-0">
@@ -202,10 +372,10 @@ const handleLogout = () => {
             <span>Inicio</span>
           </button>
 
-          <!-- Perfil -->
+          <!-- 2. Perfil -->
           <button 
             @click="navegarA('perfil')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'perfil' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 33 33" fill="none" class="shrink-0">
@@ -214,10 +384,10 @@ const handleLogout = () => {
             <span>Perfil</span>
           </button>
 
-          <!-- Reportes -->
+          <!-- 3. Reportes -->
           <button 
             @click="reportesVistaInicial = 'tabla'; navegarA('reportes')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'reportes' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 25 25" fill="none" class="shrink-0">
@@ -228,10 +398,38 @@ const handleLogout = () => {
             <span>Reportes</span>
           </button>
 
-          <!-- Historial de progreso -->
+          <!-- 4. Notificaciones (Con badge rojo numérico idéntico a la maqueta) -->
+          <button 
+            @click="navegarA('notificaciones')"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
+            :class="itemActivo === 'notificaciones' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
+          >
+            <div class="relative shrink-0 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 25 25" fill="none" class="shrink-0">
+                <g clip-path="url(#clip0_8495_654_panel)">
+                  <path d="M5 10.0001C4.99932 8.4418 5.48404 6.92198 6.38682 5.65182C7.28959 4.38166 8.56559 3.42425 10.0375 2.9126C9.9805 2.55549 10.0017 2.19026 10.0995 1.84212C10.1974 1.49397 10.3696 1.1712 10.6043 0.896075C10.839 0.620946 11.1306 0.40001 11.4589 0.248511C11.7873 0.0970111 12.1446 0.0185547 12.5063 0.0185547C12.8679 0.0185547 13.2252 0.0970111 13.5536 0.248511C13.882 0.40001 14.1735 0.620946 14.4082 0.896075C14.6429 1.1712 14.8152 1.49397 14.913 1.84212C15.0108 2.19026 15.032 2.55549 14.975 2.9126C16.4446 3.42634 17.7179 4.38466 18.6183 5.65464C19.5187 6.92462 20.0016 8.44332 20 10.0001V17.5001L23.75 20.0001V21.2501H1.25V20.0001L5 17.5001V10.0001ZM15 22.5001C15 23.1631 14.7366 23.799 14.2678 24.2679C13.7989 24.7367 13.163 25.0001 12.5 25.0001C11.837 25.0001 11.2011 24.7367 10.7322 24.2679C10.2634 23.799 10 23.1631 10 22.5001H15Z" fill="currentColor"/>
+                </g>
+                <defs>
+                  <clipPath id="clip0_8495_654_panel">
+                    <rect width="25" height="25" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+              <!-- Badge rojo dinámico según las notificaciones no leídas del usuario -->
+              <span 
+                v-if="notificacionesNoLeidas > 0"
+                class="absolute -bottom-1 -right-1 bg-[#cc0000] text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center leading-none pointer-events-none shadow-sm"
+              >
+                {{ notificacionesNoLeidas > 99 ? '99+' : notificacionesNoLeidas }}
+              </span>
+            </div>
+            <span>Notificaciones</span>
+          </button>
+
+          <!-- 5. Historial de progreso -->
           <button 
             @click="navegarA('historial')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'historial' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 27 27" fill="none" class="shrink-0">
@@ -245,10 +443,10 @@ const handleLogout = () => {
             </div>
           </button>
 
-          <!-- Análisis IA -->
+          <!-- 6. Análisis IA -->
           <button 
             @click="navegarA('ia')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'ia' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" class="shrink-0">
@@ -260,10 +458,10 @@ const handleLogout = () => {
             </div>
           </button>
 
-          <!-- Configuración -->
+          <!-- 7. Configuración -->
           <button 
             @click="navegarA('configuracion')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
             :class="itemActivo === 'configuracion' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 34 34" fill="none" class="shrink-0">
@@ -272,41 +470,20 @@ const handleLogout = () => {
             <span>Configuración</span>
           </button>
 
-          <!-- Notificaciones (Idéntico a la maqueta) -->
+          <!-- 8. Cerrar sesión (Integrado directamente en el menú de navegación para encajar sin corte) -->
           <button 
-            @click="navegarA('notificaciones')"
-            class="w-full flex items-center gap-4 px-8 py-3 text-[18px] font-medium transition-all cursor-pointer rounded-none text-left"
-            :class="itemActivo === 'notificaciones' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
+            @click="handleLogout"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium text-black hover:bg-gray-50 transition-all cursor-pointer rounded-none text-left"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 25 25" fill="none" class="shrink-0">
-              <g clip-path="url(#clip0_8495_654_panel)">
-                <path d="M5 10.0001C4.99932 8.4418 5.48404 6.92198 6.38682 5.65182C7.28959 4.38166 8.56559 3.42425 10.0375 2.9126C9.9805 2.55549 10.0017 2.19026 10.0995 1.84212C10.1974 1.49397 10.3696 1.1712 10.6043 0.896075C10.839 0.620946 11.1306 0.40001 11.4589 0.248511C11.7873 0.0970111 12.1446 0.0185547 12.5063 0.0185547C12.8679 0.0185547 13.2252 0.0970111 13.5536 0.248511C13.882 0.40001 14.1735 0.620946 14.4082 0.896075C14.6429 1.1712 14.8152 1.49397 14.913 1.84212C15.0108 2.19026 15.032 2.55549 14.975 2.9126C16.4446 3.42634 17.7179 4.38466 18.6183 5.65464C19.5187 6.92462 20.0016 8.44332 20 10.0001V17.5001L23.75 20.0001V21.2501H1.25V20.0001L5 17.5001V10.0001ZM15 22.5001C15 23.1631 14.7366 23.799 14.2678 24.2679C13.7989 24.7367 13.163 25.0001 12.5 25.0001C11.837 25.0001 11.2011 24.7367 10.7322 24.2679C10.2634 23.799 10 23.1631 10 22.5001H15Z" fill="currentColor"/>
-              </g>
-              <defs>
-                <clipPath id="clip0_8495_654_panel">
-                  <rect width="25" height="25" fill="white"/>
-                </clipPath>
-              </defs>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 23 23" fill="none" class="shrink-0">
+              <path d="M20.125 2.875H2.875C2.08437 2.875 1.4375 3.52187 1.4375 4.3125V18.6875C1.4375 19.4781 2.08437 20.125 2.875 20.125H20.125C20.9156 20.125 21.5625 19.4781 21.5625 18.6875V4.3125C21.5625 3.52187 20.9156 2.875 20.125 2.875ZM20.125 10.7812H12.7937L15.3812 8.19375L14.375 7.1875L10.0625 11.5L14.375 15.8125L15.3812 14.8063L12.7937 12.2188H20.125V18.6875H8.625V4.3125H20.125V10.7812Z" fill="currentColor"/>
             </svg>
-            <span>Notificaciones</span>
+            <div class="leading-tight text-left">
+              <div>Cerrar</div>
+              <div>sesión</div>
+            </div>
           </button>
         </nav>
-      </div>
-
-      <!-- Cerrar sesión (Abajo en 2 líneas) -->
-      <div class="py-6">
-        <button 
-          @click="handleLogout"
-          class="w-full flex items-center gap-4 px-8 py-2 text-[18px] font-medium text-black hover:bg-gray-50 transition-all cursor-pointer rounded-none text-left"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 23 23" fill="none" class="shrink-0">
-            <path d="M20.125 2.875H2.875C2.08437 2.875 1.4375 3.52187 1.4375 4.3125V18.6875C1.4375 19.4781 2.08437 20.125 2.875 20.125H20.125C20.9156 20.125 21.5625 19.4781 21.5625 18.6875V4.3125C21.5625 3.52187 20.9156 2.875 20.125 2.875ZM20.125 10.7812H12.7937L15.3812 8.19375L14.375 7.1875L10.0625 11.5L14.375 15.8125L15.3812 14.8063L12.7937 12.2188H20.125V18.6875H8.625V4.3125H20.125V10.7812Z" fill="currentColor"/>
-          </svg>
-          <div class="leading-tight text-left">
-            <div>Cerrar</div>
-            <div>sesión</div>
-          </div>
-        </button>
       </div>
     </aside>
 
@@ -317,7 +494,10 @@ const handleLogout = () => {
       <CvModulo v-if="itemActivo === 'cv'" @volver="navegarA('inicio')" />
       <ReportesModulo 
         v-else-if="itemActivo === 'reportes'" 
+        :key="itemActivo + '_' + reportesVistaInicial + '_' + (reportesInformeFinalId || reportesDetalleId || '')"
         :vista-inicial="reportesVistaInicial"
+        :informe-final-id="reportesInformeFinalId"
+        :reporte-inicial-id="reportesDetalleId"
         @volver="navegarA('inicio')" 
         @navegar="navegarA" 
       />
@@ -325,7 +505,12 @@ const handleLogout = () => {
       <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" @navegar="navegarA" />
       <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
       <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="navegarA('inicio')" />
-      <NotificacionesModulo v-else-if="itemActivo === 'notificaciones'" @volver="navegarA('inicio')" @navegar="navegarA" />
+      <NotificacionesModulo 
+        v-else-if="itemActivo === 'notificaciones'" 
+        @volver="navegarA('inicio')" 
+        @navegar="navegarA" 
+        @actualizar-contador="cargarContadorNotificaciones" 
+      />
 
       <!-- VISTA PRINCIPAL (INICIO / DASHBOARD) -->
       <template v-else>
@@ -393,7 +578,7 @@ const handleLogout = () => {
             </h2>
           </div>
 
-          <!-- 4 Fases Horizontales -->
+          <!-- 4 Fases Horizontales con Estados Dinámicos en Vivo -->
           <div class="grid grid-cols-4 gap-4 text-center items-start">
             
             <!-- Fase 1: Currículum -->
@@ -404,21 +589,39 @@ const handleLogout = () => {
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 1: Currículum</span>
-              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_1?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
                 ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
+                Pendiente
               </span>
             </div>
 
             <!-- Fase 2: Aceptado -->
             <div class="flex flex-col items-center">
               <div class="mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 25 21" fill="none">
-                  <path d="M24.1466 12.1559V16.945C24.1466 17.7876 23.765 18.5958 23.0858 19.1916C22.4065 19.7874 21.4852 20.1222 20.5246 20.1222H3.62199C2.66138 20.1222 1.74011 19.7874 1.06086 19.1916C0.381602 18.5958 0 17.7876 0 16.945V12.1559L0.667654 12.4493C4.20625 14.0127 8.1133 14.8269 12.0754 14.8265C16.0375 14.8261 19.9444 14.0112 23.4826 12.4472L24.1466 12.1559ZM14.488 0C15.4486 0 16.3698 0.334738 17.0491 0.930576C17.7284 1.52641 18.11 2.33454 18.11 3.17719V4.23625H20.5246C21.4852 4.23625 22.4065 4.57099 23.0858 5.16682C23.765 5.76266 24.1466 6.57079 24.1466 7.41343V9.78785L22.3996 10.5546C19.2739 11.9368 15.829 12.6732 12.3287 12.7073C8.82851 12.7415 5.3658 12.0725 2.20579 10.7516L1.42465 10.4127L0 9.78785V7.41343C0 6.57079 0.381602 5.76266 1.06086 5.16682C1.74011 4.57099 2.66138 4.23625 3.62199 4.23625H6.03665V3.17719C6.03665 2.33454 6.41825 1.52641 7.09751 0.930576C7.77676 0.334738 8.69803 0 9.65864 0H14.488ZM12.0733 8.47249C11.7531 8.47249 11.446 8.58407 11.2196 8.78269C10.9932 8.9813 10.866 9.25068 10.866 9.53156C10.8652 9.67063 10.8956 9.80849 10.9556 9.93724C11.0155 10.066 11.1038 10.1831 11.2153 10.282C11.3269 10.3808 11.4595 10.4594 11.6057 10.5133C11.7519 10.5671 11.9087 10.5952 12.0673 10.5959C12.2258 10.5966 12.383 10.5699 12.5298 10.5173C12.6765 10.4647 12.8101 10.3873 12.9227 10.2895C13.0354 10.1916 13.125 10.0753 13.1864 9.94703C13.2478 9.8188 13.2798 9.68122 13.2806 9.54215C13.2806 8.94695 12.7398 8.47249 12.0733 8.47249ZM14.488 2.11812H9.65864C9.33844 2.11812 9.03135 2.2297 8.80493 2.42832C8.57851 2.62693 8.45131 2.8963 8.45131 3.17719V4.23625H15.6953V3.17719C15.6953 2.8963 15.5681 2.62693 15.3417 2.42832C15.1153 2.2297 14.8082 2.11812 14.488 2.11812Z" fill="black"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 33 33" fill="none">
+                  <path d="M9.097 28.875C8.46358 28.875 7.93512 28.6632 7.51162 28.2397C7.08812 27.8162 6.87592 27.2878 6.875 26.6544V6.34562C6.875 5.71312 7.08721 5.18512 7.51162 4.76163C7.93604 4.33813 8.4645 4.12592 9.097 4.125H19.9375L26.125 10.3125V14.993C25.6685 15.0544 25.2423 15.1937 24.8462 15.411C24.4502 15.6282 24.0836 15.9051 23.7463 16.2415L15.4963 24.4571V28.875H9.097ZM18.7743 28.875V25.8363L26.1071 18.5391C26.2428 18.42 26.3835 18.3329 26.5293 18.2779C26.6759 18.221 26.8226 18.1926 26.9692 18.1926C27.1205 18.1926 27.2736 18.222 27.4285 18.2806C27.5843 18.3402 27.7209 18.4291 27.8383 18.5474L29.1101 19.8454C29.2229 19.981 29.309 20.1222 29.3686 20.2689C29.4273 20.4146 29.4566 20.5608 29.4566 20.7075C29.4566 20.8542 29.4287 21.0017 29.3727 21.1502C29.3168 21.2987 29.2298 21.4408 29.1115 21.5765L21.8116 28.875H18.7743ZM26.9692 22.0206L28.2411 20.7061L26.9692 19.4095L25.663 20.7157L26.9692 22.0206ZM19.25 11H24.75L19.25 5.5V11Z" fill="black" fill-opacity="0.7"/>
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 2: Aceptado</span>
-              <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_2?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
                 ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
+                Pendiente
               </span>
             </div>
 
@@ -430,7 +633,22 @@ const handleLogout = () => {
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5">Fase 3: Prácticas</span>
-              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_3?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else-if="pasantidaInfo.fases?.fase_3?.estado === 'en_revision'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFC071] text-gray-900 shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
                 Pendiente
               </span>
             </div>
@@ -439,11 +657,26 @@ const handleLogout = () => {
             <div @click="abrirInformeFinal" class="flex flex-col items-center cursor-pointer group">
               <div class="mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" fill="none">
-                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 18.8269 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
+                  <path d="M5.70176 18.098C5.30476 18.098 4.97354 17.9653 4.7081 17.6998C4.44266 17.4344 4.30966 17.1032 4.30908 16.7062V3.97727C4.30908 3.58084 4.44209 3.2499 4.7081 2.98447C4.97411 2.71903 5.30533 2.58602 5.70176 2.58545H12.4963L16.3744 6.46359V9.39718C16.0883 9.43567 15.8211 9.523 15.5729 9.65917C15.3247 9.79534 15.0949 9.96885 14.8835 10.1797L9.71262 15.329V18.098H5.70176ZM11.7672 18.098V16.1934L16.3632 11.6198C16.4482 11.5451 16.5364 11.4905 16.6278 11.456C16.7197 11.4204 16.8116 11.4026 16.9035 11.4026C16.9983 11.4026 17.0943 11.421 17.1914 11.4578C17.2891 11.4951 17.3747 11.5508 17.4482 11.625L18.2454 12.4385C18.316 12.5235 18.3701 12.612 18.4074 12.7039C18.4442 12.7953 18.4626 12.8869 18.4626 12.9789C18.4626 13.0708 18.445 13.1633 18.41 13.2564C18.3749 13.3494 18.3204 13.4385 18.2462 13.5235L13.6709 18.098H11.7672ZM16.9035 13.8019L17.7007 12.978L16.9035 12.1653L16.0848 12.984L16.9035 13.8019ZM12.0654 6.89449H15.5126L12.0654 3.44726V6.89449Z" fill="black"/>
                 </svg>
               </div>
               <span class="text-xs font-bold text-gray-800 mb-1.5 group-hover:text-[#000B58]">Fase 4: Informe final</span>
-              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700">
+              <span 
+                v-if="pasantidaInfo.fases?.fase_4?.estado === 'completado'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#10b981] text-black shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else-if="pasantidaInfo.fases?.fase_4?.estado === 'en_revision'" 
+                class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFC071] text-gray-900 shadow-xs"
+              >
+                ✓ Completado
+              </span>
+              <span 
+                v-else 
+                class="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-700"
+              >
                 Pendiente
               </span>
             </div>

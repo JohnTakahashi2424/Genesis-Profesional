@@ -12,6 +12,10 @@ const props = defineProps({
     type: [Number, String],
     default: null
   },
+  informeFinalId: {
+    type: [Number, String],
+    default: null
+  },
   vistaInicial: {
     type: String,
     default: 'tabla'
@@ -24,9 +28,19 @@ const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
 // Vistas del módulo: 'tabla', 'formulario', 'detalle', 'informe_final', 'informe_final_detalle'
 const vistaActual = ref(props.vistaInicial || 'tabla')
 const informeFinalDetalle = ref(null)
+const origenDetalleReporte = ref(null)
 
-watch(() => props.vistaInicial, (val) => {
-  if (val) {
+const handleEventoAbrirInformeFinal = async (e) => {
+  const id = e?.detail?.id
+  await abrirInformeFinalDetalleDirecto(id)
+}
+
+watch(() => props.vistaInicial, async (val) => {
+  if (val === 'informe_final_detalle') {
+    await abrirInformeFinalDetalleDirecto(props.informeFinalId)
+  } else if (val === 'informe_final') {
+    vistaActual.value = 'informe_final'
+  } else if (val) {
     vistaActual.value = val
   }
 })
@@ -38,7 +52,7 @@ const enviando = ref(false)
 
 // Notificación de éxito estilo Toast (como en Captura 4)
 const toastExitoVisible = ref(false)
-const toastMensaje = ref('El reporte ha sido enviado de manera exitosa.')
+const toastMensaje = ref('Reporte enviado exitosamente')
 
 // Notificación de feedback general (errores / avisos)
 const feedbackMensaje = ref('')
@@ -321,103 +335,12 @@ const cargarReportes = async () => {
         return fA - fB
       })
 
-    // 4. Reportes de la base de datos o fallback de maqueta si está vacía
+    // 4. Reportes de la base de datos en tiempo real exclusivamente
     const combinados = [...reportesMensualesMapeados, ...informesMapeados]
-    if (combinados.length > 0) {
-      reportes.value = combinados
-    } else {
-      reportes.value = [
-        {
-          id: 1,
-          mes: 'Agosto',
-          periodo: '01 Ago – 31 Ago 2026',
-          actividades_desarrolladas: 2,
-          estado: 'En revisión'
-        },
-        {
-          id: 2,
-          mes: 'Septiembre',
-          periodo: '01 Sept – 30 Sept 2026',
-          actividades_desarrolladas: 3,
-          estado: 'En revisión'
-        },
-        {
-          id: 3,
-          mes: 'Octubre',
-          periodo: '01 Oct – 30 Oct 2026',
-          actividades_desarrolladas: 1,
-          estado: 'En revisión'
-        },
-        {
-          id: 4,
-          mes: 'Noviembre',
-          periodo: '01 Nov – 30 Nov 2026',
-          actividades_desarrolladas: 1,
-          estado: 'En revisión'
-        },
-        {
-          id: 5,
-          mes: 'Diciembre',
-          periodo: '01 Dic – 31 Dic 2026',
-          actividades_desarrolladas: 1,
-          estado: 'En revisión'
-        },
-        {
-          id: 'inf_final_mock',
-          es_informe_final: true,
-          mes: 'Reporte final',
-          periodo: '01 Ago – 31 Dic 2026',
-          actividades_desarrolladas: 7,
-          estado: 'En revisión'
-        }
-      ]
-    }
+    reportes.value = combinados
   } catch (err) {
-    reportes.value = [
-      {
-        id: 1,
-        mes: 'Agosto',
-        periodo: '01 Ago – 31 Ago 2026',
-        actividades_desarrolladas: 2,
-        estado: 'En revisión'
-      },
-      {
-        id: 2,
-        mes: 'Septiembre',
-        periodo: '01 Sept – 30 Sept 2026',
-        actividades_desarrolladas: 3,
-        estado: 'En revisión'
-      },
-      {
-        id: 3,
-        mes: 'Octubre',
-        periodo: '01 Oct – 30 Oct 2026',
-        actividades_desarrolladas: 1,
-        estado: 'En revisión'
-      },
-      {
-        id: 4,
-        mes: 'Noviembre',
-        periodo: '01 Nov – 30 Nov 2026',
-        actividades_desarrolladas: 1,
-        estado: 'En revisión'
-      },
-      {
-        id: 5,
-        mes: 'Diciembre',
-        periodo: '01 Dic – 31 Dic 2026',
-        actividades_desarrolladas: 1,
-        estado: 'En revisión'
-      },
-      {
-        id: 'inf_final_mock',
-        es_informe_final: true,
-        mes: 'Reporte final',
-        periodo: '01 Ago – 31 Dic 2026',
-        actividades_desarrolladas: 7,
-        estado: 'En revisión'
-      }
-    ]
+    console.error('Error al cargar reportes desde la base de datos:', err)
+    reportes.value = []
   } finally {
     cargando.value = false
   }
@@ -486,12 +409,101 @@ const abrirInformeFinal = () => {
 }
 
 const handleInformeFinalGuardado = () => {
-  toastMensaje.value = 'El informe final ha sido enviado de manera exitosa y se encuentra en revisión.'
+  toastMensaje.value = 'Reporte enviado exitosamente'
   toastExitoVisible.value = true
   cargarReportes()
+  window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+  localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
   setTimeout(() => {
     toastExitoVisible.value = false
   }, 4000)
+}
+
+const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
+  cargando.value = true
+  const idTarget = idDeseado || props.informeFinalId || localStorage.getItem('genesis_ver_informe_final_id')
+  localStorage.removeItem('genesis_ver_informe_final')
+  localStorage.removeItem('genesis_ver_informe_final_id')
+
+  try {
+    if (reportes.value.length === 0) {
+      await cargarReportes()
+    }
+
+    let itemInf = null
+    if (idTarget) {
+      itemInf = reportes.value.find(r => r.es_informe_final && (String(r.rawId) === String(idTarget) || String(r.informe_final_id) === String(idTarget)))
+    }
+    if (!itemInf) {
+      itemInf = reportes.value.find(r => r.es_informe_final)
+    }
+
+    if (itemInf) {
+      await verDetalle(itemInf)
+      return
+    }
+
+    // Si aún no está en reportes.value, buscar directamente en la API
+    const userId = usuario.value?.id || usuario.value?.user_id
+    const token = localStorage.getItem('genesis_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    if (idTarget && String(idTarget) !== '1') {
+      try {
+        const resSingle = await axios.get(`/api/informes-finales/${idTarget}`, { headers })
+        if (resSingle.data && resSingle.data.data) {
+          informeFinalDetalle.value = resSingle.data.data
+          vistaActual.value = 'informe_final_detalle'
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+          return
+        }
+      } catch (errSingle) {
+        console.warn('No se pudo cargar informe final por ID:', errSingle)
+      }
+    }
+
+    // Listar todos los informes finales del usuario y tomar el más reciente
+    try {
+      const resList = await axios.get('/api/informes-finales', { headers, params: { user_id: userId } })
+      if (resList.data && Array.isArray(resList.data.data) && resList.data.data.length > 0) {
+        const inf = idTarget ? (resList.data.data.find(i => String(i.id) === String(idTarget)) || resList.data.data[0]) : resList.data.data[0]
+        informeFinalDetalle.value = inf
+        vistaActual.value = 'informe_final_detalle'
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+    } catch (errList) {
+      console.warn('Error al consultar lista de informes finales:', errList)
+    }
+
+    // Fallback con datos institucionales completos si no hay registros en API
+    informeFinalDetalle.value = {
+      id: idTarget || 3,
+      nombre_pasante: usuario.value?.nombres ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim() : (usuario.value?.nombre || 'Dallana Lucia Campos Garcia'),
+      institucion: 'Empresas CASS',
+      presentacion: 'Por medio de la presente, pongo a su disposición el Reporte Final de Prácticas Profesionales, el cual documenta la labor desarrollada durante mi periodo como pasante de desarrollo de software. Durante este proceso me integré en el ciclo de vida del proyecto de la empresa, participando activamente en la definición de requerimientos, la arquitectura de base de datos, el diseño de interfaz de usuario (UI/UX) y la implementación de módulos funcionales mediante el uso de herramientas de desarrollo web y herramientas de control de versiones.',
+      generalidades: 'El presente reporte detalla las actividades desarrolladas durante el periodo de prácticas profesionales en el área de desarrollo de software. El objetivo principal consistió en aplicar conocimientos teóricos y técnicos en un entorno real de trabajo, participando en el análisis de requerimientos, diseño de bases de datos, maquetación de interfaces de usuario y programación de módulos web, garantizando la calidad y funcionalidad de las soluciones implementadas.',
+      procedimiento_pasantia: 'El proceso de pasantía se estructuró en cuatro fases consecutivas: en primer lugar, la inducción al entorno tecnológico y asignación de requerimientos; en segundo lugar, el análisis y diseño mediante la creación de diagramas de base de datos y prototipos UI/UX; en tercer lugar, la fase de codificación utilizando controladores, vistas y APIs para la lógica de negocio; y finalmente, las pruebas de integración, optimización de componentes y documentación técnica del código desarrollado.',
+      descripcion_empresa: 'CASS es una organización enfocada en ofrecer soluciones tecnológicas e innovadoras para la gestión operativa y administrativa. La entidad promueve un entorno colaborativo basado en la mejora continua, apoyándose en herramientas digitales modernas para optimizar sus procesos internos y brindar servicios eficientes y de alta calidad a sus usuarios.',
+      descripcion_pasantia: 'La pasantía consistió en el desempeño como desarrolladora de software, colaborando activamente en el ciclo completo de creación de aplicaciones web. Las responsabilidades abarcaron el análisis de requerimientos, el diseño de la base de datos, el desarrollo de la interfaz de usuario (UI/UX) y la programación de módulos funcionales, asegurando un código mantenible y adaptado a las necesidades institucionales.',
+      estado: 'En revisión',
+      anexos: [],
+      presupuesto_columnas: ['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Junio', 'Jul.'],
+      presupuesto_items: [
+        { gasto: 'Comida', montos: { 'Ene.': 25, 'Feb.': 30, 'Mar.': 30, 'Abr.': 20, 'May.': 25, 'Junio': 21, 'Jul.': 18 }, total: 172 },
+        { gasto: 'Pasaje', montos: { 'Ene.': 15, 'Feb.': 15, 'Mar.': 10, 'Abr.': 12, 'May.': 11, 'Junio': 12, 'Jul.': 9 }, total: 84 }
+      ],
+      presupuesto_total: 256,
+      reportes: []
+    }
+    vistaActual.value = 'informe_final_detalle'
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (e) {
+    console.error('Error al abrir informe final directo:', e)
+    vistaActual.value = 'informe_final_detalle'
+  } finally {
+    cargando.value = false
+  }
 }
 
 const verDetalle = async (item) => {
@@ -502,11 +514,35 @@ const verDetalle = async (item) => {
       const idToFetch = item.informe_final_id || item.rawId || item.id
       const token = localStorage.getItem('genesis_token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const res = await axios.get(`/api/informes-finales/${idToFetch}`, { headers })
-      if (res.data && res.data.data) {
+
+      let res = null
+      const numId = Number(idToFetch)
+      if (numId && !isNaN(numId)) {
+        try {
+          res = await axios.get(`/api/informes-finales/${numId}`, { headers })
+        } catch (eGet) {
+          res = null
+        }
+      }
+
+      if (res && res.data && res.data.data) {
         informeFinalDetalle.value = res.data.data
+      } else if (item.datos_completos) {
+        informeFinalDetalle.value = item.datos_completos
       } else {
-        informeFinalDetalle.value = item.datos_completos || item
+        // Consultar listado de informes finales
+        const userId = usuario.value?.id || usuario.value?.user_id
+        try {
+          const resList = await axios.get('/api/informes-finales', { headers, params: { user_id: userId } })
+          if (resList.data && Array.isArray(resList.data.data) && resList.data.data.length > 0) {
+            const inf = resList.data.data.find(i => String(i.id) === String(idToFetch)) || resList.data.data[0]
+            informeFinalDetalle.value = inf
+          } else {
+            informeFinalDetalle.value = item
+          }
+        } catch (errList) {
+          informeFinalDetalle.value = item
+        }
       }
     } catch (e) {
       informeFinalDetalle.value = item.datos_completos || item
@@ -519,6 +555,9 @@ const verDetalle = async (item) => {
   }
 
   // Manejo de Reportes Mensuales regulares
+  if (vistaActual.value === 'informe_final_detalle') {
+    origenDetalleReporte.value = 'informe_final_detalle'
+  }
   cargando.value = true
   try {
     const token = localStorage.getItem('genesis_token')
@@ -543,7 +582,27 @@ const volverATabla = () => {
   dropdownMesAbierto.value = false
   dropdownEstadoAbierto.value = false
   informeFinalDetalle.value = null
+  origenDetalleReporte.value = null
   vistaActual.value = 'tabla'
+}
+
+const volverDesdeDetalle = () => {
+  dropdownAreaAbierto.value = false
+  dropdownMesAbierto.value = false
+  dropdownEstadoAbierto.value = false
+  if (origenDetalleReporte.value === 'informe_final_detalle' && informeFinalDetalle.value) {
+    vistaActual.value = 'informe_final_detalle'
+    origenDetalleReporte.value = null
+    reporteDetalle.value = null
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  volverATabla()
+}
+
+const verReporteDesdeInformeFinal = (rep) => {
+  origenDetalleReporte.value = 'informe_final_detalle'
+  verDetalle(rep)
 }
 
 const editarReporteDesdeDetalle = () => {
@@ -731,11 +790,48 @@ const enviarReporte = async () => {
       await axios.post('/api/reportes', payload, { headers })
     }
 
-    // Refrescar lista
+    // Notificar en tiempo real a otras pestañas y ventanas abiertas (Historial de progreso y Notificaciones)
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const canalSync = new BroadcastChannel('genesis_historial_sync')
+        canalSync.postMessage({
+          tipo: esEdicion.value ? 'reporte_actualizado' : 'reporte_creado',
+          mes: payload.mes,
+          reporteId: esEdicion.value ? reporteIdEditando.value : null,
+          timestamp: Date.now()
+        })
+        canalSync.close()
+
+        const canalNotif = new BroadcastChannel('genesis_notificaciones_sync')
+        canalNotif.postMessage({
+          tipo: esEdicion.value ? 'reporte_actualizado' : 'reporte_creado',
+          mes: payload.mes,
+          timestamp: Date.now()
+        })
+        canalNotif.close()
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel no disponible:', e)
+    }
+
+    try {
+      localStorage.setItem('genesis_historial_evento', JSON.stringify({
+        tipo: esEdicion.value ? 'reporte_actualizado' : 'reporte_creado',
+        mes: payload.mes,
+        timestamp: Date.now()
+      }))
+      localStorage.setItem('genesis_historial_updated', Date.now().toString())
+      localStorage.setItem('genesis_notificaciones_updated', Date.now().toString())
+    } catch (e) {}
+
+    // Refrescar lista y emitir eventos de reactividad
     await cargarReportes()
+    window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
+    window.dispatchEvent(new CustomEvent('notificaciones-actualizadas'))
+    localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
 
     // Mostrar modal / toast de éxito de la Captura 4
-    toastMensaje.value = 'El reporte ha sido enviado de manera exitosa.'
+    toastMensaje.value = 'Reporte enviado exitosamente'
     toastExitoVisible.value = true
 
     // Regresar a la tabla
@@ -790,10 +886,29 @@ const reportesMostrados = computed(() => {
 
 onMounted(async () => {
   window.addEventListener('click', cerrarDropdownsAlClickFuera)
+  window.addEventListener('abrir-informe-final-detalle', handleEventoAbrirInformeFinal)
   await cargarReportes()
-  const idParaAbrir = props.reporteInicialId || localStorage.getItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
+
+  // 0. Crear informe final si fue invocado desde el panel
+  if (props.vistaInicial === 'informe_final' || localStorage.getItem('genesis_crear_informe_final') === 'true') {
+    localStorage.removeItem('genesis_crear_informe_final')
+    vistaActual.value = 'informe_final'
+    return
+  }
+
+  // 1. Abrir informe final si fue invocado desde Historial, Notificaciones o Panel
+  const verInformeFinal = localStorage.getItem('genesis_ver_informe_final')
+  const informeFinalId = localStorage.getItem('genesis_ver_informe_final_id')
+  const targetInfId = props.informeFinalId || informeFinalId
+  if (verInformeFinal === 'true' || targetInfId || props.vistaInicial === 'informe_final_detalle') {
+    await abrirInformeFinalDetalleDirecto(targetInfId)
+    return
+  }
+
+  // 2. Abrir reporte mensual si fue invocado por ID
+  const idParaAbrir = props.reporteInicialId || localStorage.getItem('genesis_ver_reporte_id')
   if (idParaAbrir) {
-    localStorage.removeItem(String.fromCharCode(103,101,110,101,115,105,115,95,118,101,114,95,114,101,112,111,114,116,101,95,105,100))
+    localStorage.removeItem('genesis_ver_reporte_id')
     const repExistente = reportes.value.find(r => String(r.id) === String(idParaAbrir))
     await verDetalle(repExistente || { id: Number(idParaAbrir) })
   }
@@ -801,6 +916,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('click', cerrarDropdownsAlClickFuera)
+  window.removeEventListener('abrir-informe-final-detalle', handleEventoAbrirInformeFinal)
 })
 </script>
 
@@ -967,15 +1083,9 @@ onUnmounted(() => {
         <!-- LISTA VACÍA -->
         <div v-else-if="reportesMostrados.length === 0" class="py-16 text-center">
           <h3 class="text-base font-semibold text-slate-700 mb-1">No hay reportes registrados aún</h3>
-          <p class="text-slate-500 text-xs mb-4 max-w-sm mx-auto">
+          <p class="text-slate-500 text-xs max-w-sm mx-auto">
             Comienza redactando tu primer reporte mensual de pasantía para dar seguimiento a tus actividades.
           </p>
-          <button 
-            @click="abrirNuevoReporte"
-            class="px-6 py-2.5 bg-[#000B58] hover:bg-[#000840] text-white text-xs font-semibold rounded-full shadow-sm cursor-pointer transition-all"
-          >
-            + Crear primer reporte
-          </button>
         </div>
 
         <!-- FILAS DE REPORTES (Con separación generosa y tarjetas blancas puras #FFFFFF sobre fondo gris) -->
@@ -1083,24 +1193,24 @@ onUnmounted(() => {
       <!-- CONTENEDOR PRINCIPAL CON BORDE AZUL CLARO (Como en las capturas 2, 3 y 4) -->
       <div class="bg-white rounded-2xl border border-blue-400 p-8 sm:p-10 shadow-sm max-w-4xl mx-auto">
         
-        <!-- ENCABEZADO INSTITUCIONAL DE LA FACULTAD -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8 pb-6 border-b border-slate-100">
+        <!-- ENCABEZADO INSTITUCIONAL DE LA FACULTAD (Tamaño prominente y uniforme) -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
           <!-- Logo UGB -->
           <div class="shrink-0 flex items-center justify-center">
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width:123.482px; height:100px; flex-shrink:0; aspect-ratio:123.48/100; object-fit:contain;"
+              style="width: 240px; height: 192px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
 
           <!-- Títulos Oficiales de la Facultad -->
           <div class="text-center">
-            <h2 style="font-family:'Lora',serif; font-size:24px; font-weight:500; color:#010C67; text-align:center; line-height:normal;">
+            <h2 style="font-family:'Lora',serif; font-size: 28px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
               FACULTAD DE CIENCIA Y TECNOLOGÍA
             </h2>
-            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-0.5">
+            <h3 class="text-base font-semibold text-[#010C67] text-center mt-1">
               Trabajo de Graduación Modalidad Pasantía
             </h3>
             <p class="text-sm font-medium text-[#1E3A8A] text-center mt-0.5">
@@ -1541,13 +1651,14 @@ onUnmounted(() => {
       <!-- BARRA SUPERIOR: ← Reportes/Mes + BOTÓN EDITAR -->
       <div class="mb-4 flex items-center justify-between max-w-5xl mx-auto">
         <button 
-          @click="volverATabla"
+          @click="volverDesdeDetalle"
           class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-[#000B58] transition-colors cursor-pointer"
         >
           <svg class="w-4 h-4 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          <span>Reportes/{{ reporteDetalle.mes || 'Detalle' }}</span>
+          <span v-if="origenDetalleReporte === 'informe_final_detalle'">Reportes/Informe final/{{ reporteDetalle.mes || 'Detalle' }}</span>
+          <span v-else>Reportes/{{ reporteDetalle.mes || 'Detalle' }}</span>
         </button>
 
         <!-- Botón Editar ✎ con bordes redondeados y borde fino -->
@@ -1564,7 +1675,7 @@ onUnmounted(() => {
       </div>
 
       <!-- TARJETA PRINCIPAL CON BORDE AZUL Y ESQUINAS REDONDEADAS -->
-      <div class="relative bg-white rounded-[20px] border border-[#2563EB]/40 p-8 sm:p-12 shadow-sm max-w-5xl mx-auto">
+      <div class="relative bg-white rounded-[20px] border border-[#2563EB]/40 p-8 sm:p-12 shadow-sm max-w-5xl mx-auto overflow-hidden">
         
         <!-- BADGE DE ESTADO EN LA ESQUINA SUPERIOR DERECHA DE LA TARJETA -->
         <div class="absolute top-8 right-8">
@@ -1601,24 +1712,24 @@ onUnmounted(() => {
           </span>
         </div>
 
-        <!-- ENCABEZADO: LOGO + TÍTULOS OFICIALES -->
-        <div class="flex items-start gap-8 mb-8 pb-4">
+        <!-- ENCABEZADO: LOGO + TÍTULOS OFICIALES (Tamaño prominente y uniforme) -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8 pb-6 border-b border-slate-100">
           <!-- Logo UGB -->
-          <div class="shrink-0">
+          <div class="shrink-0 flex items-center justify-center">
             <img 
               src="/images/Logo_para_reportes_mensuales.png" 
               alt="Universidad Gerardo Barrios" 
-              style="width: 123.482px; height: 100px; flex-shrink: 0; aspect-ratio: 123.48/100; object-fit: contain;"
+              style="width: 240px; height: 192px; max-width: 100%; flex-shrink: 0; object-fit: contain;"
               @error="(e) => e.target.style.display = 'none'"
             />
           </div>
 
           <!-- Títulos Oficiales de la Facultad -->
-          <div class="flex-1 text-center pr-28">
-            <h2 style="font-family:'Lora',serif; font-size:24px; font-weight:500; color:#010C67; text-align:center; line-height:normal;">
+          <div class="text-center">
+            <h2 style="font-family:'Lora',serif; font-size: 28px; font-weight: 500; color: #010C67; text-align: center; line-height: normal;">
               FACULTAD DE CIENCIA Y TECNOLOGÍA
             </h2>
-            <h3 class="text-sm font-semibold text-[#010C67] text-center mt-1">
+            <h3 class="text-base font-semibold text-[#010C67] text-center mt-1">
               Trabajo de Graduación Modalidad Pasantía
             </h3>
             <p class="text-sm font-medium text-[#010C67] text-center mt-1">
@@ -1630,15 +1741,15 @@ onUnmounted(() => {
         <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
         <div class="mb-6">
           <!-- FILA 1: Área de pasantía + Nombre del pasante + Mes -->
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5 min-w-0">
             <div class="md:col-span-4">
               <span class="block text-sm font-bold text-slate-900 mb-1">Área de pasantía</span>
-              <span class="text-sm text-slate-700">{{ reporteDetalle.area_pasantia || 'UX/UI' }}</span>
+              <span class="text-sm text-slate-700 break-words [overflow-wrap:anywhere]">{{ reporteDetalle.area_pasantia || 'UX/UI' }}</span>
             </div>
 
             <div class="md:col-span-5">
               <span class="block text-sm font-bold text-slate-900 mb-1">Nombre del pasante</span>
-              <span class="text-sm text-slate-700">{{ reporteDetalle.nombre_pasante || '' }}</span>
+              <span class="text-sm text-slate-700 break-words [overflow-wrap:anywhere]">{{ reporteDetalle.nombre_pasante || '' }}</span>
             </div>
 
             <div class="md:col-span-3">
@@ -1648,7 +1759,7 @@ onUnmounted(() => {
           </div>
 
           <!-- FILA 2: Fecha Inicio + Fecha Finalización con píldoras de calendario -->
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-5 min-w-0">
             <div class="md:col-span-4">
               <span class="block text-sm font-bold text-slate-900 mb-1.5">Fecha Inicio</span>
               <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 border border-[#3b82f6] rounded-[8px] bg-white text-[#2563eb] text-sm font-normal">
@@ -1680,7 +1791,7 @@ onUnmounted(() => {
           <!-- FILA 3: Objetivo -->
           <div class="mb-6">
             <span class="block text-sm font-bold text-slate-900 mb-1">Objetivo</span>
-            <p class="text-sm text-slate-700 leading-relaxed">
+            <p class="text-sm text-slate-700 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
               {{ reporteDetalle.objetivo || 'documentar las actividades desarrolladas en la empresa' }}
             </p>
           </div>
@@ -1690,25 +1801,25 @@ onUnmounted(() => {
         <div class="mb-6">
           <h4 class="text-sm font-bold text-slate-900 mb-3">Actividades realizadas</h4>
           <div class="w-full overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full table-fixed text-left text-xs border-collapse">
               <thead class="border-b border-slate-300 text-slate-900 font-bold">
                 <tr>
-                  <th class="py-2.5 pr-4 w-12 text-left font-bold">Nº</th>
-                  <th class="py-2.5 px-4 w-1/4 text-left font-bold">Actividad</th>
-                  <th class="py-2.5 px-4 w-32 text-left font-bold whitespace-nowrap">Fecha</th>
-                  <th class="py-2.5 pl-4 text-left font-bold">Resultado de aprendizaje</th>
+                  <th class="py-2.5 pr-3 w-10 text-left font-bold">Nº</th>
+                  <th class="py-2.5 px-3 w-[44%] text-left font-bold">Actividad</th>
+                  <th class="py-2.5 px-3 w-28 text-left font-bold whitespace-nowrap">Fecha</th>
+                  <th class="py-2.5 pl-3 text-left font-bold">Resultado de aprendizaje</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="divide-y divide-slate-100">
                 <tr 
                   v-for="(act, idx) in (reporteDetalle.actividades || [])" 
                   :key="idx"
                   class="align-top"
                 >
-                  <td class="py-4 pr-4 font-normal text-slate-600">{{ act.numero ?? (idx + 1) }}</td>
-                  <td class="py-4 px-4 font-normal text-slate-600 leading-relaxed">{{ act.actividad || act.actividad_realizada }}</td>
-                  <td class="py-4 px-4 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
-                  <td class="py-4 pl-4 font-normal text-slate-600 leading-relaxed">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
+                  <td class="py-4 pr-3 font-normal text-slate-600 select-none">{{ act.numero ?? (idx + 1) }}</td>
+                  <td class="py-4 px-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">{{ act.actividad || act.actividad_realizada }}</td>
+                  <td class="py-4 px-3 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
+                  <td class="py-4 pl-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
                 </tr>
               </tbody>
             </table>
@@ -1733,7 +1844,7 @@ onUnmounted(() => {
       <div class="max-w-5xl mx-auto flex justify-end mt-6">
         <button 
           type="button"
-          @click="volverATabla"
+          @click="volverDesdeDetalle"
           class="w-[140px] py-2.5 rounded-[12px] bg-[#000854] hover:bg-[#00063d] text-white text-sm font-medium transition-all shadow-md cursor-pointer text-center"
         >
           Aceptar
@@ -1759,6 +1870,7 @@ onUnmounted(() => {
       <InformeFinalDetalle 
         :informe="informeFinalDetalle" 
         @volver="volverATabla" 
+        @ver-reporte="verReporteDesdeInformeFinal"
       />
     </div>
 
