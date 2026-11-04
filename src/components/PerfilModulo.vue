@@ -24,27 +24,32 @@ const normalizarUrlFoto = (url) => {
   return '/api/storage/' + url
 }
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('genesis_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 const fotoInicial = normalizarUrlFoto(usuario.value?.foto || usuario.value?.foto_url || usuario.value?.avatar || '')
-const nombreInicial = usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || 'Estudiante'
+const nombreInicial = usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || usuario.value?.nombre || 'Estudiante Pasante'
 const emailInicial = usuario.value?.correo || usuario.value?.email || ''
 
 const perfilData = ref({
   fotoUrl: fotoInicial,
   nombre: nombreInicial,
-  profesion: 'Egresada de Ingeniería en sistemas y redes informáticas',
-  direccion: 'Usulután',
+  profesion: usuario.value?.carrera || '',
+  direccion: usuario.value?.direccion || '',
   email: emailInicial,
-  telefono: '7200 - 6452',
-  educacion: 'Egresada de Ingeniería en sistemas y redes informáticas',
-  idiomas: '- Español nativo\n- Ingles básico',
-  sobreMi: 'Soy una persona apasionada por la tecnología, con un profundo interés en el campo de la ciberseguridad.',
-  conocimientos: '- Conocimientos en redes:\nProtocolos, enrutamientos, IPv4 y IPv6, NAT\n- Conocimientos en seguridad:\nAnálisis de casos de estudio, Phishing Emails',
-  valores: '- Liderazgo.\n- Compromiso.\n- Trabajo en equipo.\n- Responsabilidad.\n- Sinceridad.',
-  objetivo: 'Incorporarme y consolidarme en un equipo de trabajo donde pueda aplicar los conocimientos y habilidades adquiridos a lo largo de mi formación académica y profesional',
-  habilidades: '- Facilidad para expresarme de forma verbal, y que esta a su vez sea fluida, entendible y coherente frente a las personas.\n- Facilidad para trabajar en equipo.',
-  certificados: '- CCNAv7: Introduction to Networks.\n- CCNAv7: Enterprise Networking, Security, and Automation.\n- Ciberseguridad y privacidad empresarial.',
-  logros: 'Primer lugar a nivel de sede en la categoría innovación - Rally Latinoamericano de innovación 2023. - Tercer lugar en investigación de cátedra - Universidad Gerardo Barrios Usulután 2023.',
-  proyectos: 'Asociación Juvenil del Bajo Lempa (AJUBAL).\n• Miembro activo desde el año 2021 hasta la actualidad.'
+  telefono: usuario.value?.telefono || '',
+  educacion: usuario.value?.carrera ? `Estudiante de ${usuario.value.carrera}` : '',
+  idiomas: '',
+  sobreMi: '',
+  conocimientos: '',
+  valores: '',
+  objetivo: '',
+  habilidades: '',
+  certificados: '',
+  logros: '',
+  proyectos: ''
 })
 
 const formatTexto = (val) => {
@@ -74,6 +79,7 @@ const cargarCvPerfil = async () => {
     const correo = usuario.value.correo || usuario.value.email || ''
 
     const res = await axios.get(`/api/cv/obtener/${userId}`, {
+      headers: getAuthHeaders(),
       params: { correo }
     })
     if (res.data && res.data.cvs && res.data.cvs.length > 0) {
@@ -94,12 +100,18 @@ const cargarCvPerfil = async () => {
       if (cvReciente.sobre_mi) perfilData.value.sobreMi = cvReciente.sobre_mi
 
       if (cvReciente.conocimientos) perfilData.value.conocimientos = formatTexto(cvReciente.conocimientos)
-      if (cvReciente.valores_profesionales) perfilData.value.valores = formatTexto(cvReciente.valores_profesionales)
+      if (cvReciente.valores || cvReciente.valores_profesionales) {
+        perfilData.value.valores = formatTexto(cvReciente.valores || cvReciente.valores_profesionales)
+      }
       if (cvReciente.objetivo) perfilData.value.objetivo = cvReciente.objetivo
       if (cvReciente.habilidades) perfilData.value.habilidades = formatTexto(cvReciente.habilidades)
-      if (cvReciente.certificaciones) perfilData.value.certificados = formatTexto(cvReciente.certificaciones)
+      if (cvReciente.certificados || cvReciente.certificaciones) {
+        perfilData.value.certificados = formatTexto(cvReciente.certificados || cvReciente.certificaciones)
+      }
       if (cvReciente.logros) perfilData.value.logros = formatTexto(cvReciente.logros)
-      if (cvReciente.proyectos_sociales) perfilData.value.proyectos = formatTexto(cvReciente.proyectos_sociales)
+      if (cvReciente.proyectos_sociales || cvReciente.proyectos) {
+        perfilData.value.proyectos = formatTexto(cvReciente.proyectos_sociales || cvReciente.proyectos)
+      }
     }
   } catch (err) {
     console.warn('Error al cargar perfil CV:', err)
@@ -206,8 +218,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Dirección:</span>
             </span>
-            <span class="text-gray-900 break-words [overflow-wrap:anywhere] min-w-0 flex-1 pt-0.5" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ perfilData.direccion }}
+            <span class="text-gray-900 break-words [overflow-wrap:anywhere] min-w-0 flex-1 pt-0.5" :class="{ 'italic text-gray-400': !perfilData.direccion }" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ perfilData.direccion || 'Sin registrar' }}
             </span>
           </div>
 
@@ -219,8 +231,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Email:</span>
             </span>
-            <span class="text-gray-900 break-words [overflow-wrap:anywhere] min-w-0 flex-1 pt-0.5" style="overflow-wrap: anywhere; word-break: break-all;">
-              {{ perfilData.email }}
+            <span class="text-gray-900 break-words [overflow-wrap:anywhere] min-w-0 flex-1 pt-0.5" :class="{ 'italic text-gray-400': !perfilData.email }" style="overflow-wrap: anywhere; word-break: break-all;">
+              {{ perfilData.email || 'Sin registrar' }}
             </span>
           </div>
 
@@ -232,8 +244,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Teléfono:</span>
             </span>
-            <span class="text-gray-900 break-words [overflow-wrap:anywhere] min-w-0 flex-1 pt-0.5" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ perfilData.telefono }}
+            <span class="text-gray-900 break-words [overflow-wrap:anywhere] min-w-0 flex-1 pt-0.5" :class="{ 'italic text-gray-400': !perfilData.telefono }" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ perfilData.telefono || 'Sin registrar' }}
             </span>
           </div>
         </div>
@@ -248,8 +260,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Educación:</span>
             </p>
-            <p class="text-gray-900 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ perfilData.educacion }}
+            <p class="text-gray-900 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.educacion }" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ perfilData.educacion || 'Sin registrar' }}
             </p>
           </div>
 
@@ -264,8 +276,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Idiomas:</span>
             </p>
-            <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ perfilData.idiomas }}
+            <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.idiomas }" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ perfilData.idiomas || 'Sin registrar' }}
             </p>
           </div>
         </div>
@@ -282,8 +294,8 @@ const handleGuardadoExitoso = async () => {
           </svg>
           <span>Sobre mí:</span>
         </p>
-        <p class="text-sm text-gray-900 leading-relaxed max-w-full break-words [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
-          {{ perfilData.sobreMi }}
+        <p class="text-sm text-gray-900 leading-relaxed max-w-full break-words [overflow-wrap:anywhere]" :class="{ 'italic text-gray-400': !perfilData.sobreMi }" style="overflow-wrap: anywhere; word-break: break-word;">
+          {{ perfilData.sobreMi || 'Sin descripción añadida' }}
         </p>
       </div>
 
@@ -299,8 +311,8 @@ const handleGuardadoExitoso = async () => {
             </svg>
             <span>Conocimientos</span>
           </p>
-          <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-            {{ perfilData.conocimientos }}
+          <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.conocimientos }" style="overflow-wrap: anywhere; word-break: break-word;">
+            {{ perfilData.conocimientos || 'Sin conocimientos registrados' }}
           </p>
         </div>
 
@@ -312,8 +324,8 @@ const handleGuardadoExitoso = async () => {
             </svg>
             <span>Valores profesionales</span>
           </p>
-          <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-            {{ perfilData.valores }}
+          <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.valores }" style="overflow-wrap: anywhere; word-break: break-word;">
+            {{ perfilData.valores || 'Sin valores registrados' }}
           </p>
         </div>
       </div>
@@ -331,8 +343,8 @@ const handleGuardadoExitoso = async () => {
             </svg>
             <span>Mi objetivo:</span>
           </p>
-          <p class="text-gray-900 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-            {{ perfilData.objetivo }}
+          <p class="text-gray-900 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.objetivo }" style="overflow-wrap: anywhere; word-break: break-word;">
+            {{ perfilData.objetivo || 'Sin objetivo registrado' }}
           </p>
         </div>
 
@@ -344,8 +356,8 @@ const handleGuardadoExitoso = async () => {
             </svg>
             <span>Habilidades:</span>
           </p>
-          <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-            {{ perfilData.habilidades }}
+          <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.habilidades }" style="overflow-wrap: anywhere; word-break: break-word;">
+            {{ perfilData.habilidades || 'Sin habilidades registradas' }}
           </p>
         </div>
       </div>
@@ -364,8 +376,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Certificados:</span>
             </p>
-            <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ perfilData.certificados }}
+            <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.certificados }" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ perfilData.certificados || 'Sin certificados registrados' }}
             </p>
           </div>
 
@@ -377,8 +389,8 @@ const handleGuardadoExitoso = async () => {
               </svg>
               <span>Proyectos de beneficio social:</span>
             </p>
-            <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ perfilData.proyectos }}
+            <p class="text-gray-900 whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.proyectos }" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ perfilData.proyectos || 'Sin proyectos registrados' }}
             </p>
           </div>
         </div>
@@ -394,8 +406,8 @@ const handleGuardadoExitoso = async () => {
             </svg>
             <span>Logros:</span>
           </p>
-          <p class="text-gray-900 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-            {{ perfilData.logros }}
+          <p class="text-gray-900 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" :class="{ 'italic text-gray-400': !perfilData.logros }" style="overflow-wrap: anywhere; word-break: break-word;">
+            {{ perfilData.logros || 'Sin logros registrados' }}
           </p>
         </div>
       </div>

@@ -68,7 +68,7 @@ const formCv = ref({
     fotoUrl: normalizarUrlFoto(usuario.value?.foto || usuario.value?.foto_url || usuario.value?.avatar || ''),
     nombre: usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || '',
     profesion: '',
-    direccion: 'Usulután',
+    direccion: usuario.value?.direccion || '',
     email: usuario.value?.correo || usuario.value?.email || '',
     telefono: '',
     sobreMi: '',
@@ -131,7 +131,7 @@ onMounted(async () => {
         fotoUrl: normalizarUrlFoto(cv.foto_url || cv.foto || cv.avatar || usuario.value?.foto || usuario.value?.foto_url || ''),
         nombre: cv.nombre_completo || usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || '',
         profesion: cv.profesion || '',
-        direccion: cv.direccion || 'Usulután',
+        direccion: cv.direccion || usuario.value?.direccion || '',
         email: cv.email || usuario.value?.correo || usuario.value?.email || '',
         telefono: cv.telefono || '',
         sobreMi: formatTexto(cv.sobre_mi),
@@ -173,7 +173,7 @@ const abrirCrearCv = () => {
       fotoUrl: normalizarUrlFoto(cvExistente?.foto_url || cvExistente?.foto || cvExistente?.avatar || usuario.value?.foto || usuario.value?.foto_url || ''),
       nombre: cvExistente?.nombre_completo || usuario.value?.nombre_completo || ((usuario.value?.nombres || '') + ' ' + (usuario.value?.apellidos || '')).trim() || '',
       profesion: cvExistente?.profesion || '',
-      direccion: cvExistente?.direccion || 'Usulután',
+      direccion: cvExistente?.direccion || usuario.value?.direccion || '',
       email: cvExistente?.email || usuario.value?.correo || usuario.value?.email || '',
       telefono: cvExistente?.telefono || '',
       sobreMi: cvExistente?.sobre_mi ? formatTexto(cvExistente.sobre_mi) : '',
@@ -633,7 +633,14 @@ const eliminarCv = async (cvId) => {
               class="w-full px-4 py-3 rounded-xl bg-white border text-gray-900 text-sm focus:outline-none shadow-xs"
               :class="intentoPasoTouched && !formCv.tituloCv.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-gray-300 focus:border-[#010C67]'"
             />
-            <p v-if="intentoPasoTouched && !formCv.tituloCv.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+            <p v-if="intentoPasoTouched && !formCv.tituloCv.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
 
             <p class="text-xs text-[#00589B] mt-2.5 font-sans">
               Este nombre te ayudará a identificarlo entre varios curriculums guardados
@@ -982,7 +989,14 @@ const eliminarCv = async (cvId) => {
                     :class="formCv.diseno.color === '#1F4E5B' ? 'ring-4 ring-[#1F4E5B]/40 scale-110' : ''"
                   ></button>
                 </div>
-                <p v-if="intentoPasoTouched && !formCv.diseno.color" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                <p v-if="intentoPasoTouched && !formCv.diseno.color" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
               </div>
 
               <div>
@@ -999,7 +1013,14 @@ const eliminarCv = async (cvId) => {
                   <option value="Roboto">Roboto</option>
                   <option value="Inter">Inter</option>
                 </select>
-                <p v-if="intentoPasoTouched && !formCv.diseno.fuente" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                <p v-if="intentoPasoTouched && !formCv.diseno.fuente" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
               </div>
             </div>
 
@@ -1057,40 +1078,68 @@ const eliminarCv = async (cvId) => {
                     class="w-full px-4 py-2.5 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.nombre.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;" />
-                  <p v-if="intentoPasoTouched && !formCv.perfil.nombre.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                  <p v-if="intentoPasoTouched && !formCv.perfil.nombre.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
                 </div>
                 <div>
                   <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 41 41" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M15.5003 19.6459C14.3676 19.6459 13.2813 19.196 12.4804 18.395C11.6795 17.5941 11.2295 16.5078 11.2295 15.3751C11.2295 14.2424 11.6795 13.1561 12.4804 12.3551C13.2813 11.5542 14.3676 11.1042 15.5003 11.1042C16.633 11.1042 17.7193 11.5542 18.5203 12.3551C19.3212 13.1561 19.7712 14.2424 19.7712 15.3751C19.7712 15.9359 19.6607 16.4913 19.4461 17.0095C19.2314 17.5276 18.9168 17.9984 18.5203 18.395C18.1237 18.7916 17.6529 19.1062 17.1347 19.3208C16.6165 19.5354 16.0612 19.6459 15.5003 19.6459ZM15.5003 3.41675C12.3288 3.41675 9.28713 4.67664 7.04451 6.91926C4.80188 9.16189 3.54199 12.2035 3.54199 15.3751C3.54199 24.3438 15.5003 37.5834 15.5003 37.5834C15.5003 37.5834 27.4587 24.3438 27.4587 15.3751C27.4587 12.2035 26.1988 9.16189 23.9561 6.91926C21.7135 4.67664 18.6719 3.41675 15.5003 3.41675Z" fill="currentColor"/></svg>
                     <span>Dirección<span class="text-rose-500">*</span></span>
                   </label>
-                  <input v-model="formCv.perfil.direccion" type="text" placeholder="Usulután"
+                  <input v-model="formCv.perfil.direccion" type="text" placeholder="Dirección actual"
                     class="w-full px-4 py-2.5 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.direccion.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;" />
-                  <p v-if="intentoPasoTouched && !formCv.perfil.direccion.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                  <p v-if="intentoPasoTouched && !formCv.perfil.direccion.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
                 </div>
                 <div>
                   <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 39 39" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M32.5 29.25H29.25V15.0312L19.5 21.125L9.75 15.0312V29.25H6.5V9.75H8.45L19.5 16.6562L30.55 9.75H32.5M32.5 6.5H6.5C4.69625 6.5 3.25 7.94625 3.25 9.75V29.25C3.25 30.112 3.59241 30.9386 4.2019 31.5481C4.8114 32.1576 5.63805 32.5 6.5 32.5H32.5C33.362 32.5 34.1886 32.1576 34.7981 31.5481C35.4076 30.9386 35.75 30.112 35.75 29.25V9.75C35.75 8.88805 35.4076 8.0614 34.7981 7.4519C34.1886 6.84241 33.362 6.5 32.5 6.5Z" fill="currentColor"/></svg>
                     <span>Email<span class="text-rose-500">*</span></span>
                   </label>
-                  <input v-model="formCv.perfil.email" type="email" placeholder="usss002419@ugb.edu.sv"
+                  <input v-model="formCv.perfil.email" type="email" placeholder="ejemplo@ugb.edu.sv"
                     class="w-full px-4 py-2.5 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.email.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;" />
-                  <p v-if="intentoPasoTouched && !formCv.perfil.email.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                  <p v-if="intentoPasoTouched && !formCv.perfil.email.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
                 </div>
                 <div>
                   <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M26.0809 31.1668H26.6051C27.0442 31.1526 27.4551 30.926 27.7101 30.5576L30.9259 25.9251C31.1384 25.6135 31.2234 25.231 31.1526 24.8485C31.1178 24.662 31.046 24.4844 30.9414 24.3263C30.8367 24.1681 30.7014 24.0325 30.5434 23.9276L23.5876 19.2951C23.0067 18.9126 22.2276 18.9976 21.7601 19.5076L19.0967 22.3835C18.0201 21.746 16.2209 20.5985 14.8042 19.1818C13.3876 17.7651 12.2401 15.966 11.6026 14.9035L14.4784 12.2401C14.9884 11.7726 15.0876 10.9935 14.6909 10.4126L10.0584 3.4568C9.8459 3.14513 9.52007 2.91847 9.15173 2.84763C8.76923 2.7768 8.38673 2.84763 8.07507 3.0743L3.44257 6.27597C3.07423 6.53097 2.84757 6.9418 2.8334 7.38097C2.7909 8.3868 2.60673 17.3543 9.61923 24.3526C15.9376 30.671 23.8426 31.1526 26.0809 31.1526V31.1668Z" fill="currentColor"/></svg>
                     <span>Teléfono<span class="text-rose-500">*</span></span>
                   </label>
-                  <input v-model="formCv.perfil.telefono" type="text" placeholder="7200 - 6452"
+                  <input v-model="formCv.perfil.telefono" type="text" placeholder="0000 - 0000"
                     class="w-full px-4 py-2.5 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.telefono.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;" />
-                  <p v-if="intentoPasoTouched && !formCv.perfil.telefono.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                  <p v-if="intentoPasoTouched && !formCv.perfil.telefono.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
                 </div>
               </div>
 
@@ -1102,11 +1151,18 @@ const eliminarCv = async (cvId) => {
                     <span>Sobre mi<span class="text-rose-500">*</span></span>
                   </label>
                   <textarea v-model="formCv.perfil.sobreMi" rows="5"
-                    placeholder="ej.Soy una persona apasionada por la tecnología, con un profundo interés en el campo de la ciberseguridad."
+                    placeholder="Describe brevemente tu perfil profesional, áreas de especialización e intereses..."
                     class="w-full px-4 py-3 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none resize-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.sobreMi.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;"></textarea>
-                  <p v-if="intentoPasoTouched && !formCv.perfil.sobreMi.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                  <p v-if="intentoPasoTouched && !formCv.perfil.sobreMi.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
                 </div>
                 <div>
                   <label class="block text-sm font-bold text-black mb-1.5 flex items-center gap-2">
@@ -1114,11 +1170,18 @@ const eliminarCv = async (cvId) => {
                     <span>Educación<span class="text-rose-500">*</span></span>
                   </label>
                   <textarea v-model="formCv.perfil.educacion" rows="3"
-                    placeholder="Egresada de Ingeniería en sistemas y redes informáticas"
+                    placeholder="Carrera o grado académico (Ej. Licenciatura en Computación)"
                     class="w-full px-4 py-3 rounded-[14px] bg-white border text-sm text-gray-800 focus:outline-none resize-none shadow-xs"
                     :class="intentoPasoTouched && !formCv.perfil.educacion.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
                     style="font-family: 'Lora', Georgia, serif;"></textarea>
-                  <p v-if="intentoPasoTouched && !formCv.perfil.educacion.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+                  <p v-if="intentoPasoTouched && !formCv.perfil.educacion.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
                 </div>
               </div>
             </div>
@@ -1140,7 +1203,14 @@ const eliminarCv = async (cvId) => {
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.objetivos.objetivo.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.objetivos.objetivo.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.objetivos.objetivo.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
 
             <div>
@@ -1155,7 +1225,14 @@ const eliminarCv = async (cvId) => {
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.objetivos.valores.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.objetivos.valores.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.objetivos.valores.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
 
             <div>
@@ -1170,7 +1247,14 @@ const eliminarCv = async (cvId) => {
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.objetivos.conocimientos.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.objetivos.conocimientos.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.objetivos.conocimientos.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
 
             <div>
@@ -1185,7 +1269,14 @@ const eliminarCv = async (cvId) => {
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.objetivos.idiomas.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.objetivos.idiomas.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.objetivos.idiomas.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
           </div>
 
@@ -1199,11 +1290,18 @@ const eliminarCv = async (cvId) => {
               <textarea 
                 v-model="formCv.logros.certificados" 
                 rows="4" 
-                placeholder="Ej. - CCNAv7: Introduction to Networks&#10;- Ciberseguridad empresarial" 
+                placeholder="Ej. - Certificaciones técnicas, cursos o diplomados" 
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.logros.certificados.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.logros.certificados.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.logros.certificados.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
 
             <div>
@@ -1218,7 +1316,14 @@ const eliminarCv = async (cvId) => {
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.logros.habilidades.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.logros.habilidades.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.logros.habilidades.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
 
             <div>
@@ -1233,7 +1338,14 @@ const eliminarCv = async (cvId) => {
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.logros.logros.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.logros.logros.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.logros.logros.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
 
             <div>
@@ -1244,11 +1356,18 @@ const eliminarCv = async (cvId) => {
               <textarea 
                 v-model="formCv.logros.proyectos" 
                 rows="4" 
-                placeholder="Ej. Asociación Juvenil del Bajo Lempa (AJUBAL) - Miembro activo desde 2021" 
+                placeholder="Ej. Proyectos sociales, voluntariado o iniciativas comunitarias" 
                 class="w-full px-3 py-2 rounded-xl bg-white border text-sm resize-none"
                 :class="intentoPasoTouched && !formCv.logros.proyectos.trim() ? 'border-rose-500 bg-rose-50/20' : 'border-black'"
               ></textarea>
-              <p v-if="intentoPasoTouched && !formCv.logros.proyectos.trim()" class="text-xs text-rose-500 font-medium mt-1">Este campo es obligatorio.</p>
+              <p v-if="intentoPasoTouched && !formCv.logros.proyectos.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <span>Este campo es obligatorio.</span>
+</p>
             </div>
           </div>
 

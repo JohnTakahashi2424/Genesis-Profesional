@@ -262,7 +262,7 @@ const verReporteMensual = (rep) => {
               Nombre del pasante
             </h3>
             <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ informe.nombre_pasante || 'Dallana Lucia Campos Garcia' }}
+              {{ informe.nombre_pasante || (usuario?.nombres ? `${usuario.nombres} ${usuario.apellidos || ''}`.trim() : (usuario?.nombre_completo || usuario?.nombre || 'Pasante')) }}
             </p>
           </div>
 
@@ -272,7 +272,7 @@ const verReporteMensual = (rep) => {
               Institución dónde se realizó la pasantía
             </h3>
             <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
-              {{ informe.institucion || 'Empresas CASS' }}
+              {{ informe.institucion || 'Sin institución registrada' }}
             </p>
           </div>
 

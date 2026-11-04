@@ -16,11 +16,11 @@ const toastExitoVisible = ref(false)
 // Nombre del estudiante autenticado desde sesión
 const nombreInicial = usuario.value?.nombres
   ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim()
-  : (usuario.value?.nombre || 'Dallana Lucia Campos Garcia')
+  : (usuario.value?.nombre || usuario.value?.nombre_completo || '')
 
 // Campos del formulario principal
 const form = ref({
-  nombre_pasante: nombreInicial || 'Dallana Lucia Campos Garcia',
+  nombre_pasante: nombreInicial,
   institucion: '',
   presentacion: '',
   generalidades: '',
@@ -637,7 +637,7 @@ const finalizarEnvio = () => {
               type="text" 
               class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs transition-colors"
               :class="intentoEnvio && !form.institucion?.trim() ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-[#3b82f6] focus:border-blue-600 focus:ring-1 focus:ring-blue-500'"
-              placeholder="Empresas CASS"
+              placeholder="Nombre de la empresa o institución"
             />
             <!-- Mensaje de error campo obligatorio -->
             <p v-if="intentoEnvio && !form.institucion?.trim()" class="flex items-center gap-1.5 text-xs text-red-500 font-medium mt-1.5">

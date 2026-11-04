@@ -17,6 +17,7 @@ const modoEdicion = ref(false)
 const idEditando = ref(null)
 const cargando = ref(false)
 const guardando = ref(false)
+const intentoGuardar = ref(false)
 const errorMensaje = ref('')
 const exitoMensaje = ref('')
 
@@ -72,11 +73,12 @@ const resetFormulario = () => {
   }
   modoEdicion.value = false
   idEditando.value = null
+  intentoGuardar.value = false
 }
 
 const guardarPortafolio = async () => {
+  intentoGuardar.value = true
   if (!form.value.titulo.trim() || !form.value.link.trim()) {
-    errorMensaje.value = 'Por favor, completa tanto el título como el enlace del portafolio.'
     return
   }
 
@@ -141,9 +143,10 @@ const iniciarEdicion = (item) => {
   modoEdicion.value = true
   idEditando.value = item.id
   form.value = {
-    titulo: item.titulo || 'My portafolio',
+    titulo: item.titulo || '',
     link: item.link_portafolio || item.link || ''
   }
+  intentoGuardar.value = false
   errorMensaje.value = ''
   exitoMensaje.value = ''
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -224,33 +227,49 @@ onMounted(() => {
             {{ modoEdicion ? 'Editar enlace de portafolio' : 'Añade un nuevo enlace de portafolio' }}
           </h2>
 
-          <form @submit.prevent="guardarPortafolio" class="space-y-5">
+          <form @submit.prevent="guardarPortafolio" novalidate class="space-y-5">
             <!-- Campo 1: Título* -->
             <div class="min-w-0">
               <label class="block text-sm font-semibold text-gray-900 mb-1.5">
-                Título<span class="text-red-500">*</span>
+                Título<span class="text-rose-500">*</span>
               </label>
               <input 
                 v-model="form.titulo"
                 type="text"
                 placeholder="My portafolio"
-                required
-                class="w-full px-4 py-2.5 rounded-[8px] bg-white border border-[#7FA9E0] text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500 shadow-xs transition-colors"
+                :class="intentoGuardar && !form.titulo.trim() ? 'border-rose-500 focus:border-rose-600 bg-rose-50/20' : 'border-[#7FA9E0] focus:border-blue-600'"
+                class="w-full px-4 py-2.5 rounded-[8px] bg-white border text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-xs transition-colors"
               />
+              <p v-if="intentoGuardar && !form.titulo.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
             <!-- Campo 2: Link del portafolio* -->
             <div class="min-w-0">
               <label class="block text-sm font-semibold text-gray-900 mb-1.5">
-                Link del portafolio<span class="text-red-500">*</span>
+                Link del portafolio<span class="text-rose-500">*</span>
               </label>
               <input 
                 v-model="form.link"
                 type="text"
                 placeholder="http://portafolio.com"
-                required
-                class="w-full px-4 py-2.5 rounded-[8px] bg-white border border-[#7FA9E0] text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500 shadow-xs transition-colors"
+                :class="intentoGuardar && !form.link.trim() ? 'border-rose-500 focus:border-rose-600 bg-rose-50/20' : 'border-[#7FA9E0] focus:border-blue-600'"
+                class="w-full px-4 py-2.5 rounded-[8px] bg-white border text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500 shadow-xs transition-colors"
               />
+              <p v-if="intentoGuardar && !form.link.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
+              </p>
             </div>
 
             <!-- Botones de Acción -->
