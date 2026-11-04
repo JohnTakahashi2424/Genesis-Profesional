@@ -88,4 +88,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(InformeFinal::class, 'user_id', 'id');
     }
+
+    /**
+     * Relación con los enlaces de portafolio del usuario.
+     */
+    public function portafolios()
+    {
+        return $this->hasMany(Portafolio::class, 'usuario_id', 'id');
+    }
 }
