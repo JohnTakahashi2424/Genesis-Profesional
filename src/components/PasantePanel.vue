@@ -5,6 +5,7 @@ import axios from 'axios'
 import CvModulo from './CvModulo.vue'
 import ReportesModulo from './ReportesModulo.vue'
 import PerfilModulo from './PerfilModulo.vue'
+import PortafolioModulo from './PortafolioModulo.vue'
 import HistorialModulo from './HistorialModulo.vue'
 import IaModulo from './IaModulo.vue'
 import ConfiguracionModulo from './ConfiguracionModulo.vue'
@@ -238,6 +239,7 @@ const cargarEstadoPasantia = async () => {
 
 const mapPathToItem = (path) => {
   if (path.includes('/perfil')) return 'perfil'
+  if (path.includes('/portafolio')) return 'portafolio'
   if (path.includes('/reportes') || path.includes('/reporte')) return 'reportes'
   if (path.includes('/historial')) return 'historial'
   if (path.includes('/ia')) return 'ia'
@@ -384,6 +386,18 @@ const handleLogout = () => {
             <span>Perfil</span>
           </button>
 
+          <!-- 2.5 Portafolio (Maqueta de alta fidelidad) -->
+          <button 
+            @click="navegarA('portafolio')"
+            class="w-full flex items-center gap-4 px-7 py-2.5 text-[17px] font-medium transition-all cursor-pointer rounded-none text-left"
+            :class="itemActivo === 'portafolio' ? 'bg-[#000B58] text-white' : 'text-black hover:bg-gray-50'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 80 76" fill="none" class="shrink-0">
+              <path d="M79.7666 45.778V63.8132C79.7666 66.9866 78.506 70.0299 76.2621 72.2738C74.0182 74.5176 70.9749 75.7782 67.8016 75.7782H11.965C8.79167 75.7782 5.74833 74.5176 3.50446 72.2738C1.26059 70.0299 0 66.9866 0 63.8132V45.778L2.20555 46.8828C13.895 52.7704 26.8017 55.8366 39.8902 55.8352C52.9787 55.8338 65.8847 52.7649 77.573 46.8748L79.7666 45.778ZM47.8599 0C51.0332 0 54.0766 1.26059 56.3205 3.50446C58.5643 5.74833 59.8249 8.79167 59.8249 11.965V15.9533H67.8016C70.9749 15.9533 74.0182 17.2139 76.2621 19.4578C78.506 21.7016 79.7666 24.745 79.7666 27.9183V36.8601L73.9954 39.7477C63.6698 44.9529 52.2898 47.7259 40.7271 47.8545C29.1643 47.9831 17.7255 45.4638 7.28667 40.4895L4.70623 39.2132L0 36.8601V27.9183C0 24.745 1.26059 21.7016 3.50446 19.4578C5.74833 17.2139 8.79167 15.9533 11.965 15.9533H19.9416V11.965C19.9416 8.79167 21.2022 5.74833 23.4461 3.50446C25.69 1.26059 28.7333 0 31.9066 0H47.8599ZM39.8833 31.9066C38.8255 31.9066 37.8111 32.3268 37.0631 33.0748C36.3151 33.8227 35.895 34.8372 35.895 35.895C35.8923 36.4187 35.9929 36.9378 36.1909 37.4227C36.3889 37.9076 36.6805 38.3488 37.049 38.721C37.4175 39.0932 37.8557 39.3891 38.3386 39.592C38.8215 39.7948 39.3396 39.9006 39.8633 39.9032C40.3871 39.9058 40.9062 39.8053 41.3911 39.6073C41.876 39.4092 42.3171 39.1177 42.6894 38.7492C43.0616 38.3807 43.3575 37.9425 43.5604 37.4596C43.7632 36.9767 43.869 36.4586 43.8716 35.9348C43.8716 33.6934 42.0848 31.9066 39.8833 31.9066ZM47.8599 7.97666H31.9066C30.8489 7.97666 29.8344 8.39685 29.0864 9.14481C28.3385 9.89277 27.9183 10.9072 27.9183 11.965V15.9533H51.8483V11.965C51.8483 10.9072 51.4281 9.89277 50.6801 9.14481C49.9322 8.39685 48.9177 7.97666 47.8599 7.97666Z" fill="currentColor"/>
+            </svg>
+            <span>Portafolio</span>
+          </button>
+
           <!-- 3. Reportes -->
           <button 
             @click="reportesVistaInicial = 'tabla'; navegarA('reportes')"
@@ -502,6 +516,7 @@ const handleLogout = () => {
         @navegar="navegarA" 
       />
       <PerfilModulo v-else-if="itemActivo === 'perfil'" @volver="navegarA('inicio')" />
+      <PortafolioModulo v-else-if="itemActivo === 'portafolio'" @volver="navegarA('inicio')" />
       <HistorialModulo v-else-if="itemActivo === 'historial'" @volver="navegarA('inicio')" @navegar="navegarA" />
       <IaModulo v-else-if="itemActivo === 'ia'" @volver="navegarA('inicio')" />
       <ConfiguracionModulo v-else-if="itemActivo === 'configuracion'" @volver="navegarA('inicio')" />

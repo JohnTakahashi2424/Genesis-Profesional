@@ -520,4 +520,86 @@ class SwaggerAnnotations
         ]
     )]
     public function docPasanteEstado() {}
+
+    // =========================================================================
+    // PORTAFOLIO
+    // =========================================================================
+
+    #[OA\Get(
+        path: "/api/portafolio",
+        operationId: "obtenerPortafolios",
+        tags: ["Portafolio y Perfil"],
+        security: [["bearerAuth" => []]],
+        summary: "Listar enlaces de portafolio del pasante autenticado",
+        responses: [
+            new OA\Response(response: 200, description: "Lista de enlaces de portafolio"),
+            new OA\Response(response: 401, description: "No autenticado")
+        ]
+    )]
+    public function docPortafolioIndex() {}
+
+    #[OA\Post(
+        path: "/api/portafolio",
+        operationId: "crearPortafolio",
+        tags: ["Portafolio y Perfil"],
+        security: [["bearerAuth" => []]],
+        summary: "Añadir nuevo enlace de portafolio",
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["titulo", "link"],
+                properties: [
+                    new OA\Property(property: "titulo", type: "string", example: "My portafolio"),
+                    new OA\Property(property: "link", type: "string", example: "http://portafolio.com")
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: "Enlace de portafolio creado exitosamente"),
+            new OA\Response(response: 422, description: "Error de validación")
+        ]
+    )]
+    public function docPortafolioStore() {}
+
+    #[OA\Put(
+        path: "/api/portafolio/{id}",
+        operationId: "actualizarPortafolio",
+        tags: ["Portafolio y Perfil"],
+        security: [["bearerAuth" => []]],
+        summary: "Actualizar un enlace de portafolio existente",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID del enlace de portafolio", schema: new OA\Schema(type: "integer", example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["titulo", "link"],
+                properties: [
+                    new OA\Property(property: "titulo", type: "string", example: "My portafolio actualizado"),
+                    new OA\Property(property: "link", type: "string", example: "https://mi-portafolio.com")
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Enlace actualizado exitosamente"),
+            new OA\Response(response: 404, description: "Enlace no encontrado")
+        ]
+    )]
+    public function docPortafolioUpdate() {}
+
+    #[OA\Delete(
+        path: "/api/portafolio/{id}",
+        operationId: "eliminarPortafolio",
+        tags: ["Portafolio y Perfil"],
+        security: [["bearerAuth" => []]],
+        summary: "Eliminar un enlace de portafolio",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID del enlace de portafolio", schema: new OA\Schema(type: "integer", example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Enlace eliminado exitosamente"),
+            new OA\Response(response: 404, description: "Enlace no encontrado")
+        ]
+    )]
+    public function docPortafolioDestroy() {}
 }

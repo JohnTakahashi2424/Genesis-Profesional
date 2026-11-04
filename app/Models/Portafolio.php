@@ -13,8 +13,25 @@ class Portafolio extends Model
 
     protected $fillable = [
         'usuario_id',
+        'titulo',
         'link_portafolio',
     ];
+
+    /**
+     * Accesor para permitir $portafolio->link
+     */
+    public function getLinkAttribute()
+    {
+        return $this->link_portafolio;
+    }
+
+    /**
+     * Mutador para permitir $portafolio->link = '...'
+     */
+    public function setLinkAttribute($value)
+    {
+        $this->attributes['link_portafolio'] = $value;
+    }
 
     /**
      * Relación con el usuario propietario
@@ -24,4 +41,3 @@ class Portafolio extends Model
         return $this->belongsTo(User::class, 'usuario_id');
     }
 }
-

@@ -43,16 +43,20 @@ Route::prefix('auth')->group(function () {
     Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
-// Rutas públicas de consulta de estado de pasantía (permite consulta con o sin token JWT)
-Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
-
 // Rutas protegidas mediante autenticación JWT
 Route::middleware('jwt.auth')->group(function () {
     // Cierre de sesión y destrucción de token
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
 
-    // Rutas del Módulo de Portafolio / Perfil
+    // Rutas de Pasantías
+    Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+
+    // Rutas del Módulo de Portafolio
     Route::prefix('portafolio')->group(function () {
+        Route::get('/', [PortafolioController::class, 'index'])->name('api.portafolio.index');
+        Route::post('/', [PortafolioController::class, 'store'])->name('api.portafolio.store');
+        Route::put('/{id}', [PortafolioController::class, 'update'])->name('api.portafolio.update');
+        Route::delete('/{id}', [PortafolioController::class, 'destroy'])->name('api.portafolio.destroy');
         Route::get('/obtener/{usuarioId}', [PortafolioController::class, 'obtener'])->name('api.portafolio.obtener');
         Route::post('/guardar', [PortafolioController::class, 'guardar'])->name('api.portafolio.guardar');
     });
@@ -84,7 +88,6 @@ Route::middleware('jwt.auth')->group(function () {
 
     // Rutas del Módulo de Notificaciones
     Route::prefix('notificaciones')->group(function () {
-        Route::get('/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador');
         Route::get('/', [NotificacionController::class, 'index'])->name('api.notificaciones.index');
         Route::post('/', [NotificacionController::class, 'store'])->name('api.notificaciones.store');
         Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');
