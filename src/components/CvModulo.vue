@@ -329,7 +329,7 @@ const verCvVistaPrevia = () => {
   pasoActual.value = 6 // Pantalla Vista Previa (Captura 2)
 }
 
-// Construye el HTML del CV como string para renderizado fuera de pantalla
+// Construye el HTML del CV como string para renderizado fuera de pantalla (fiel a diseño de Figma)
 const buildCvHtml = () => {
   const data = formCv.value
   const color = data.diseno.color || '#010C67'
@@ -338,57 +338,62 @@ const buildCvHtml = () => {
 
   const fotoHtml = fotoUrl
     ? `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" crossorigin="anonymous" />`
-    : `<span style="font-size:24px;color:white;">&#128100;</span>`
+    : `<span style="font-size:32px;color:#9ca3af;">&#128100;</span>`
 
   const col = (titulo, contenido, c) => `
     <div style="flex:1;min-width:0;">
-      <p style="font-weight:bold;margin:0 0 4px;font-size:10px;color:${c};">${titulo}</p>
-      <p style="margin:0 0 0 16px;font-size:9.5px;color:#374151;white-space:pre-line;">${contenido || ''}</p>
+      <p style="font-weight:bold;margin:0 0 3px;font-size:10px;color:${c};">${titulo}</p>
+      <p style="margin:0 0 0 16px;font-size:9.5px;color:#111;white-space:pre-line;">${contenido || ''}</p>
     </div>`
 
   const seccion = (titulo, contenido, c) => `
     <div style="margin-bottom:8px;">
       <p style="font-weight:bold;margin:0 0 3px;font-size:10px;color:${c};">${titulo}</p>
-      <p style="margin:0 0 0 16px;font-size:9.5px;color:#374151;white-space:pre-line;">${contenido || ''}</p>
+      <p style="margin:0 0 0 16px;font-size:9.5px;color:#111;white-space:pre-line;">${contenido || ''}</p>
     </div>`
 
   return `
   <div style="font-family:'${fuente}',Helvetica,sans-serif;background:#fff;width:794px;color:#111;line-height:1.5;">
-    <div style="background:${color};padding:16px 20px;display:flex;align-items:center;gap:16px;">
-      <div style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.25);border:2px solid white;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <!-- Barra superior de color sólido -->
+    <div style="background:${color};height:38px;width:100%;"></div>
+    
+    <!-- Encabezado con foto solapada y nombre en negro sobre blanco -->
+    <div style="padding:0 24px 12px;display:flex;align-items:center;gap:18px;margin-top:-24px;">
+      <div style="width:72px;height:72px;border-radius:50%;background:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.15);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
         ${fotoHtml}
       </div>
-      <div>
-        <h3 style="margin:0;font-size:17px;font-weight:700;color:white;">${data.perfil.nombre || ''}</h3>
-        ${data.perfil.educacion ? `<p style="margin:2px 0 0;font-size:10px;color:rgba(255,255,255,0.9);">${data.perfil.educacion}</p>` : ''}
+      <div style="padding-top:16px;">
+        <h3 style="margin:0;font-size:18px;font-weight:700;color:#111827;">${data.perfil.nombre || ''}</h3>
+        ${data.perfil.educacion ? `<p style="margin:2px 0 0;font-size:10.5px;color:#4b5563;">${data.perfil.educacion}</p>` : ''}
       </div>
     </div>
-    <div style="padding:18px 20px;background:#fff;">
-      <div style="display:flex;gap:20px;padding-bottom:10px;border-bottom:1px solid #e5e7eb;margin-bottom:10px;">
+    
+    <div style="padding:14px 24px;background:#fff;">
+      <div style="display:flex;gap:24px;margin-bottom:14px;">
         <div style="flex:1;">
-          <p style="margin:0 0 4px;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Direccion: </span>${data.perfil.direccion || ''}</p>
-          <p style="margin:0 0 4px;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Email: </span>${data.perfil.email || ''}</p>
-          <p style="margin:0;font-size:9.5px;color:#374151;"><span style="font-weight:bold;color:${color};">Telefono: </span>${data.perfil.telefono || ''}</p>
+          <p style="margin:0 0 4px;font-size:9.5px;color:#111;"><span style="font-weight:bold;color:${color};">Dirección: </span>${data.perfil.direccion || ''}</p>
+          <p style="margin:0 0 4px;font-size:9.5px;color:#111;"><span style="font-weight:bold;color:${color};">Email: </span>${data.perfil.email || ''}</p>
+          <p style="margin:0;font-size:9.5px;color:#111;"><span style="font-weight:bold;color:${color};">Teléfono: </span>${data.perfil.telefono || ''}</p>
         </div>
         <div style="flex:1;">
-          <p style="margin:0 0 3px;font-weight:bold;font-size:10px;color:${color};">Educacion:</p>
-          <p style="margin:0 0 6px 16px;font-size:9.5px;color:#374151;">${data.perfil.educacion || ''}</p>
-          <p style="margin:0 0 3px;font-weight:bold;font-size:10px;color:${color};">Idiomas:</p>
-          <p style="margin:0 0 0 16px;font-size:9.5px;color:#374151;white-space:pre-line;">${data.objetivos.idiomas || ''}</p>
+          <p style="margin:0 0 2px;font-weight:bold;font-size:10px;color:${color};">Educación:</p>
+          <p style="margin:0 0 6px 16px;font-size:9.5px;color:#111;">${data.perfil.educacion || ''}</p>
+          <p style="margin:0 0 2px;font-weight:bold;font-size:10px;color:${color};">Idiomas:</p>
+          <p style="margin:0 0 0 16px;font-size:9.5px;color:#111;white-space:pre-line;">${data.objetivos.idiomas || ''}</p>
         </div>
       </div>
-      <div style="padding-bottom:10px;border-bottom:1px solid #e5e7eb;margin-bottom:10px;">
-        ${seccion('Sobre mi:', data.perfil.sobreMi, color)}
+      <div style="margin-bottom:14px;">
+        ${seccion('Sobre mí:', data.perfil.sobreMi, color)}
       </div>
-      <div style="display:flex;gap:20px;padding-bottom:10px;border-bottom:1px solid #e5e7eb;margin-bottom:10px;">
+      <div style="display:flex;gap:24px;margin-bottom:14px;">
         ${col('Conocimientos:', data.objetivos.conocimientos, color)}
         ${col('Valores profesionales:', data.objetivos.valores, color)}
       </div>
-      <div style="display:flex;gap:20px;padding-bottom:10px;border-bottom:1px solid #e5e7eb;margin-bottom:10px;">
+      <div style="display:flex;gap:24px;margin-bottom:14px;">
         ${col('Mi objetivo:', data.objetivos.objetivo, color)}
         ${col('Habilidades:', data.logros.habilidades, color)}
       </div>
-      <div style="display:flex;gap:20px;padding-bottom:10px;border-bottom:1px solid #e5e7eb;margin-bottom:10px;">
+      <div style="display:flex;gap:24px;margin-bottom:14px;">
         ${col('Certificados:', data.logros.certificados, color)}
         ${col('Logros:', data.logros.logros, color)}
       </div>
@@ -479,7 +484,12 @@ const descargarPdfDirecto = async () => {
 
 // Imprimir CV
 const imprimirCvDirecto = () => {
+  const originalTitle = document.title
+  document.title = ' '
   window.print()
+  setTimeout(() => {
+    document.title = originalTitle
+  }, 1000)
 }
 
 // Guardar CV en Backend y regresar a la lista
@@ -742,11 +752,21 @@ const eliminarCv = async (cvId) => {
         v-else-if="pasoActual === 6"
         class="relative w-full max-w-[950px] bg-white rounded-[22px] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[95vh]"
       >
-        <!-- Header Banner -->
-        <div class="bg-[#010C67] text-white px-6 py-4 text-center shrink-0">
-          <h3 class="text-lg sm:text-xl font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+        <!-- Header Banner Dinámico con botón de cerrar ✕ fiel a diseño Figma -->
+        <div class="bg-[#010C67] text-white px-6 py-4 relative flex items-center justify-center shrink-0">
+          <h3 class="text-lg sm:text-xl font-bold font-serif tracking-tight text-center pr-10 pl-10" style="font-family: 'Lora', Georgia, serif;">
             Tu perfil ya casi está listo.
           </h3>
+          <button
+            @click="cancelarWizard"
+            type="button"
+            class="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 text-white/90 hover:text-white p-1 rounded-full transition-colors cursor-pointer"
+            title="Cerrar modal"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <!-- Contenido Vista Previa -->
@@ -756,149 +776,169 @@ const eliminarCv = async (cvId) => {
           </h2>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <!-- Plantilla CV Renderizada (Lado Izquierdo) -->
+            <!-- Plantilla CV Renderizada (Lado Izquierdo) Fiel a Diseño Figma -->
             <div id="cv-card-preview" class="cv-card-printable lg:col-span-8 bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden text-left text-xs font-sans">
-              <!-- Encabezado con color elegido -->
-              <div class="p-4 text-white transition-colors flex items-center gap-4" :style="{ backgroundColor: formCv.diseno.color }">
-                <div class="w-14 h-14 rounded-full bg-white/20 border border-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+              <!-- Barra superior sólida con color elegido -->
+              <div class="h-9 sm:h-10 w-full transition-colors shrink-0" :style="{ backgroundColor: formCv.diseno.color }"></div>
+
+              <!-- Fila Encabezado: Foto solapada y datos de perfil en texto negro sobre blanco -->
+              <div class="px-6 pt-0 pb-3 flex items-center gap-5 -mt-6">
+                <!-- Foto circular con borde blanco solapada a la barra de color -->
+                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border-2 border-white flex items-center justify-center overflow-hidden shrink-0 shadow-md">
                   <img v-if="formCv.perfil.fotoUrl && !imgErrorWizard" :src="formCv.perfil.fotoUrl" @error="imgErrorWizard = true" class="w-full h-full object-cover" />
-                  <span v-else class="text-2xl text-white">👤</span>
+                  <span v-else class="text-3xl text-gray-400">👤</span>
                 </div>
-                <div>
-                  <h3 class="text-lg font-bold leading-tight" :style="{ fontFamily: formCv.diseno.fuente }">
-                    {{ formCv.perfil.nombre || '' }}
+                <!-- Nombre y carrera en negro/oscuro -->
+                <div class="min-w-0 pt-4">
+                  <h3 class="text-lg sm:text-xl font-bold text-gray-900 leading-tight tracking-tight" :style="{ fontFamily: formCv.diseno.fuente }">
+                    {{ formCv.perfil.nombre || 'Nombre Completo' }}
                   </h3>
-                  <p v-if="formCv.perfil.educacion" class="text-xs opacity-90 font-sans mt-0.5">
+                  <p v-if="formCv.perfil.educacion" class="text-xs text-gray-600 font-sans mt-0.5">
                     {{ formCv.perfil.educacion }}
                   </p>
                 </div>
               </div>
 
-              <!-- Cuerpo del CV -->
-              <div class="p-5 space-y-3.5 bg-white text-gray-900 text-[11px] leading-relaxed">
-                <!-- Contacto y Educación / Idiomas -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100">
-                  <div class="space-y-1">
+              <!-- Cuerpo del CV sin líneas divisorias horizontales, fiel a Figma -->
+              <div class="px-6 py-3 space-y-4 bg-white text-gray-900 text-[11px] leading-relaxed">
+                <!-- Contacto y Educación / Idiomas (2 columnas) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="space-y-1.5">
                     <p class="flex items-center gap-1.5 font-bold">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Dirección:</span>
-                      <span class="font-normal text-gray-800 ml-0.5">{{ formCv.perfil.direccion }}</span>
+                      <span class="font-normal text-gray-900 ml-0.5">{{ formCv.perfil.direccion }}</span>
                     </p>
                     <p class="flex items-center gap-1.5 font-bold">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Email:</span>
-                      <span class="font-normal text-gray-800 ml-0.5">{{ formCv.perfil.email }}</span>
+                      <span class="font-normal text-gray-900 ml-0.5">{{ formCv.perfil.email }}</span>
                     </p>
                     <p class="flex items-center gap-1.5 font-bold">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Teléfono:</span>
-                      <span class="font-normal text-gray-800 ml-0.5">{{ formCv.perfil.telefono }}</span>
+                      <span class="font-normal text-gray-900 ml-0.5">{{ formCv.perfil.telefono }}</span>
                     </p>
                   </div>
 
-                  <div class="space-y-2">
+                  <div class="space-y-1.5">
                     <div>
                       <p class="flex items-center gap-1.5 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
                         <span :style="{ color: formCv.diseno.color }">Educación:</span>
                       </p>
-                      <p class="text-gray-800 ml-5 font-normal">{{ formCv.perfil.educacion }}</p>
+                      <p class="text-gray-900 ml-5 font-normal">{{ formCv.perfil.educacion }}</p>
                     </div>
 
                     <div>
                       <p class="flex items-center gap-1.5 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/></svg>
                         <span :style="{ color: formCv.diseno.color }">Idiomas:</span>
                       </p>
-                      <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.idiomas }}</p>
+                      <p class="text-gray-900 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.idiomas }}</p>
                     </div>
                   </div>
                 </div>
 
                 <!-- Sobre mí -->
-                <div class="pt-1.5 pb-2 border-b border-gray-100">
+                <div>
                   <p class="font-bold mb-1 flex items-center gap-1.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-2.33 4.67-3.6 7-3.6s7 1.27 7 3.6V19z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-2.33 4.67-3.6 7-3.6s7 1.27 7 3.6V19z"/></svg>
                     <span :style="{ color: formCv.diseno.color }">Sobre mí:</span>
                   </p>
-                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.perfil.sobreMi }}</p>
+                  <p class="text-gray-900 ml-5 font-normal whitespace-pre-line">{{ formCv.perfil.sobreMi }}</p>
                 </div>
 
-                <!-- Conocimientos y Valores profesionales -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100">
+                <!-- 2 Columnas para Conocimientos, Valores, Objetivo, Habilidades, Certificados, Logros -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  <!-- Izquierda: Conocimientos -->
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
-                      <span :style="{ color: formCv.diseno.color }">Conocimientos:</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                      <span :style="{ color: formCv.diseno.color }">Conocimientos</span>
                     </p>
-                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.conocimientos }}</p>
+                    <p class="text-gray-900 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.conocimientos }}</p>
                   </div>
-                  <div>
-                    <p class="font-bold mb-1 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                      <span :style="{ color: formCv.diseno.color }">Valores profesionales:</span>
-                    </p>
-                    <p class="text-gray-800 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.valores }}</p>
-                  </div>
-                </div>
 
-                <!-- Mi objetivo y Habilidades -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100">
+                  <!-- Derecha: Valores profesionales -->
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                      <span :style="{ color: formCv.diseno.color }">Valores profesionales</span>
+                    </p>
+                    <p class="text-gray-900 whitespace-pre-line ml-5 font-normal">{{ formCv.objetivos.valores }}</p>
+                  </div>
+
+                  <!-- Izquierda: Mi objetivo (con SVG provisto por el usuario) -->
+                  <div>
+                    <p class="font-bold mb-1 flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-black" viewBox="0 0 27 27" fill="none">
+                        <path d="M3.28442 13.1373C3.28442 14.4312 3.53928 15.7124 4.03444 16.9079C4.5296 18.1033 5.25536 19.1895 6.1703 20.1044C7.08523 21.0193 8.17142 21.7451 9.36684 22.2403C10.5623 22.7354 11.8435 22.9903 13.1374 22.9903C14.4313 22.9903 15.7126 22.7354 16.908 22.2403C18.1034 21.7451 19.1896 21.0193 20.1045 20.1044C21.0195 19.1895 21.7452 18.1033 22.2404 16.9079C22.7355 15.7124 22.9904 14.4312 22.9904 13.1373C22.9904 11.8434 22.7355 10.5621 22.2404 9.36671C21.7452 8.17129 21.0195 7.08511 20.1045 6.17018C19.1896 5.25524 18.1034 4.52947 16.908 4.03432C15.7126 3.53916 14.4313 3.2843 13.1374 3.2843C11.8435 3.2843 10.5623 3.53916 9.36684 4.03432C8.17142 4.52947 7.08523 5.25524 6.1703 6.17018C5.25536 7.08511 4.5296 8.17129 4.03444 9.36671C3.53928 10.5621 3.28442 11.8434 3.28442 13.1373Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                        <path d="M7.66357 13.1373C7.66357 14.5891 8.24028 15.9814 9.26684 17.008C10.2934 18.0345 11.6857 18.6112 13.1375 18.6112C14.5892 18.6112 15.9815 18.0345 17.0081 17.008C18.0346 15.9814 18.6113 14.5891 18.6113 13.1373C18.6113 11.6856 18.0346 10.2933 17.0081 9.26671C15.9815 8.24016 14.5892 7.66345 13.1375 7.66345C11.6857 7.66345 10.2934 8.24016 9.26684 9.26671C8.24028 10.2933 7.66357 11.6856 7.66357 13.1373Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                        <path d="M9.30581 21.8955L13.1375 13.1373L6.02148 19.706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                        <path d="M12.0427 13.1372C12.0427 13.4276 12.1581 13.7061 12.3634 13.9114C12.5687 14.1167 12.8471 14.232 13.1375 14.232C13.4278 14.232 13.7063 14.1167 13.9116 13.9114C14.1169 13.7061 14.2323 13.4276 14.2323 13.1372C14.2323 12.8469 14.1169 12.5684 13.9116 12.3631C13.7063 12.1578 13.4278 12.0425 13.1375 12.0425C12.8471 12.0425 12.5687 12.1578 12.3634 12.3631C12.1581 12.5684 12.0427 12.8469 12.0427 13.1372Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                      </svg>
                       <span :style="{ color: formCv.diseno.color }">Mi objetivo:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.objetivos.objetivo }}</p>
+                    <p class="text-gray-900 ml-5 font-normal whitespace-pre-line">{{ formCv.objetivos.objetivo }}</p>
                   </div>
+
+                  <!-- Derecha: Habilidades -->
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Habilidades:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.habilidades }}</p>
+                    <p class="text-gray-900 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.habilidades }}</p>
                   </div>
-                </div>
 
-                <!-- Certificados y Logros -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-gray-100">
+                  <!-- Izquierda: Certificados -->
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h6v2H9V4zm9 16H6V8h12v12z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h6v2H9V4zm9 16H6V8h12v12z"/></svg>
                       <span :style="{ color: formCv.diseno.color }">Certificados:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.certificados }}</p>
+                    <p class="text-gray-900 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.certificados }}</p>
                   </div>
+
+                  <!-- Derecha: Logros -->
                   <div>
                     <p class="font-bold mb-1 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-black" viewBox="0 0 27 27" fill="none">
+                        <path d="M3.28442 13.1373C3.28442 14.4312 3.53928 15.7124 4.03444 16.9079C4.5296 18.1033 5.25536 19.1895 6.1703 20.1044C7.08523 21.0193 8.17142 21.7451 9.36684 22.2403C10.5623 22.7354 11.8435 22.9903 13.1374 22.9903C14.4313 22.9903 15.7126 22.7354 16.908 22.2403C18.1034 21.7451 19.1896 21.0193 20.1045 20.1044C21.0195 19.1895 21.7452 18.1033 22.2404 16.9079C22.7355 15.7124 22.9904 14.4312 22.9904 13.1373C22.9904 11.8434 22.7355 10.5621 22.2404 9.36671C21.7452 8.17129 21.0195 7.08511 20.1045 6.17018C19.1896 5.25524 18.1034 4.52947 16.908 4.03432C15.7126 3.53916 14.4313 3.2843 13.1374 3.2843C11.8435 3.2843 10.5623 3.53916 9.36684 4.03432C8.17142 4.52947 7.08523 5.25524 6.1703 6.17018C5.25536 7.08511 4.5296 8.17129 4.03444 9.36671C3.53928 10.5621 3.28442 11.8434 3.28442 13.1373Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                        <path d="M7.66357 13.1373C7.66357 14.5891 8.24028 15.9814 9.26684 17.008C10.2934 18.0345 11.6857 18.6112 13.1375 18.6112C14.5892 18.6112 15.9815 18.0345 17.0081 17.008C18.0346 15.9814 18.6113 14.5891 18.6113 13.1373C18.6113 11.6856 18.0346 10.2933 17.0081 9.26671C15.9815 8.24016 14.5892 7.66345 13.1375 7.66345C11.6857 7.66345 10.2934 8.24016 9.26684 9.26671C8.24028 10.2933 7.66357 11.6856 7.66357 13.1373Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                        <path d="M9.30581 21.8955L13.1375 13.1373L6.02148 19.706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                        <path d="M12.0427 13.1372C12.0427 13.4276 12.1581 13.7061 12.3634 13.9114C12.5687 14.1167 12.8471 14.232 13.1375 14.232C13.4278 14.232 13.7063 14.1167 13.9116 13.9114C14.1169 13.7061 14.2323 13.4276 14.2323 13.1372C14.2323 12.8469 14.1169 12.5684 13.9116 12.3631C13.7063 12.1578 13.4278 12.0425 13.1375 12.0425C12.8471 12.0425 12.5687 12.1578 12.3634 12.3631C12.1581 12.5684 12.0427 12.8469 12.0427 13.1372Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                      </svg>
                       <span :style="{ color: formCv.diseno.color }">Logros:</span>
                     </p>
-                    <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.logros }}</p>
+                    <p class="text-gray-900 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.logros }}</p>
                   </div>
                 </div>
 
                 <!-- Proyectos de beneficio social -->
                 <div>
                   <p class="font-bold mb-1 flex items-center gap-1.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0" :style="{ color: formCv.diseno.color }"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0 text-black"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                     <span :style="{ color: formCv.diseno.color }">Proyectos de beneficio social:</span>
                   </p>
-                  <p class="text-gray-800 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.proyectos }}</p>
+                  <p class="text-gray-900 ml-5 font-normal whitespace-pre-line">{{ formCv.logros.proyectos }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- Botones de Acción (Lado Derecho) -->
-            <div class="lg:col-span-4 space-y-4 pt-4 flex flex-col items-center justify-start w-full">
+            <!-- Botones de Acción (Lado Derecho) fieles a Figma -->
+            <div class="lg:col-span-4 space-y-3 pt-2 flex flex-col items-center justify-start w-full">
               <!-- Editar -->
               <button
                 @click="pasoActual = 2"
-                class="w-[134px] h-[41px] px-[10px] rounded-[18px] border border-[#010C67] bg-white hover:bg-blue-50 text-[#010C67] text-xs font-medium transition-all shadow-xs flex items-center justify-center gap-[10px] cursor-pointer shrink-0"
+                class="w-[110px] h-[34px] rounded-[6px] border border-[#010C67] bg-white hover:bg-gray-50 text-[#010C67] text-xs font-serif font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
                 style="font-family: 'Lora', Georgia, serif;"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 27 27" fill="none" class="shrink-0 text-[#010C67]">
-                  <path d="M25.875 5.625V7.875H24.75V9H23.625V10.125H22.5V11.25H21.375V10.125H20.25V9H19.125V7.875H18V6.75H16.875V5.625H15.75V4.5H16.875V3.375H18V2.25H19.125V1.125H21.375V2.25H22.5V3.375H23.625V4.5H24.75V5.625H25.875ZM19.125 11.25V10.125H18V9H16.875V7.875H15.75V6.75H13.5V7.875H12.375V9H11.25V10.125H10.125V11.25H9V12.375H7.875V13.5H6.75V14.625H5.625V15.75H4.5V16.875H3.375V18H2.25V19.125H1.125V25.875H7.875V24.75H9V23.625H10.125V22.5H11.25V21.375H12.375V20.25H13.5V19.125H14.625V18H15.75V16.875H16.875V15.75H18V14.625H19.125V13.5H20.25V11.25H19.125ZM16.875 13.5V14.625H15.75V15.75H14.625V16.875H13.5V18H12.375V19.125H11.25V20.25H10.125V21.375H9V22.5H7.875V23.625H3.375V19.125H4.5V18H5.625V16.875H6.75V15.75H7.875V14.625H9V13.5H10.125V12.375H11.25V11.25H12.375V10.125H13.5V9H15.75V10.125H16.875V11.25H18V13.5H16.875Z" fill="currentColor"/>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0 text-[#010C67]" viewBox="0 0 24 24" fill="none">
+                  <path d="M15.8 4.2C16.4 3.6 17.4 3.6 18 4.2L19.8 6C20.4 6.6 20.4 7.6 19.8 8.2L17.5 10.5L13.5 6.5L15.8 4.2Z" fill="currentColor" />
+                  <path d="M12.2 7.8L16.2 11.8L6.8 21.2H2.8V17.2L12.2 7.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none" />
+                  <path d="M5.5 18.5L7 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                 </svg>
                 <span>Editar</span>
               </button>
@@ -906,11 +946,11 @@ const eliminarCv = async (cvId) => {
               <!-- Imprimir cv -->
               <button
                 @click="imprimirCvDirecto"
-                class="w-[134px] h-[41px] px-[10px] rounded-[18px] border border-[#010C67] bg-white hover:bg-blue-50 text-[#010C67] text-xs font-medium transition-all shadow-xs flex items-center justify-center gap-[10px] cursor-pointer shrink-0"
+                class="w-[110px] h-[34px] rounded-[6px] border border-[#010C67] bg-white hover:bg-gray-50 text-[#010C67] text-xs font-serif font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
                 style="font-family: 'Lora', Georgia, serif;"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 19 19" fill="none" class="shrink-0">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M3.32507 6.62145L4.94799 6.44095V3.09774C4.94799 2.5887 5.33591 2.16358 5.84258 2.11608C8.27574 1.89165 10.7244 1.89165 13.1576 2.11608C13.6642 2.16358 14.0522 2.5887 14.0522 3.09774V6.44095L15.6751 6.62145C15.9311 6.64969 16.1722 6.75576 16.366 6.92535C16.5598 7.09494 16.6969 7.3199 16.7589 7.56987C17.1991 9.34267 17.1991 11.1962 16.7589 12.969L16.6377 13.4559C16.6099 13.5698 16.5445 13.6709 16.4522 13.7432C16.3598 13.8154 16.2459 13.8545 16.1287 13.8541H14.0522V15.899C14.0523 16.1367 13.9641 16.366 13.8046 16.5424C13.6452 16.7187 13.4258 16.8294 13.1892 16.853C10.7359 17.0984 8.26428 17.0984 5.81091 16.853C5.57434 16.8294 5.35499 16.7187 5.19551 16.5424C5.03603 16.366 4.9478 16.1367 4.94799 15.899V13.8541H2.87145C2.75423 13.8545 2.6403 13.8154 2.54798 13.7432C2.45565 13.6709 2.39029 13.5698 2.36241 13.4559L2.24128 12.969C1.80108 11.1962 1.80108 9.34267 2.24128 7.56987C2.30327 7.31979 2.44051 7.09475 2.63446 6.92514C2.82842 6.75554 3.06975 6.64954 3.32587 6.62145M6.13628 6.32537C8.37558 6.14174 10.6262 6.14174 12.8654 6.32537V3.2822C10.6266 3.08729 8.3751 3.08729 6.13628 3.2822V6.32537ZM6.13628 12.8091V15.6908C8.37431 15.9031 10.6274 15.9031 12.8654 15.6908V12.8091C10.6274 12.5982 8.37438 12.5982 6.13628 12.8091ZM14.0529 8.70829C13.7905 8.70829 13.5388 8.81255 13.3532 8.99813C13.1676 9.18371 13.0634 9.43542 13.0634 9.69787C13.0634 9.96032 13.1676 10.212 13.3532 10.3976C13.5388 10.5832 13.7905 10.6875 14.0529 10.6875C14.3154 10.6875 14.5671 10.5832 14.7527 10.3976C14.9383 10.212 15.0425 9.96032 15.0425 9.69787C15.0425 9.43542 14.9383 9.18371 14.7527 8.99813C14.5671 8.81255 14.3154 8.70829 14.0529 8.70829Z" fill="#010C67"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 19 19" fill="none" class="shrink-0 text-[#010C67]">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M3.32507 6.62145L4.94799 6.44095V3.09774C4.94799 2.5887 5.33591 2.16358 5.84258 2.11608C8.27574 1.89165 10.7244 1.89165 13.1576 2.11608C13.6642 2.16358 14.0522 2.5887 14.0522 3.09774V6.44095L15.6751 6.62145C15.9311 6.64969 16.1722 6.75576 16.366 6.92535C16.5598 7.09494 16.6969 7.3199 16.7589 7.56987C17.1991 9.34267 17.1991 11.1962 16.7589 12.969L16.6377 13.4559C16.6099 13.5698 16.5445 13.6709 16.4522 13.7432C16.3598 13.8154 16.2459 13.8545 16.1287 13.8541H14.0522V15.899C14.0523 16.1367 13.9641 16.366 13.8046 16.5424C13.6452 16.7187 13.4258 16.8294 13.1892 16.853C10.7359 17.0984 8.26428 17.0984 5.81091 16.853C5.57434 16.8294 5.35499 16.7187 5.19551 16.5424C5.03603 16.366 4.9478 16.1367 4.94799 15.899V13.8541H2.87145C2.75423 13.8545 2.6403 13.8154 2.54798 13.7432C2.45565 13.6709 2.39029 13.5698 2.36241 13.4559L2.24128 12.969C1.80108 11.1962 1.80108 9.34267 2.24128 7.56987C2.30327 7.31979 2.44051 7.09475 2.63446 6.92514C2.82842 6.75554 3.06975 6.64954 3.32587 6.62145M6.13628 6.32537C8.37558 6.14174 10.6262 6.14174 12.8654 6.32537V3.2822C10.6266 3.08729 8.3751 3.08729 6.13628 3.2822V6.32537ZM6.13628 12.8091V15.6908C8.37431 15.9031 10.6274 15.9031 12.8654 15.6908V12.8091C10.6274 12.5982 8.37438 12.5982 6.13628 12.8091ZM14.0529 8.70829C13.7905 8.70829 13.5388 8.81255 13.3532 8.99813C13.1676 9.18371 13.0634 9.43542 13.0634 9.69787C13.0634 9.96032 13.1676 10.212 13.3532 10.3976C13.5388 10.5832 13.7905 10.6875 14.0529 10.6875C14.3154 10.6875 14.5671 10.5832 14.7527 10.3976C14.9383 10.212 15.0425 9.96032 15.0425 9.69787C15.0425 9.43542 14.9383 9.18371 14.7527 8.99813C14.5671 8.81255 14.3154 8.70829 14.0529 8.70829Z" fill="currentColor"/>
                 </svg>
                 <span>Imprimir</span>
               </button>
@@ -919,11 +959,11 @@ const eliminarCv = async (cvId) => {
               <button
                 @click="guardarCvFinal"
                 :disabled="cargandoGuardar"
-                class="w-[134px] h-[41px] px-[10px] rounded-[18px] border border-[#010C67] bg-[#010C67] hover:bg-[#01094f] text-white text-xs font-medium transition-all shadow-md flex items-center justify-center gap-[10px] cursor-pointer disabled:opacity-60 shrink-0"
+                class="w-[110px] h-[34px] rounded-[6px] bg-[#010C67] hover:bg-[#00083D] text-white text-xs font-serif font-medium transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
                 style="font-family: 'Lora', Georgia, serif;"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" class="shrink-0">
-                  <path d="M4.58333 19.25H17.4167C17.9029 19.25 18.3692 19.0569 18.713 18.713C19.0568 18.3692 19.25 17.9029 19.25 17.4167V7.33335C19.2507 7.21271 19.2276 7.09312 19.182 6.98143C19.1363 6.86975 19.0691 6.76817 18.9842 6.68252L15.3175 3.01585C15.2318 2.93089 15.1303 2.86368 15.0186 2.81806C14.9069 2.77244 14.7873 2.74932 14.6667 2.75002H4.58333C4.0971 2.75002 3.63079 2.94317 3.28699 3.28699C2.94315 3.6308 2.75 4.09712 2.75 4.58335V17.4167C2.75 17.9029 2.94315 18.3692 3.28697 18.713C3.63079 19.0569 4.0971 19.25 4.58333 19.25ZM13.75 17.4167H8.25V12.8333H13.75V17.4167ZM11.9167 6.41668H10.0833V4.58335H11.9167V6.41668ZM4.58333 4.58335H6.41667V8.25002H13.75V4.58335H14.2908L17.4167 7.70918V17.4167H15.5833V12.8333C15.5833 12.3471 15.3902 11.8808 15.0464 11.537C14.7025 11.1932 14.2362 11 13.75 11H8.25C7.76377 11 7.29745 11.1932 6.95364 11.537C6.60982 11.8808 6.41667 12.3471 6.41667 12.8333V17.4167H4.58333V4.58335Z" fill="white"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 22 22" fill="none" class="shrink-0 text-white">
+                  <path d="M4.58333 19.25H17.4167C17.9029 19.25 18.3692 19.0569 18.713 18.713C19.0568 18.3692 19.25 17.9029 19.25 17.4167V7.33335C19.2507 7.21271 19.2276 7.09312 19.182 6.98143C19.1363 6.86975 19.0691 6.76817 18.9842 6.68252L15.3175 3.01585C15.2318 2.93089 15.1303 2.86368 15.0186 2.81806C14.9069 2.77244 14.7873 2.74932 14.6667 2.75002H4.58333C4.0971 2.75002 3.63079 2.94317 3.28699 3.28699C2.94315 3.6308 2.75 4.09712 2.75 4.58335V17.4167C2.75 17.9029 2.94315 18.3692 3.28697 18.713C3.63079 19.0569 4.0971 19.25 4.58333 19.25ZM13.75 17.4167H8.25V12.8333H13.75V17.4167ZM11.9167 6.41668H10.0833V4.58335H11.9167V6.41668ZM4.58333 4.58335H6.41667V8.25002H13.75V4.58335H14.2908L17.4167 7.70918V17.4167H15.5833V12.8333C15.5833 12.3471 15.3902 11.8808 15.0464 11.537C14.7025 11.1932 14.2362 11 13.75 11H8.25C7.76377 11 7.29745 11.1932 6.95364 11.537C6.60982 11.8808 6.41667 12.3471 6.41667 12.8333V17.4167H4.58333V4.58335Z" fill="currentColor"/>
                 </svg>
                 <span>Guardar</span>
               </button>
@@ -931,11 +971,12 @@ const eliminarCv = async (cvId) => {
               <!-- Descargar CV -->
               <button
                 @click="descargarPdfDirecto"
-                class="w-[134px] h-[41px] px-[10px] rounded-[18px] border border-[#010C67] bg-white hover:bg-blue-50 text-[#010C67] text-xs font-medium transition-all shadow-xs flex items-center justify-center gap-[10px] cursor-pointer shrink-0"
+                class="w-[110px] h-[34px] rounded-[6px] border border-[#010C67] bg-white hover:bg-gray-50 text-[#010C67] text-xs font-serif font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
                 style="font-family: 'Lora', Georgia, serif;"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-[#010C67] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-[#010C67] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v8m-3-3l3 3 3-3" />
                 </svg>
                 <span>Descargar</span>
               </button>
@@ -957,43 +998,41 @@ const eliminarCv = async (cvId) => {
           v-if="mostrandoModalExito"
           class="absolute inset-0 z-30 flex items-center justify-center p-6 bg-black/40 backdrop-blur-[1px]"
         >
-          <div class="relative w-full max-w-[480px] bg-[#10A957] text-white rounded-[22px] p-8 shadow-2xl">
+          <div class="relative w-full max-w-[310px] sm:max-w-[320px] bg-[#00B341] text-white rounded-[18px] p-5 sm:p-6 shadow-2xl flex flex-col items-center">
             <!-- Botón Cerrar ✕ -->
             <button 
               @click="mostrandoModalExito = false"
-              class="absolute top-4 right-4 text-white hover:opacity-80 p-1 cursor-pointer"
+              class="absolute top-3 right-3 text-white hover:opacity-80 p-1 cursor-pointer transition-opacity"
+              title="Cerrar"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
             <!-- Título con icono elipse y check -->
-            <div class="flex items-center gap-2.5 mb-3 text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 text-white shrink-0">
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-                <path d="M8.5 12.5L11 15L15.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <div class="flex items-center justify-center gap-1.5 mb-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-5 h-5 text-white shrink-0">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.2"/>
+                <path d="M8.5 12L11 14.5L15.5 9.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <h3 class="text-2xl sm:text-3xl font-bold font-serif text-white tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+              <h3 class="text-base font-bold font-sans text-white tracking-normal">
                 Perfil completado
               </h3>
             </div>
 
             <!-- Subtítulo -->
-            <p class="text-sm sm:text-base font-bold font-sans text-white mb-6 leading-snug text-left pl-8 max-w-[380px]">
-              Su cv ah sido cargado con éxito, verifique sus datos antes de finalizar.
+            <p class="text-xs text-white leading-relaxed text-center font-sans font-normal opacity-95 mb-4 max-w-[240px]">
+              Su cv ha sido cargado con éxito. Verifique sus datos antes de finalizar.
             </p>
 
-            <!-- Botón Ver cv (Centrado) -->
-            <div class="flex justify-center pt-1">
-              <button
-                @click="verCvVistaPrevia"
-                class="px-8 py-2 rounded-[16px] border border-white text-white font-medium text-base sm:text-lg hover:bg-white/10 transition-all cursor-pointer inline-flex items-center justify-center min-w-[140px]"
-                style="font-family: 'Lora', Georgia, serif;"
-              >
-                Ver cv
-              </button>
-            </div>
+            <!-- Botón Aceptar (Centrado) -->
+            <button
+              @click="verCvVistaPrevia"
+              class="px-6 py-1.5 rounded-[8px] border border-white text-white font-medium text-xs hover:bg-white/10 transition-all cursor-pointer inline-flex items-center justify-center min-w-[90px]"
+            >
+              Aceptar
+            </button>
           </div>
         </div>
 
@@ -1271,7 +1310,12 @@ const eliminarCv = async (cvId) => {
           <div v-else-if="pasoActual === 3" class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label class="block text-xs font-bold text-gray-900 mb-1 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5" fill="none" class="w-4 h-4 text-black shrink-0"><path d="M1 2.30965C1 2.657 1.13798 2.99011 1.38359 3.23572C1.6292 3.48133 1.96231 3.61931 2.30965 3.61931C2.657 3.61931 2.99011 3.48133 3.23572 3.23572C3.48133 2.99011 3.61931 2.657 3.61931 2.30965C3.61931 1.96231 3.48133 1.6292 3.23572 1.38359C2.99011 1.13798 2.657 1 2.30965 1C1.96231 1 1.6292 1.13798 1.38359 1.38359C1.13798 1.6292 1 1.96231 1 2.30965Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 27 27" fill="none" class="w-4 h-4 text-black shrink-0">
+                  <path d="M3.28442 13.1373C3.28442 14.4312 3.53928 15.7124 4.03444 16.9079C4.5296 18.1033 5.25536 19.1895 6.1703 20.1044C7.08523 21.0193 8.17142 21.7451 9.36684 22.2403C10.5623 22.7354 11.8435 22.9903 13.1374 22.9903C14.4313 22.9903 15.7126 22.7354 16.908 22.2403C18.1034 21.7451 19.1896 21.0193 20.1045 20.1044C21.0195 19.1895 21.7452 18.1033 22.2404 16.9079C22.7355 15.7124 22.9904 14.4312 22.9904 13.1373C22.9904 11.8434 22.7355 10.5621 22.2404 9.36671C21.7452 8.17129 21.0195 7.08511 20.1045 6.17018C19.1896 5.25524 18.1034 4.52947 16.908 4.03432C15.7126 3.53916 14.4313 3.2843 13.1374 3.2843C11.8435 3.2843 10.5623 3.53916 9.36684 4.03432C8.17142 4.52947 7.08523 5.25524 6.1703 6.17018C5.25536 7.08511 4.5296 8.17129 4.03444 9.36671C3.53928 10.5621 3.28442 11.8434 3.28442 13.1373Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                  <path d="M7.66357 13.1373C7.66357 14.5891 8.24028 15.9814 9.26684 17.008C10.2934 18.0345 11.6857 18.6112 13.1375 18.6112C14.5892 18.6112 15.9815 18.0345 17.0081 17.008C18.0346 15.9814 18.6113 14.5891 18.6113 13.1373C18.6113 11.6856 18.0346 10.2933 17.0081 9.26671C15.9815 8.24016 14.5892 7.66345 13.1375 7.66345C11.6857 7.66345 10.2934 8.24016 9.26684 9.26671C8.24028 10.2933 7.66357 11.6856 7.66357 13.1373Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                  <path d="M9.30581 21.8955L13.1375 13.1373L6.02148 19.706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                  <path d="M12.0427 13.1372C12.0427 13.4276 12.1581 13.7061 12.3634 13.9114C12.5687 14.1167 12.8471 14.232 13.1375 14.232C13.4278 14.232 13.7063 14.1167 13.9116 13.9114C14.1169 13.7061 14.2323 13.4276 14.2323 13.1372C14.2323 12.8469 14.1169 12.5684 13.9116 12.3631C13.7063 12.1578 13.4278 12.0425 13.1375 12.0425C12.8471 12.0425 12.5687 12.1578 12.3634 12.3631C12.1581 12.5684 12.0427 12.8469 12.0427 13.1372Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>
+                </svg>
                 <span>Mi objetivo<span class="text-rose-500">*</span></span>
               </label>
               <textarea 
@@ -1479,7 +1523,19 @@ const eliminarCv = async (cvId) => {
 </template>
 
 <style>
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    width: 210mm !important;
+    height: 297mm !important;
+  }
   body * {
     visibility: hidden !important;
   }
@@ -1487,11 +1543,11 @@ const eliminarCv = async (cvId) => {
     visibility: visible !important;
   }
   #cv-card-preview {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    position: absolute !important;
+    left: 10mm !important;
+    top: 10mm !important;
+    width: calc(210mm - 20mm) !important;
+    max-width: calc(210mm - 20mm) !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -1499,10 +1555,6 @@ const eliminarCv = async (cvId) => {
     background-color: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-  }
-  @page {
-    size: A4 portrait;
-    margin: 8mm;
   }
 }
 </style>
