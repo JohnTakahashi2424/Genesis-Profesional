@@ -43,6 +43,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
+// Conteo rápido de notificaciones no leídas (soporta JWT o query params)
+Route::get('/notificaciones/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador');
+
 // Rutas protegidas mediante autenticación JWT
 Route::middleware('jwt.auth')->group(function () {
     // Cierre de sesión y destrucción de token
@@ -88,6 +91,7 @@ Route::middleware('jwt.auth')->group(function () {
 
     // Rutas del Módulo de Notificaciones
     Route::prefix('notificaciones')->group(function () {
+        Route::get('/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador_auth');
         Route::get('/', [NotificacionController::class, 'index'])->name('api.notificaciones.index');
         Route::post('/', [NotificacionController::class, 'store'])->name('api.notificaciones.store');
         Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');

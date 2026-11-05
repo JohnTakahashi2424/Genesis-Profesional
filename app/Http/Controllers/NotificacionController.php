@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Notificacion;
 use App\Models\User;
+use App\Services\JwtService;
 
 class NotificacionController extends Controller
 {
@@ -16,6 +17,12 @@ class NotificacionController extends Controller
     public function contador(Request $request)
     {
         $jwtUser = $request->attributes->get('jwt_user');
+
+        if (!$jwtUser && $request->bearerToken()) {
+            $payload = JwtService::validarToken($request->bearerToken());
+            $jwtUser = $payload->user ?? null;
+        }
+
         $userId = $jwtUser->id ?? $request->header('X-User-Id') ?? $request->query('user_id');
 
         if (!$userId && $request->has('correo')) {
