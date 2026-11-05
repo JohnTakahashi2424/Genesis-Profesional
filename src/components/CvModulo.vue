@@ -1,7 +1,11 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import jsPDF from 'jspdf'
+import DOMPurify from 'dompurify'
+import { logger } from '../utils/logger'
 import html2canvas from 'html2canvas'
 import { subirImagenBase64 } from '../services/firebase'
 
@@ -15,7 +19,7 @@ const props = defineProps({
 const emit = defineEmits(['volver'])
 
 // Obtener datos del usuario en sesión
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Estado del módulo
 const cvs = ref([])
@@ -89,7 +93,7 @@ const formCv = ref({
 })
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('genesis_token')
+  const token = authStorage.getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -97,7 +101,7 @@ const getAuthHeaders = () => {
 const cargarCvs = async () => {
   cargando.value = true
   try {
-    const u = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+    const u = authStorage.getUser()
     const userId = usuario.value.id || usuario.value.user_id || u.id || 1
     if (!userId) return
 
@@ -109,7 +113,7 @@ const cargarCvs = async () => {
       cvs.value = res.data.cvs
     }
   } catch (err) {
-    console.warn('Error al cargar CVs:', err)
+    logger.warn('Error al cargar CVs:', err)
   } finally {
     cargando.value = false
   }
@@ -433,7 +437,12 @@ const generarPdfDoc = async () => {
       background: '#fff',
       zIndex: '-1'
     })
-    container.innerHTML = buildCvHtml()
+    const cleanString = DOMPurify.sanitize(buildCvHtml())
+    const parser = new DOMParser()
+    const parsedDoc = parser.parseFromString(cleanString, 'text/html')
+    if (parsedDoc.body.firstElementChild) {
+      container.appendChild(document.importNode(parsedDoc.body.firstElementChild, true))
+    }
     document.body.appendChild(container)
     targetEl = container.firstElementChild
   }
@@ -474,7 +483,7 @@ const descargarPdfDirecto = async () => {
     const nombre = (formCv.value.tituloCv || 'Curriculum_Vitae').replace(/\s+/g, '_') + '.pdf'
     doc.save(nombre)
   } catch (err) {
-    console.error('Error al descargar PDF:', err)
+    logger.error('Error al descargar PDF:', err)
     alert('Ocurrió un error al generar el archivo PDF. Intente nuevamente.')
   }
 }
@@ -554,14 +563,17 @@ const imprimirCvDirecto = async () => {
     </head>
     <body>
       <div class="print-page-wrapper">
-        <div class="cv-card-print">
-          ${previewEl.innerHTML}
-        </div>
+        <div class="cv-card-print"></div>
       </div>
     </body>
     </html>
   `)
   doc.close()
+
+  const printTarget = doc.querySelector('.cv-card-print')
+  if (printTarget && previewEl) {
+    printTarget.appendChild(previewEl.cloneNode(true))
+  }
 
   // Esperar a que las imágenes en el iframe carguen
   const imgs = Array.from(doc.querySelectorAll('img'))
@@ -588,7 +600,7 @@ const guardarCvFinal = async () => {
   mensajeError.value = ''
 
   try {
-    const u = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+    const u = authStorage.getUser()
     const usuarioId = usuario.value.id || usuario.value.user_id || u.id || 1
 
     // Subida opcional ultra-rápida (con límite para no congelar la UI)
@@ -605,7 +617,7 @@ const guardarCvFinal = async () => {
             formCv.value.perfil.fotoUrl = urlCloud
           }
         } catch (fbErr) {
-          console.warn('Subida cloud omitida por timeout:', fbErr)
+          logger.warn('Subida cloud omitida por timeout:', fbErr)
         }
       }
     })()
@@ -636,7 +648,7 @@ const guardarCvFinal = async () => {
       mensajeExito.value = '¡Currículum vitae guardado exitosamente!'
       const fotoFinal = res.data.data?.foto_url || formCv.value.perfil.fotoUrl
       if (fotoFinal) {
-        const u = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+        const u = authStorage.getUser()
         u.foto = fotoFinal
         u.foto_url = fotoFinal
         localStorage.setItem('genesis_usuario', JSON.stringify(u))
@@ -743,7 +755,7 @@ const eliminarCv = async (cvId) => {
           <a
             v-if="cv.url_publica"
             :href="normalizarUrlFoto(cv.url_publica)"
-            target="_blank"
+            target="_blank" rel="noopener noreferrer"
             class="text-[#00589B] text-xs font-semibold hover:underline flex items-center gap-1 cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
