@@ -52,11 +52,11 @@ return new class extends Migration
         // En PostgreSQL / SQL directo como refuerzo seguro
         try {
             DB::statement('ALTER TABLE portafolios DROP CONSTRAINT IF EXISTS portafolios_usuario_id_unique;');
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::info('Columna ya configurada en migracion'); }
 
         try {
             DB::statement('DROP INDEX IF EXISTS portafolios_usuario_id_unique;');
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::info('Columna ya configurada en migracion'); }
     }
 
     /**

@@ -458,6 +458,7 @@ const verReporteMensual = (rep) => {
                 v-if="anx.url && !anx.url.startsWith('data:')" 
                 :href="anx.url" 
                 target="_blank" 
+                rel="noopener noreferrer" 
                 download
                 class="mt-2 text-xs font-semibold text-blue-700 hover:underline truncate max-w-[140px] text-center block"
                 :title="anx.nombre"

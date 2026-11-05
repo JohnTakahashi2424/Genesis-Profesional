@@ -1,4 +1,7 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+import { logger } from '../utils/logger'
+
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import InformeFinalFormulario from './InformeFinalFormulario.vue'
@@ -23,7 +26,7 @@ const props = defineProps({
 })
 
 // Estado del usuario activo
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Vistas del módulo: 'tabla', 'formulario', 'detalle', 'informe_final', 'informe_final_detalle'
 const vistaActual = ref(props.vistaInicial || 'tabla')
@@ -112,7 +115,7 @@ const abrirCalendarioInicio = (e) => {
     try {
       el.focus()
     } catch (focusErr) {
-      console.warn('[ReportesModulo] No se pudo enfocar input fecha inicio', focusErr)
+      logger.warn('[ReportesModulo] No se pudo enfocar input fecha inicio', focusErr)
     }
   }
 }
@@ -133,7 +136,7 @@ const abrirCalendarioFin = (e) => {
     try {
       el.focus()
     } catch (focusErr) {
-      console.warn('[ReportesModulo] No se pudo enfocar input fecha fin', focusErr)
+      logger.warn('[ReportesModulo] No se pudo enfocar input fecha fin', focusErr)
     }
   }
 }
@@ -147,7 +150,7 @@ const desplegarPicker = (event) => {
         el.showPicker()
       }
     } catch (pickerErr) {
-      console.warn('[ReportesModulo] showPicker no soportado en este navegador', pickerErr)
+      logger.warn('[ReportesModulo] showPicker no soportado en este navegador', pickerErr)
     }
   }
 }
@@ -250,7 +253,7 @@ const cargarReportes = async () => {
   cargando.value = true
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const headers = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     if (userId) headers['X-User-Id'] = userId
@@ -278,7 +281,7 @@ const cargarReportes = async () => {
           informesFinalesList = resInf.data.data
         }
       } catch (errInf) {
-        console.warn('Error al consultar informes finales:', errInf)
+        logger.warn('Error al consultar informes finales:', errInf)
       }
     }
 
@@ -345,7 +348,7 @@ const cargarReportes = async () => {
     const combinados = [...reportesMensualesMapeados, ...informesMapeados]
     reportes.value = combinados
   } catch (err) {
-    console.error('Error al cargar reportes desde la base de datos:', err)
+    logger.error('Error al cargar reportes desde la base de datos:', err)
     reportes.value = []
   } finally {
     cargando.value = false
@@ -375,7 +378,7 @@ const inicializarDatosFormulario = async () => {
   // Intentar cargar sugerencias de la API si existen
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const headers = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     if (userId) headers['X-User-Id'] = userId
@@ -392,7 +395,7 @@ const inicializarDatosFormulario = async () => {
       if (data.mes_sugerido) reporteForm.value.mes = data.mes_sugerido
     }
   } catch (e) {
-    console.warn('[ReportesModulo] Datos auxiliares no disponibles:', e)
+    logger.warn('[ReportesModulo] Datos auxiliares no disponibles:', e)
   }
 }
 
@@ -451,7 +454,7 @@ const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
 
     // Si aún no está en reportes.value, buscar directamente en la API
     const userId = usuario.value?.id || usuario.value?.user_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
     if (idTarget && String(idTarget) !== '1') {
@@ -464,7 +467,7 @@ const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
           return
         }
       } catch (errSingle) {
-        console.warn('No se pudo cargar informe final por ID:', errSingle)
+        logger.warn('No se pudo cargar informe final por ID:', errSingle)
       }
     }
 
@@ -479,7 +482,7 @@ const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
         return
       }
     } catch (errList) {
-      console.warn('Error al consultar lista de informes finales:', errList)
+      logger.warn('Error al consultar lista de informes finales:', errList)
     }
 
     // Fallback con datos institucionales completos si no hay registros en API
@@ -505,7 +508,7 @@ const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
     vistaActual.value = 'informe_final_detalle'
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
-    console.error('Error al abrir informe final directo:', e)
+    logger.error('Error al abrir informe final directo:', e)
     vistaActual.value = 'informe_final_detalle'
   } finally {
     cargando.value = false
@@ -518,7 +521,7 @@ const verDetalle = async (item) => {
     cargando.value = true
     try {
       const idToFetch = item.informe_final_id || item.rawId || item.id
-      const token = localStorage.getItem('genesis_token')
+      const token = authStorage.getToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
       let res = null
@@ -566,7 +569,7 @@ const verDetalle = async (item) => {
   }
   cargando.value = true
   try {
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
     const res = await axios.get(`/api/reportes/${item.id}`, { headers })
     if (res.data && res.data.data) {
@@ -747,7 +750,7 @@ const enviarReporte = async () => {
   enviando.value = true
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
     if (userId) headers['X-User-Id'] = userId
@@ -763,7 +766,7 @@ const enviarReporte = async () => {
               const ruta = `reportes/evidencias/${userId || 1}/evidencia_${Date.now()}_${idx}.${ext}`
               return await subirImagenBase64(ev, ruta)
             } catch (err) {
-              console.warn('Error al subir evidencia a Firebase:', err)
+              logger.warn('Error al subir evidencia a Firebase:', err)
               return ev
             }
           }
@@ -817,7 +820,7 @@ const enviarReporte = async () => {
         canalNotif.close()
       }
     } catch (e) {
-      console.warn('BroadcastChannel no disponible:', e)
+      logger.warn('BroadcastChannel no disponible:', e)
     }
 
     try {
@@ -829,7 +832,7 @@ const enviarReporte = async () => {
       localStorage.setItem('genesis_historial_updated', Date.now().toString())
       localStorage.setItem('genesis_notificaciones_updated', Date.now().toString())
     } catch (storageErr) {
-      console.warn('[ReportesModulo] Error al actualizar estado en localStorage', storageErr)
+      logger.warn('[ReportesModulo] Error al actualizar estado en localStorage', storageErr)
     }
 
     // Refrescar lista y emitir eventos de reactividad
@@ -845,7 +848,7 @@ const enviarReporte = async () => {
     // Regresar a la tabla
     vistaActual.value = 'tabla'
   } catch (err) {
-    console.error('Error al enviar reporte:', err)
+    logger.error('Error al enviar reporte:', err)
     const msg = err.response?.data?.mensaje || err.response?.data?.message || 'Error al enviar el reporte. Verifique los datos.'
     mostrarFeedback(msg)
   } finally {

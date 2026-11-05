@@ -1,11 +1,14 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+import { logger } from '../utils/logger'
+
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 
 const emit = defineEmits(['volver', 'navegar'])
 
 // Datos del usuario autenticado
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Estados de control
 const dropdownFiltroAbierto = ref(false)
@@ -138,7 +141,7 @@ const cargarHistorialDesdeApi = async (silencioso = false) => {
       cargando.value = true
     }
     const userId = usuario.value?.id || usuario.value?.user_id || usuario.value?.usuario_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     
     const config = {}
     if (token) {
@@ -182,7 +185,7 @@ const cargarHistorialDesdeApi = async (silencioso = false) => {
       itemsHistorial.value = []
     }
   } catch (e) {
-    console.error('Error al cargar historial desde la API:', e)
+    logger.error('Error al cargar historial desde la API:', e)
     if (!silencioso && itemsHistorial.value.length === 0) {
       itemsHistorial.value = []
     }
@@ -230,7 +233,7 @@ onMounted(() => {
         }
       }
     } catch (e) {
-      console.warn('BroadcastChannel no disponible:', e)
+      logger.warn('BroadcastChannel no disponible:', e)
     }
   }
 

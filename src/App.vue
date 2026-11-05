@@ -138,11 +138,11 @@ const handleCambioTabLanding = (tab) => {
 }
 
 const handleRegistroExitoso = (respuesta) => {
-  console.log('Registro exitoso:', respuesta)
+  // Registro completado
 }
 
 const handleLoginExitoso = (respuesta) => {
-  console.log('Login exitoso:', respuesta)
+  // Login completado
   cerrarModales()
   vistaActual.value = 'panel'
   let rutaDestino = '/pasante'

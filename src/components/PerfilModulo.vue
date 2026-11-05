@@ -1,12 +1,15 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+
 import { ref, onMounted } from 'vue'
+import { logger } from '../utils/logger'
 import axios from 'axios'
 import CvModulo from './CvModulo.vue'
 
 const emit = defineEmits(['volver'])
 
 // Usuario actual
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Estado
 const editandoCv = ref(false)
@@ -25,7 +28,7 @@ const normalizarUrlFoto = (url) => {
 }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('genesis_token')
+  const token = authStorage.getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -114,7 +117,7 @@ const cargarCvPerfil = async () => {
       }
     }
   } catch (err) {
-    console.warn('Error al cargar perfil CV:', err)
+    logger.warn('Error al cargar perfil CV:', err)
   } finally {
     cargando.value = false
   }
@@ -161,6 +164,7 @@ const handleGuardadoExitoso = async () => {
         <a
           :href="cvRaw?.url_publica ? normalizarUrlFoto(cvRaw.url_publica) : '#'"
           :target="cvRaw?.url_publica ? '_blank' : '_self'"
+          rel="noopener noreferrer"
           :download="cvRaw?.url_publica ? true : false"
           @click="!cvRaw?.url_publica && alert('Por favor, edite y guarde su CV para generar y descargar el archivo PDF.')"
           class="h-[36px] w-[122px] rounded-[10px] border border-[#010C67] bg-[#010C67] hover:bg-[#00083D] text-white text-sm font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
