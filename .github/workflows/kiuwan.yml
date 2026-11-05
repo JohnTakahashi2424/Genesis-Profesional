@@ -15,22 +15,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Clonar el repositorio
       - name: Checkout del código fuente
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 2. Configurar Java JDK (Requisito del motor de Kiuwan)
       - name: Configurar Java JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      - name: Kiuwan Code Scan
-        uses: porrige51122/Kiuwan-Local-Analysis-Action@v1.3
-        with:
-          user: ${{ secrets.KIUWAN_USER }}
-          pass: ${{ secrets.KIUWAN_PASS }}
-          software_name: "Genesis-Profesional"
-          source_path: ${{ github.workspace }}
-          additional_parameters: "--exclude **/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
+      # 3. Descargar e instalar el Kiuwan Local Analyzer Oficial de forma nativa
+      - name: Descargar e instalar Kiuwan Local Analyzer
+        run: |
+          curl -sSLo kla.zip https://kiuwan.com
+          unzip -q kla.zip -d kla
+          chmod +x kla/bin/agent.sh
+
+      # 4. Ejecutar el escaneo directo aplicando credenciales y exclusiones de Laravel/React
+      - name: Ejecutar Análisis de Código en Kiuwan
+        run: |
+          ./kla/bin/agent.sh --user "${{ secrets.KIUWAN_USER }}" --password "${{ secrets.KIUWAN_PASS }}" --softwareName "Genesis-Profesional" --sourcePath "${{ github.workspace }}" --exclude "**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
