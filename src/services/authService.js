@@ -1,3 +1,4 @@
+import { authStorage } from '../utils/storage'
 import axios from 'axios'
 
 const apiClient = axios.create({
@@ -10,7 +11,7 @@ const apiClient = axios.create({
 
 // Función para inyectar el token Bearer en las solicitudes HTTP
 const setBearerToken = config => {
-  const token = localStorage.getItem('genesis_token')
+  const token = authStorage.getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -23,8 +24,7 @@ const handleResponseError = error => {
     const url = error.config?.url || ''
     const esEndpointAuth = url.includes('/auth/login') || url.includes('/auth/verificar-codigo')
     if (!esEndpointAuth) {
-      localStorage.removeItem('genesis_token')
-      localStorage.removeItem('genesis_usuario')
+      authStorage.clear()
       if (window.location.pathname !== '/' && window.location.pathname !== '') {
         window.location.href = '/'
       }
@@ -53,10 +53,10 @@ export const authService = {
     })
 
     if (response.data.token) {
-      localStorage.setItem('genesis_token', response.data.token)
+      authStorage.setToken(response.data.token)
     }
     if (response.data.usuario) {
-      localStorage.setItem('genesis_usuario', JSON.stringify(response.data.usuario))
+      authStorage.setUser(response.data.usuario)
     }
 
     return response.data
@@ -137,8 +137,7 @@ export const authService = {
     } catch (e) {
       // Ignorar errores en caso de que el token ya haya expirado
     } finally {
-      localStorage.removeItem('genesis_token')
-      localStorage.removeItem('genesis_usuario')
+      authStorage.clear()
     }
   },
 
@@ -146,15 +145,14 @@ export const authService = {
    * Obtener datos del usuario autenticado en local
    */
   getUsuarioActual() {
-    const raw = localStorage.getItem('genesis_usuario')
-    return raw ? JSON.parse(raw) : null
+    return authStorage.getUser()
   },
 
   /**
    * Comprobar si hay sesión activa (token y datos de usuario presentes)
    */
   isAuthenticated() {
-    return !!localStorage.getItem('genesis_usuario') && !!localStorage.getItem('genesis_token')
+    return !!authStorage.getToken()
   }
 }
 
