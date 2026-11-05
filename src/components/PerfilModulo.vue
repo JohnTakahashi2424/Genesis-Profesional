@@ -143,16 +143,16 @@ const handleGuardadoExitoso = async () => {
       class="bg-white rounded-[24px] p-6 sm:p-10 border border-gray-200/90 shadow-xs relative max-w-5xl mx-auto overflow-hidden min-w-0"
     >
       
-      <!-- BOTONES SUPERIORES DERECHOS: EDITAR Y DESCARGAR -->
-      <div class="flex flex-wrap items-center justify-end gap-3 mb-6 sm:absolute sm:top-8 sm:right-8 sm:mb-0 z-10">
+      <!-- BOTONES SUPERIORES DERECHOS: EDITAR Y DESCARGAR (APILADOS VERTICALMENTE FIEL A CAPTURA 1) -->
+      <div class="flex flex-col items-end gap-2.5 mb-6 sm:absolute sm:top-8 sm:right-8 sm:mb-0 z-10">
         <!-- Botón Editar (Blanco con borde oscuro redondeado) -->
         <button
           @click="editandoCv = true"
           type="button"
-          class="h-[38px] px-4 rounded-[12px] border border-gray-800 bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-2xs flex items-center gap-2 cursor-pointer shrink-0"
+          class="h-[36px] w-[122px] rounded-[10px] border border-gray-800 bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
         >
           <span>Editar</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
           </svg>
         </button>
@@ -163,10 +163,10 @@ const handleGuardadoExitoso = async () => {
           :target="cvRaw?.url_publica ? '_blank' : '_self'"
           :download="cvRaw?.url_publica ? true : false"
           @click="!cvRaw?.url_publica && alert('Por favor, edite y guarde su CV para generar y descargar el archivo PDF.')"
-          class="h-[38px] px-4 rounded-[12px] border border-[#010C67] bg-[#010C67] hover:bg-[#00083D] text-white text-sm font-medium transition-all shadow-2xs flex items-center gap-2 cursor-pointer shrink-0"
+          class="h-[36px] w-[122px] rounded-[10px] border border-[#010C67] bg-[#010C67] hover:bg-[#00083D] text-white text-sm font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
         >
           <span>Descargar</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="9" />
             <path d="M12 8v8m-3-3l3 3 3-3" />
           </svg>
@@ -176,7 +176,7 @@ const handleGuardadoExitoso = async () => {
       <!-- ========================================================================= -->
       <!-- ENCABEZADO: FOTO DE PERFIL + NOMBRE + CARRERA                              -->
       <!-- ========================================================================= -->
-      <div class="flex items-center gap-6 mb-8 pt-1 min-w-0 w-full sm:pr-[240px]">
+      <div class="flex items-center gap-6 mb-8 pt-1 min-w-0 w-full sm:pr-[145px]">
         <div class="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-900 shrink-0 bg-gray-200 flex items-center justify-center shadow-xs">
           <img 
             v-if="perfilData.fotoUrl && !imgError" 

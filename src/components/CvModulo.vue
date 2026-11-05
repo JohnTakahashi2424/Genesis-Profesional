@@ -221,12 +221,67 @@ const cancelarWizard = () => {
 }
 
 // Navegación entre pasos
+const pasoEstaCompleto = (paso) => {
+  if (paso === 0) {
+    return !!formCv.value.tituloCv?.trim()
+  }
+  if (paso === 1) {
+    return !!(formCv.value.diseno.color && formCv.value.diseno.fuente)
+  }
+  if (paso === 2) {
+    const p = formCv.value.perfil
+    return !!(p.nombre?.trim() && p.direccion?.trim() && p.email?.trim() && p.telefono?.trim() && p.sobreMi?.trim() && p.educacion?.trim())
+  }
+  if (paso === 3) {
+    const o = formCv.value.objetivos
+    return !!(o.objetivo?.trim() && o.valores?.trim() && o.conocimientos?.trim() && o.idiomas?.trim())
+  }
+  if (paso === 4) {
+    const l = formCv.value.logros
+    return !!(l.certificados?.trim() && l.habilidades?.trim() && l.logros?.trim() && l.proyectos?.trim())
+  }
+  return true
+}
+
+// Navegación directa dando click en el número del paso (solo cuando todos los campos están llenos)
+const irAPaso = (targetPaso) => {
+  if (targetPaso === pasoActual.value) return
+  if (targetPaso < 1 || targetPaso > 4) return
+
+  // Validar si el paso actual tiene todos los campos obligatorios completos
+  if (!pasoEstaCompleto(pasoActual.value)) {
+    intentoPasoTouched.value = true
+    mensajeError.value = 'Por favor complete todos los campos obligatorios antes de cambiar de paso.'
+    return
+  }
+
+  // Si intenta avanzar hacia adelante (targetPaso > pasoActual.value), verificar los pasos previos
+  if (targetPaso > pasoActual.value) {
+    for (let p = 1; p < targetPaso; p++) {
+      if (!pasoEstaCompleto(p)) {
+        intentoPasoTouched.value = true
+        mensajeError.value = `Debe completar los campos del Paso ${p} antes de avanzar.`
+        return
+      }
+    }
+  }
+
+  intentoPasoTouched.value = false
+  mensajeError.value = ''
+  pasoActual.value = targetPaso
+}
+
 const siguientePaso = () => {
   intentoPasoTouched.value = true
 
   if (pasoActual.value === 0) {
     if (!formCv.value.tituloCv.trim()) {
       mensajeError.value = 'El nombre del CV es un campo obligatorio.'
+      return
+    }
+  } else if (pasoActual.value === 1) {
+    if (!formCv.value.diseno.color || !formCv.value.diseno.fuente) {
+      mensajeError.value = 'Por favor seleccione el color y la fuente de la plantilla.'
       return
     }
   } else if (pasoActual.value === 2) {
@@ -609,10 +664,20 @@ const eliminarCv = async (cvId) => {
         v-if="pasoActual === 0"
         class="relative w-full max-w-[580px] bg-white rounded-[22px] shadow-2xl overflow-hidden my-auto"
       >
-        <div class="bg-[#010C67] text-white px-6 py-4 text-center">
-          <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+        <div class="bg-[#010C67] text-white px-6 py-4 relative flex items-center justify-center shrink-0">
+          <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight text-center pr-10 pl-10" style="font-family: 'Lora', Georgia, serif;">
             Bienvenido a Génesis Profesional - Completa tu perfil profesional
           </h3>
+          <button
+            @click="cancelarWizard"
+            type="button"
+            class="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 text-white/90 hover:text-white p-1 rounded-full transition-colors cursor-pointer"
+            title="Cerrar modal"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div class="p-6 sm:p-8 text-center">
@@ -932,30 +997,43 @@ const eliminarCv = async (cvId) => {
           </div>
         </div>
 
-        <!-- Header Banner Dinámico por Paso -->
-        <div class="bg-[#010C67] text-white px-6 py-4 text-center shrink-0">
-          <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight" style="font-family: 'Lora', Georgia, serif;">
+        <!-- Header Banner Dinámico por Paso con botón de cerrar '✕' (Presente desde el Paso 1 fiel al diseño) -->
+        <div class="bg-[#010C67] text-white px-6 py-4 relative flex items-center justify-center shrink-0">
+          <h3 class="text-base sm:text-lg font-bold font-serif tracking-tight text-center pr-10 pl-10" style="font-family: 'Lora', Georgia, serif;">
             <template v-if="pasoActual === 1">Paso 1: Configuración del diseño</template>
             <template v-else-if="pasoActual === 2">Paso 2: Información de Perfil</template>
             <template v-else-if="pasoActual === 3">Paso 3: Objetivos y valores</template>
             <template v-else-if="pasoActual === 4">Paso 4: Logros</template>
           </h3>
+          <button
+            @click="cancelarWizard"
+            type="button"
+            class="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 text-white/90 hover:text-white p-1 rounded-full transition-colors cursor-pointer"
+            title="Cerrar modal"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <!-- Indicador de Stepper 1 - 4 -->
+        <!-- Indicador de Stepper 1 - 4 interactivo -->
         <div class="px-8 pt-6 pb-2 border-b border-gray-100 shrink-0">
           <div class="flex items-center justify-between max-w-md mx-auto relative">
             <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-gray-300 z-0"></div>
             
-            <div 
+            <button
               v-for="num in 4" 
               :key="num"
-              class="relative z-10 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all"
+              type="button"
+              @click="irAPaso(num)"
+              class="relative z-10 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all cursor-pointer select-none shadow-xs hover:scale-105 active:scale-95 focus:outline-none"
               :class="pasoActual >= num ? 'bg-[#010C67] text-white' : 'bg-[#d1d5db] text-white'"
               style="font-family: 'Lora', Georgia, serif;"
+              :title="'Ir al Paso ' + num"
             >
               {{ num }}
-            </div>
+            </button>
           </div>
         </div>
 
