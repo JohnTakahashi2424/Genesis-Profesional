@@ -182,6 +182,26 @@ onMounted(() => {
 <template>
   <div class="w-full max-w-7xl mx-auto px-2 sm:px-6 py-6 font-sans">
     
+    <!-- Mensaje de éxito fiel a diseño (Imagen 1) -->
+    <div 
+      v-if="exitoMensaje" 
+      class="mb-6 px-4 py-3 rounded-lg bg-[#EAFBF1] border border-[#6CE9A6] text-[#027A48] text-sm font-medium flex items-center justify-between shadow-2xs transition-all"
+    >
+      <div class="flex items-center gap-2.5">
+        <span class="w-5 h-5 rounded-full bg-[#12B76A] text-white flex items-center justify-center shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+        </span>
+        <span>{{ exitoMensaje }}</span>
+      </div>
+      <button @click="exitoMensaje = ''" class="text-[#027A48] hover:opacity-80 p-1 cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
     <!-- Mensaje de error flotante/alerta -->
     <div 
       v-if="errorMensaje" 
@@ -216,10 +236,11 @@ onMounted(() => {
           <form @submit.prevent="guardarPortafolio" novalidate class="space-y-5">
             <!-- Campo 1: Título* -->
             <div class="min-w-0">
-              <label class="block text-sm font-semibold text-gray-900 mb-1.5">
+              <label for="porta-titulo" class="block text-sm font-semibold text-gray-900 mb-1.5">
                 Título<span class="text-rose-500">*</span>
               </label>
               <input 
+                id="porta-titulo"
                 v-model="form.titulo"
                 type="text"
                 placeholder="My portafolio"
@@ -238,10 +259,11 @@ onMounted(() => {
 
             <!-- Campo 2: Link del portafolio* -->
             <div class="min-w-0">
-              <label class="block text-sm font-semibold text-gray-900 mb-1.5">
+              <label for="porta-link" class="block text-sm font-semibold text-gray-900 mb-1.5">
                 Link del portafolio<span class="text-rose-500">*</span>
               </label>
               <input 
+                id="porta-link"
                 v-model="form.link"
                 type="text"
                 placeholder="http://portafolio.com"
@@ -366,10 +388,8 @@ onMounted(() => {
                   title="Editar enlace"
                   class="text-gray-800 hover:text-[#000B58] p-1 rounded-sm transition-colors cursor-pointer shrink-0"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none">
-                    <path d="M15.8 4.2C16.4 3.6 17.4 3.6 18 4.2L19.8 6C20.4 6.6 20.4 7.6 19.8 8.2L17.5 10.5L13.5 6.5L15.8 4.2Z" fill="currentColor" />
-                    <path d="M12.2 7.8L16.2 11.8L6.8 21.2H2.8V17.2L12.2 7.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none" />
-                    <path d="M5.5 18.5L7 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                   </svg>
                 </button>
 

@@ -59,8 +59,8 @@ const obtenerScoreMes = (item) => {
     const limpio = String(item.fecha_inicio).split('T')[0]
     const partes = limpio.split('-')
     if (partes.length >= 2) {
-      anio = parseInt(partes[0], 10) || 2026
-      mesNum = parseInt(partes[1], 10) || 0
+      anio = Number.parseInt(partes[0], 10) || 2026
+      mesNum = Number.parseInt(partes[1], 10) || 0
     }
   }
 
@@ -87,7 +87,7 @@ const obtenerScoreMes = (item) => {
   if (item.periodo) {
     const matchAnio = String(item.periodo).match(/\b(20\d{2})\b/)
     if (matchAnio) {
-      anio = parseInt(matchAnio[1], 10)
+      anio = Number.parseInt(matchAnio[1], 10)
     }
   }
 
@@ -115,8 +115,11 @@ const reportesDisponiblesOrdenados = computed(() => {
 
 const formatearRangoPeriodo = (periodo) => {
   if (!periodo) return '01 Ene – 27 Ene'
-  const match = periodo.match(/^(.*?)(\s+\d{4})$/)
-  return match ? match[1].trim() : periodo
+  const lastSpace = periodo.lastIndexOf(' ')
+  if (lastSpace > 0 && /^\d{4}$/.test(periodo.slice(lastSpace + 1).trim())) {
+    return periodo.slice(0, lastSpace).trim()
+  }
+  return periodo
 }
 
 const formatearAnioPeriodo = (periodo) => {
@@ -322,8 +325,8 @@ const calcularTotalFila = (fila) => {
   let hayValores = false
   columnasMeses.value.forEach(col => {
     const raw = String(fila.montos?.[col] ?? '').trim().replace(',', '.')
-    const val = parseFloat(raw)
-    if (!isNaN(val) && val > 0) {
+    const val = Number.parseFloat(raw)
+    if (!Number.isNaN(val) && val > 0) {
       suma += val
       hayValores = true
     }
@@ -339,8 +342,8 @@ const granTotalPresupuesto = computed(() => {
   filasPresupuesto.value.forEach(fila => {
     columnasMeses.value.forEach(col => {
       const raw = String(fila.montos?.[col] ?? '').trim().replace(',', '.')
-      const val = parseFloat(raw)
-      if (!isNaN(val) && val > 0) {
+      const val = Number.parseFloat(raw)
+      if (!Number.isNaN(val) && val > 0) {
         total += val
         hayValores = true
       }
@@ -606,10 +609,10 @@ const finalizarEnvio = () => {
           
           <!-- Nombre del pasante* -->
           <div class="min-w-0">
-            <label class="block text-sm font-medium text-gray-900 mb-1.5">
+            <label for="inf-nombre-pasante" class="block text-sm font-medium text-gray-900 mb-1.5">
               Nombre del pasante<span class="text-red-500">*</span>
             </label>
-            <input 
+            <input id="inf-nombre-pasante" 
               v-model="form.nombre_pasante"
               type="text" 
               class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs transition-colors"
@@ -629,10 +632,10 @@ const finalizarEnvio = () => {
 
           <!-- Institución dónde se realizó la pasantía* -->
           <div class="min-w-0">
-            <label class="block text-sm font-medium text-gray-900 mb-1.5">
+            <label for="inf-institucion" class="block text-sm font-medium text-gray-900 mb-1.5">
               Institución dónde se realizó la pasantía<span class="text-red-500">*</span>
             </label>
-            <input 
+            <input id="inf-institucion" 
               v-model="form.institucion"
               type="text" 
               class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs transition-colors"
@@ -654,10 +657,10 @@ const finalizarEnvio = () => {
 
         <!-- Presentación* -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1.5">
+          <label for="inf-presentacion" class="block text-sm font-medium text-gray-900 mb-1.5">
             Presentación<span class="text-red-500">*</span>
           </label>
-          <textarea 
+          <textarea id="inf-presentacion" 
             v-model="form.presentacion"
             rows="3"
             class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs resize-y placeholder:text-gray-400 transition-colors"
@@ -677,10 +680,10 @@ const finalizarEnvio = () => {
 
         <!-- Generalidades* -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1.5">
+          <label for="inf-generalidades" class="block text-sm font-medium text-gray-900 mb-1.5">
             Generalidades<span class="text-red-500">*</span>
           </label>
-          <textarea 
+          <textarea id="inf-generalidades" 
             v-model="form.generalidades"
             rows="3"
             class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs resize-y placeholder:text-gray-400 transition-colors"
@@ -700,10 +703,10 @@ const finalizarEnvio = () => {
 
         <!-- Procedimiento para el proceso de la pasantía* -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1.5">
+          <label for="inf-procedimiento-pasantia" class="block text-sm font-medium text-gray-900 mb-1.5">
             Procedimiento para el proceso de la pasantía<span class="text-red-500">*</span>
           </label>
-          <textarea 
+          <textarea id="inf-procedimiento-pasantia" 
             v-model="form.procedimiento_pasantia"
             rows="3"
             class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs resize-y placeholder:text-gray-400 transition-colors"
@@ -723,10 +726,10 @@ const finalizarEnvio = () => {
 
         <!-- Descripción de la empresa* -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1.5">
+          <label for="inf-descripcion-empresa" class="block text-sm font-medium text-gray-900 mb-1.5">
             Descripción de la empresa<span class="text-red-500">*</span>
           </label>
-          <textarea 
+          <textarea id="inf-descripcion-empresa" 
             v-model="form.descripcion_empresa"
             rows="3"
             class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs resize-y placeholder:text-gray-400 transition-colors"
@@ -746,10 +749,10 @@ const finalizarEnvio = () => {
 
         <!-- Descripción de la pasantía* -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1.5">
+          <label for="inf-descripcion-pasantia" class="block text-sm font-medium text-gray-900 mb-1.5">
             Descripción de la pasantía<span class="text-red-500">*</span>
           </label>
-          <textarea 
+          <textarea id="inf-descripcion-pasantia" 
             v-model="form.descripcion_pasantia"
             rows="3"
             class="w-full px-3.5 py-2.5 rounded-lg border bg-white text-gray-900 text-sm focus:outline-none shadow-xs resize-y placeholder:text-gray-400 transition-colors"
@@ -771,9 +774,9 @@ const finalizarEnvio = () => {
         <!-- SECCIÓN: SELECCIONA LOS REPORTES MENSUALES PARA ADJUNTAR*                 -->
         <!-- ========================================================================= -->
         <div class="pt-4">
-          <label class="block text-sm font-semibold text-gray-900 mb-3">
+          <p class="block text-sm font-semibold text-gray-900 mb-3">
             Selecciona los reportes mensuales para adjuntar<span class="text-red-500">*</span>
-          </label>
+          </p>
 
           <!-- Encabezado de la tabla de reportes adjuntos (solo visible si existen reportes) -->
           <div 
@@ -884,7 +887,7 @@ const finalizarEnvio = () => {
             class="border-2 border-dashed border-gray-400 rounded-xl bg-gray-50/70 py-10 px-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100/70 transition-all text-center"
             :class="{ 'border-blue-500 bg-blue-50/50': isDragging }"
           >
-            <input 
+            <input id="inf-file-input"<input 
               ref="fileInputRef" 
               type="file" 
               multiple 
@@ -983,8 +986,7 @@ const finalizarEnvio = () => {
                   >
                     <!-- Nombre del gasto (Comida, Pasaje, etc.) -->
                     <td class="py-3 px-4 font-serif text-sm sm:text-base font-semibold text-gray-900">
-                      <input 
-                        v-model="fila.gasto"
+                      <input :id="'presupuesto-gasto-' + fIndex" :aria-label="'Nombre del gasto fila ' + (fIndex + 1)" v-model="fila.gasto"
                         type="text"
                         placeholder="Nombre de gasto"
                         class="w-full font-serif text-sm sm:text-base font-semibold text-gray-900 bg-transparent focus:outline-none focus:border-b border-blue-500"
@@ -997,8 +999,7 @@ const finalizarEnvio = () => {
                       :key="col"
                       class="py-3 px-1.5 text-center"
                     >
-                      <input 
-                        :value="fila.montos[col]"
+                      <input :id="'presupuesto-monto-' + fIndex + '-' + col" :aria-label="'Monto para ' + col + ' en ' + (fila.gasto || 'gasto ' + (fIndex + 1))" :value="fila.montos[col]"
                         @keydown="permitirSoloNumerosYPuntuacion($event)"
                         @input="filtrarMontoEnVivo(fila, col, $event)"
                         type="text" 

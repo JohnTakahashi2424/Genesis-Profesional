@@ -93,8 +93,8 @@ const obtenerScoreMes = (item) => {
     const limpio = String(item.fecha_inicio).split('T')[0]
     const partes = limpio.split('-')
     if (partes.length >= 2) {
-      anio = parseInt(partes[0], 10) || 2026
-      mesNum = parseInt(partes[1], 10) || 0
+      anio = Number.parseInt(partes[0], 10) || 2026
+      mesNum = Number.parseInt(partes[1], 10) || 0
     }
   }
 
@@ -121,7 +121,7 @@ const obtenerScoreMes = (item) => {
   if (item.periodo) {
     const matchAnio = String(item.periodo).match(/\b(20\d{2})\b/)
     if (matchAnio) {
-      anio = parseInt(matchAnio[1], 10)
+      anio = Number.parseInt(matchAnio[1], 10)
     }
   }
 
@@ -187,8 +187,11 @@ const cerrarLightbox = () => {
 // Helpers para separar rango y año de fechas
 const formatearRangoPeriodo = (periodo) => {
   if (!periodo) return '01 Ene – 27 Ene'
-  const match = periodo.match(/^(.*?)(\s+\d{4})$/)
-  return match ? match[1].trim() : periodo
+  const lastSpace = periodo.lastIndexOf(' ')
+  if (lastSpace > 0 && /^\d{4}$/.test(periodo.slice(lastSpace + 1).trim())) {
+    return periodo.slice(0, lastSpace).trim()
+  }
+  return periodo
 }
 
 const formatearAnioPeriodo = (periodo) => {

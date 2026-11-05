@@ -32,7 +32,7 @@ const formatearFecha = (fechaRaw, formateadaBack) => {
   if (!fechaRaw) return ''
   try {
     const d = new Date(fechaRaw)
-    if (isNaN(d.getTime())) return fechaRaw
+    if (Number.isNaN(d.getTime())) return fechaRaw
     const meses = ['ene.', 'feb.', 'mar.', 'abr.', 'may.', 'jun.', 'jul.', 'ago.', 'sep.', 'oct.', 'nov.', 'dic.']
     const dia = d.getDate()
     const mes = meses[d.getMonth()]
