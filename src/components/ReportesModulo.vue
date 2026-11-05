@@ -1570,12 +1570,14 @@ onUnmounted(() => {
 
           <!-- ÁREA DE SUBIDA DE EVIDENCIAS FOTOGRÁFICAS -->
           <div class="mt-6">
+            <label for="input-evidencias-upload" class="sr-only">Subir evidencias fotográficas del reporte mensual</label>
             <input 
               id="input-evidencias-upload"
               type="file" 
               multiple 
               accept="image/jpeg,image/png,.jpg,.jpeg,.png"
               class="hidden"
+              aria-label="Subir evidencias fotográficas del reporte mensual"
               @change="handleFileUpload"
             />
 

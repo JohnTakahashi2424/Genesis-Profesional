@@ -550,7 +550,7 @@ class SwaggerAnnotations
                 required: ["titulo", "link"],
                 properties: [
                     new OA\Property(property: "titulo", type: "string", example: "My portafolio"),
-                    new OA\Property(property: "link", type: "string", example: "http://portafolio.com")
+                    new OA\Property(property: "link", type: "string", example: "https://portafolio.com")
                 ]
             )
         ),
