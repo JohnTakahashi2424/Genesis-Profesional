@@ -24,8 +24,8 @@ watch(() => form.value.correo, (nuevoCorreo) => {
     errorCorreo.value = ''
     return
   }
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!regexEmail.test(correoLimpio)) {
+  const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (correoLimpio.length > 254 || !regexEmail.test(correoLimpio)) {
     errorCorreo.value = 'El formato del correo institucional es inválido.'
     return
   }
@@ -57,8 +57,8 @@ const handleLogin = async () => {
     hayErrores = true
   } else {
     // 2. Validación sintáctica y dominio del correo institucional si fue provisto
-    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!regexEmail.test(correoLimpio)) {
+    const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    if (correoLimpio.length > 254 || !regexEmail.test(correoLimpio)) {
       errorCorreo.value = 'El formato del correo institucional es inválido.'
       hayErrores = true
     } else if (!correoLimpio.endsWith('@ugb.edu.sv')) {

@@ -139,41 +139,9 @@ class ReporteController extends Controller
      */
     public function store(Request $request)
     {
-        // Normalizar estructura de actividades recibidas (por si vienen con nombres alternativos)
         $this->normalizarDatosActividades($request);
+        $validated = $this->validarDatosReporte($request, false);
 
-        $validated = $request->validate([
-            'pasante_id' => 'nullable|integer',
-            'user_id' => 'nullable|integer',
-            'area_pasantia' => 'required|string|max:150',
-            'nombre_pasante' => 'required|string|max:150',
-            'mes' => 'required|string|max:50',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
-            'objetivo' => 'required|string',
-            'estado' => 'nullable|string|in:Enviado,En revisión,Aprobado,Observado',
-            'evidencias' => 'nullable|array|max:10',
-            'actividades' => 'required|array|min:1',
-            'actividades.*.numero' => 'nullable|integer',
-            'actividades.*.actividad' => 'required|string',
-            'actividades.*.fecha' => 'required|date',
-            'actividades.*.resultado_aprendizaje' => 'required|string',
-        ], [
-            'area_pasantia.required' => 'El área de pasantía es requerida.',
-            'nombre_pasante.required' => 'El nombre del pasante es requerido.',
-            'mes.required' => 'El mes del reporte es requerido.',
-            'fecha_inicio.required' => 'La fecha de inicio es requerida.',
-            'fecha_fin.required' => 'La fecha de finalización es requerida.',
-            'fecha_fin.after_or_equal' => 'La fecha de finalización debe ser igual o posterior a la fecha de inicio.',
-            'objetivo.required' => 'El objetivo del reporte es requerido.',
-            'actividades.required' => 'Debe registrar al menos una actividad realizada.',
-            'actividades.min' => 'Debe registrar al menos una actividad realizada.',
-            'actividades.*.actividad.required' => 'La descripción de la actividad es requerida.',
-            'actividades.*.fecha.required' => 'La fecha de la actividad es requerida.',
-            'actividades.*.resultado_aprendizaje.required' => 'El resultado de aprendizaje es requerido.',
-        ]);
-
-        // Determinar user_id y pasante_id
         $jwtUser = $request->attributes->get('jwt_user');
         $userId = $validated['user_id'] ?? ($jwtUser->id ?? $request->header('X-User-Id'));
 
@@ -192,11 +160,9 @@ class ReporteController extends Controller
             }
         }
 
-        // Procesar imágenes de evidencias (Base64 o archivos multipart)
         $urlsEvidencias = $this->procesarEvidencias($request);
 
         return DB::transaction(function () use ($validated, $userId, $pasanteId, $urlsEvidencias) {
-            // 1. Crear el reporte principal vinculado directamente al usuario
             $reporte = Reporte::create([
                 'user_id' => $userId,
                 'pasante_id' => $pasanteId,
@@ -210,93 +176,20 @@ class ReporteController extends Controller
                 'evidencias' => $urlsEvidencias,
             ]);
 
-            // 2. Crear las actividades realizadas asociadas
-            foreach ($validated['actividades'] as $index => $act) {
-                $reporte->actividades()->create([
-                    'numero' => $act['numero'] ?? ($index + 1),
-                    'actividad' => $act['actividad'],
-                    'fecha' => $act['fecha'],
-                    'resultado_aprendizaje' => $act['resultado_aprendizaje'],
-                ]);
-            }
-
-            // 3. Registrar actividad en el Historial de Progreso del estudiante
-            try {
-                // Cada reporte mensual incrementa un 10% hasta un límite de 70% (7 reportes)
-                $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual((int)$userId);
-
-                // Registrar Creación de reporte
-                \App\Models\HistorialProgreso::registrar(
-                    userId: (int)$userId,
-                    categoria: 'reportes',
-                    titulo: 'Creación de reporte',
-                    descripcion: "Creación de reporte del mes de {$validated['mes']}",
-                    accionTexto: 'Ver reporte',
-                    accionUrl: '/reportes/' . $reporte->id,
-                    progreso: $progresoActual,
-                    fechaExacta: now()->subMinutes(1)->toDateTimeString()
-                );
-
-                // Registrar Envío de reporte
-                \App\Models\HistorialProgreso::registrar(
-                    userId: (int)$userId,
-                    categoria: 'reportes',
-                    titulo: 'Envío de reporte',
-                    descripcion: "Envío de reporte del mes de {$validated['mes']}",
-                    accionTexto: 'Ver reporte',
-                    accionUrl: '/reportes/' . $reporte->id,
-                    progreso: $progresoActual,
-                    fechaExacta: now()->toDateTimeString()
-                );
-
-                // 4. Crear Notificación de acción propia para el usuario
-                \App\Models\Notificacion::crearNotificacion(
-                    userId: (int)$userId,
-                    titulo: 'Reporte enviado',
-                    mensaje: "El reporte del mes de {$validated['mes']} ha sido enviado exitosamente.",
-                    tipo: 'reporte',
-                    origenTipo: 'sistema',
-                    remitenteNombre: 'Notificaciones',
-                    enlace: '/reportes/' . $reporte->id
-                );
-
-                // 5. Si se adjuntaron evidencias al crear el reporte, registrar también el anexo
-                if (!empty($urlsEvidencias) && count($urlsEvidencias) > 0) {
-                    \App\Models\HistorialProgreso::registrar(
-                        userId: (int)$userId,
-                        categoria: 'anexos',
-                        titulo: 'Anexo agregado al reporte',
-                        descripcion: "Se han adjuntado imágenes de evidencia al reporte del mes de {$validated['mes']}",
-                        accionTexto: 'Ver reporte',
-                        accionUrl: '/reportes/' . $reporte->id,
-                        progreso: $progresoActual,
-                        fechaExacta: now()->toDateTimeString()
-                    );
-
-                    \App\Models\Notificacion::crearNotificacion(
-                        userId: (int)$userId,
-                        titulo: 'Anexos agregados',
-                        mensaje: "Se han adjuntado imágenes de evidencia al reporte del mes de {$validated['mes']}.",
-                        tipo: 'reporte',
-                        origenTipo: 'sistema',
-                        remitenteNombre: 'Notificaciones',
-                        enlace: '/reportes/' . $reporte->id
-                    );
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('No se pudo registrar en historial o notificaciones: ' . $e->getMessage());
-            }
+            $this->guardarActividades($reporte, $validated['actividades'] ?? []);
+            $this->registrarEventosNuevoReporte($reporte, (int)$userId, $validated, $urlsEvidencias);
 
             return response()->json([
                 'exito' => true,
-                'mensaje' => 'Reporte mensual creado correctamente.',
+                'mensaje' => 'Reporte creado y enviado exitosamente.',
                 'data' => $reporte->load('actividades')
             ], 201);
         });
     }
 
     /**
-     * Actualizar un reporte mensual existente y sus actividades.
+     * Actualizar un reporte mensual existente.
+     *
      * PUT /api/reportes/{id}
      */
     public function update(Request $request, $id)
@@ -310,33 +203,14 @@ class ReporteController extends Controller
             ], 404);
         }
 
-        // Normalizar estructura de actividades recibidas
         $this->normalizarDatosActividades($request);
-
-        $validated = $request->validate([
-            'area_pasantia' => 'required|string|max:150',
-            'nombre_pasante' => 'required|string|max:150',
-            'mes' => 'required|string|max:50',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
-            'objetivo' => 'required|string',
-            'estado' => 'nullable|string|in:Enviado,En revisión,Aprobado,Observado',
-            'evidencias' => 'nullable|array|max:10',
-            'actividades' => 'nullable|array',
-            'actividades.*.numero' => 'nullable|integer',
-            'actividades.*.actividad' => 'required|string',
-            'actividades.*.fecha' => 'required|date',
-            'actividades.*.resultado_aprendizaje' => 'required|string',
-        ]);
+        $validated = $this->validarDatosReporte($request, true);
 
         $conteoActividadesAntes = $reporte->actividades()->count();
         $conteoEvidenciasAntes = count($reporte->evidencias ?? []);
-
-        // Procesar evidencias nuevas o mantener existentes
         $urlsEvidencias = $this->procesarEvidencias($request, $reporte->evidencias ?? []);
 
         return DB::transaction(function () use ($reporte, $validated, $urlsEvidencias, $conteoActividadesAntes, $conteoEvidenciasAntes, $request) {
-            // Actualizar datos del reporte
             $reporte->update([
                 'area_pasantia' => $validated['area_pasantia'],
                 'nombre_pasante' => $validated['nombre_pasante'],
@@ -348,145 +222,35 @@ class ReporteController extends Controller
                 'evidencias' => $urlsEvidencias,
             ]);
 
-            // Reemplazar actividades si se enviaron
             if (isset($validated['actividades'])) {
                 $reporte->actividades()->delete();
-                foreach ($validated['actividades'] as $index => $act) {
-                    $reporte->actividades()->create([
-                        'numero' => $act['numero'] ?? ($index + 1),
-                        'actividad' => $act['actividad'],
-                        'fecha' => $act['fecha'],
-                        'resultado_aprendizaje' => $act['resultado_aprendizaje'],
-                    ]);
-                }
+                $this->guardarActividades($reporte, $validated['actividades']);
             }
 
-            // Registrar en Historial de Progreso y Notificaciones según el cambio realizado
-            try {
-                $userId = (int)($reporte->user_id ?? $request->user()?->id ?? $request->header('X-User-Id') ?? 1);
-                $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual($userId);
-                $mesReporte = $validated['mes'] ?? $reporte->mes;
-                $enlaceReporte = '/reportes/' . $reporte->id;
+            $userId = (int)($reporte->user_id ?? $request->user()?->id ?? $request->header('X-User-Id') ?? 1);
+            $conteoActividadesDespues = isset($validated['actividades']) ? count($validated['actividades']) : $conteoActividadesAntes;
+            $conteoEvidenciasDespues = count($urlsEvidencias);
 
-                $conteoActividadesDespues = isset($validated['actividades']) ? count($validated['actividades']) : $conteoActividadesAntes;
-                $conteoEvidenciasDespues = count($urlsEvidencias);
-
-                $seAgregoActividad = ($conteoActividadesDespues > $conteoActividadesAntes);
-                $seAgregoEvidencia = ($conteoEvidenciasDespues > $conteoEvidenciasAntes);
-
-                if ($seAgregoActividad && $seAgregoEvidencia) {
-                    // AMBOS: Se agregaron tanto actividades como imágenes de evidencia
-                    \App\Models\HistorialProgreso::registrar(
-                        userId: $userId,
-                        categoria: 'reportes',
-                        titulo: 'Nueva actividad agregada',
-                        descripcion: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}",
-                        accionTexto: 'Ver reporte',
-                        accionUrl: $enlaceReporte,
-                        progreso: $progresoActual,
-                        fechaExacta: now()->subSeconds(2)->toDateTimeString()
-                    );
-
-                    \App\Models\HistorialProgreso::registrar(
-                        userId: $userId,
-                        categoria: 'anexos',
-                        titulo: 'Anexo agregado al reporte',
-                        descripcion: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}",
-                        accionTexto: 'Ver reporte',
-                        accionUrl: $enlaceReporte,
-                        progreso: $progresoActual,
-                        fechaExacta: now()->toDateTimeString()
-                    );
-
-                    \App\Models\Notificacion::crearNotificacion(
-                        userId: $userId,
-                        titulo: 'Cambios en reporte',
-                        mensaje: "Se ha agregado una nueva actividad y una nueva imagen de evidencia al reporte del mes de {$mesReporte}.",
-                        tipo: 'reporte',
-                        origenTipo: 'sistema',
-                        remitenteNombre: 'Notificaciones',
-                        enlace: $enlaceReporte
-                    );
-                } elseif ($seAgregoActividad) {
-                    // SOLO NUEVA ACTIVIDAD
-                    \App\Models\HistorialProgreso::registrar(
-                        userId: $userId,
-                        categoria: 'reportes',
-                        titulo: 'Nueva actividad agregada',
-                        descripcion: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}",
-                        accionTexto: 'Ver reporte',
-                        accionUrl: $enlaceReporte,
-                        progreso: $progresoActual,
-                        fechaExacta: now()->toDateTimeString()
-                    );
-
-                    \App\Models\Notificacion::crearNotificacion(
-                        userId: $userId,
-                        titulo: 'Nueva actividad en reporte',
-                        mensaje: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}.",
-                        tipo: 'reporte',
-                        origenTipo: 'sistema',
-                        remitenteNombre: 'Notificaciones',
-                        enlace: $enlaceReporte
-                    );
-                } elseif ($seAgregoEvidencia) {
-                    // SOLO NUEVA IMAGEN / ANEXO
-                    \App\Models\HistorialProgreso::registrar(
-                        userId: $userId,
-                        categoria: 'anexos',
-                        titulo: 'Anexo agregado al reporte',
-                        descripcion: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}",
-                        accionTexto: 'Ver reporte',
-                        accionUrl: $enlaceReporte,
-                        progreso: $progresoActual,
-                        fechaExacta: now()->toDateTimeString()
-                    );
-
-                    \App\Models\Notificacion::crearNotificacion(
-                        userId: $userId,
-                        titulo: 'Nueva imagen en reporte',
-                        mensaje: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}.",
-                        tipo: 'reporte',
-                        origenTipo: 'sistema',
-                        remitenteNombre: 'Notificaciones',
-                        enlace: $enlaceReporte
-                    );
-                } else {
-                    // CAMBIO GENERAL EN REPORTE
-                    \App\Models\HistorialProgreso::registrar(
-                        userId: $userId,
-                        categoria: 'reportes',
-                        titulo: 'Actualización de reporte',
-                        descripcion: "Se han actualizado los datos del reporte del mes de {$mesReporte}",
-                        accionTexto: 'Ver reporte',
-                        accionUrl: $enlaceReporte,
-                        progreso: $progresoActual,
-                        fechaExacta: now()->toDateTimeString()
-                    );
-
-                    \App\Models\Notificacion::crearNotificacion(
-                        userId: $userId,
-                        titulo: 'Reporte actualizado',
-                        mensaje: "El reporte del mes de {$mesReporte} ha sido actualizado correctamente.",
-                        tipo: 'reporte',
-                        origenTipo: 'sistema',
-                        remitenteNombre: 'Notificaciones',
-                        enlace: $enlaceReporte
-                    );
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Error al registrar historial/notificación en update de reporte: ' . $e->getMessage());
-            }
+            $this->registrarEventosActualizacionReporte(
+                $reporte,
+                $userId,
+                $validated,
+                $urlsEvidencias,
+                $conteoActividadesAntes,
+                $conteoActividadesDespues,
+                $conteoEvidenciasAntes,
+                $conteoEvidenciasDespues
+            );
 
             return response()->json([
                 'exito' => true,
-                'mensaje' => 'Reporte mensual actualizado correctamente.',
+                'mensaje' => 'Reporte actualizado exitosamente.',
                 'data' => $reporte->load('actividades')
             ]);
         });
     }
 
-    /**
+        /**
      * Eliminar un reporte mensual, sus actividades y evidencias.
      * DELETE /api/reportes/{id}
      */
@@ -655,5 +419,241 @@ class ReporteController extends Controller
         }
 
         return $urls;
+    }
+
+    /**
+     * Valida la estructura del payload de reporte.
+     */
+    private function validarDatosReporte(Request $request, bool $esActualizacion = false): array
+    {
+        $reglas = [
+            'area_pasantia' => 'required|string|max:150',
+            'nombre_pasante' => 'required|string|max:150',
+            'mes' => 'required|string|max:50',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            'objetivo' => 'required|string',
+            'estado' => 'nullable|string|in:Enviado,En revisión,Aprobado,Observado',
+            'evidencias' => 'nullable|array|max:10',
+            'actividades' => $esActualizacion ? 'nullable|array' : 'required|array|min:1',
+            'actividades.*.numero' => 'nullable|integer',
+            'actividades.*.actividad' => 'required|string',
+            'actividades.*.fecha' => 'required|date',
+            'actividades.*.resultado_aprendizaje' => 'required|string',
+        ];
+
+        if (!$esActualizacion) {
+            $reglas['pasante_id'] = 'nullable|integer';
+            $reglas['user_id'] = 'nullable|integer';
+        }
+
+        return $request->validate($reglas, [
+            'area_pasantia.required' => 'El área de pasantía es requerida.',
+            'nombre_pasante.required' => 'El nombre del pasante es requerido.',
+            'mes.required' => 'El mes del reporte es requerido.',
+            'fecha_inicio.required' => 'La fecha de inicio es requerida.',
+            'fecha_fin.required' => 'La fecha de finalización es requerida.',
+            'fecha_fin.after_or_equal' => 'La fecha de finalización debe ser igual o posterior a la fecha de inicio.',
+            'objetivo.required' => 'El objetivo del reporte es requerido.',
+            'actividades.required' => 'Debe registrar al menos una actividad realizada.',
+            'actividades.min' => 'Debe registrar al menos una actividad realizada.',
+            'actividades.*.actividad.required' => 'La descripción de la actividad es requerida.',
+            'actividades.*.fecha.required' => 'La fecha de la actividad es requerida.',
+            'actividades.*.resultado_aprendizaje.required' => 'El resultado de aprendizaje es requerido.',
+        ]);
+    }
+
+    /**
+     * Crea actividades realizadas asociadas a un reporte.
+     */
+    private function guardarActividades(Reporte $reporte, array $actividades): void
+    {
+        foreach ($actividades as $index => $act) {
+            $reporte->actividades()->create([
+                'numero' => $act['numero'] ?? ($index + 1),
+                'actividad' => $act['actividad'],
+                'fecha' => $act['fecha'],
+                'resultado_aprendizaje' => $act['resultado_aprendizaje'],
+            ]);
+        }
+    }
+
+    /**
+     * Registra historial y notificaciones para nuevo reporte.
+     */
+    private function registrarEventosNuevoReporte(Reporte $reporte, int $userId, array $validated, array $urlsEvidencias): void
+    {
+        try {
+            $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual($userId);
+
+            \App\Models\HistorialProgreso::registrar(
+                userId: $userId,
+                categoria: 'reportes',
+                titulo: 'Creación de reporte',
+                descripcion: "Creación de reporte del mes de {$validated['mes']}",
+                accionTexto: 'Ver reporte',
+                accionUrl: '/reportes/' . $reporte->id,
+                progreso: $progresoActual,
+                fechaExacta: now()->subMinutes(1)->toDateTimeString()
+            );
+
+            \App\Models\HistorialProgreso::registrar(
+                userId: $userId,
+                categoria: 'reportes',
+                titulo: 'Envío de reporte',
+                descripcion: "Envío de reporte del mes de {$validated['mes']}",
+                accionTexto: 'Ver reporte',
+                accionUrl: '/reportes/' . $reporte->id,
+                progreso: $progresoActual,
+                fechaExacta: now()->toDateTimeString()
+            );
+
+            \App\Models\Notificacion::crearNotificacion(
+                userId: $userId,
+                titulo: 'Reporte enviado',
+                mensaje: "El reporte del mes de {$validated['mes']} ha sido enviado exitosamente.",
+                tipo: 'reporte',
+                origenTipo: 'sistema',
+                remitenteNombre: 'Notificaciones',
+                enlace: '/reportes/' . $reporte->id
+            );
+
+            if (!empty($urlsEvidencias)) {
+                \App\Models\HistorialProgreso::registrar(
+                    userId: $userId,
+                    categoria: 'anexos',
+                    titulo: 'Anexo agregado al reporte',
+                    descripcion: "Se han adjuntado imágenes de evidencia al reporte del mes de {$validated['mes']}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: '/reportes/' . $reporte->id,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->toDateTimeString()
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial o notificación para reporte: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Registra historial y notificaciones para actualización de reporte.
+     */
+    private function registrarEventosActualizacionReporte(
+        Reporte $reporte,
+        int $userId,
+        array $validated,
+        array $urlsEvidencias,
+        int $conteoActividadesAntes,
+        int $conteoActividadesDespues,
+        int $conteoEvidenciasAntes,
+        int $conteoEvidenciasDespues
+    ): void {
+        try {
+            $progresoActual = \App\Models\HistorialProgreso::calcularProgresoActual($userId);
+            $mesReporte = $validated['mes'] ?? $reporte->mes;
+            $enlaceReporte = '/reportes/' . $reporte->id;
+
+            $seAgregoActividad = ($conteoActividadesDespues > $conteoActividadesAntes);
+            $seAgregoEvidencia = ($conteoEvidenciasDespues > $conteoEvidenciasAntes);
+
+            if ($seAgregoActividad && $seAgregoEvidencia) {
+                \App\Models\HistorialProgreso::registrar(
+                    userId: $userId,
+                    categoria: 'reportes',
+                    titulo: 'Nueva actividad agregada',
+                    descripcion: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: $enlaceReporte,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->subSeconds(2)->toDateTimeString()
+                );
+
+                \App\Models\HistorialProgreso::registrar(
+                    userId: $userId,
+                    categoria: 'anexos',
+                    titulo: 'Anexo agregado al reporte',
+                    descripcion: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: $enlaceReporte,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->toDateTimeString()
+                );
+
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: $userId,
+                    titulo: 'Cambios en reporte',
+                    mensaje: "Se ha agregado una nueva actividad y una nueva imagen de evidencia al reporte del mes de {$mesReporte}.",
+                    tipo: 'reporte',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones',
+                    enlace: $enlaceReporte
+                );
+            } elseif ($seAgregoActividad) {
+                \App\Models\HistorialProgreso::registrar(
+                    userId: $userId,
+                    categoria: 'reportes',
+                    titulo: 'Nueva actividad agregada',
+                    descripcion: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: $enlaceReporte,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->toDateTimeString()
+                );
+
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: $userId,
+                    titulo: 'Nueva actividad en reporte',
+                    mensaje: "Se ha agregado una nueva actividad al reporte del mes de {$mesReporte}.",
+                    tipo: 'reporte',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones',
+                    enlace: $enlaceReporte
+                );
+            } elseif ($seAgregoEvidencia) {
+                \App\Models\HistorialProgreso::registrar(
+                    userId: $userId,
+                    categoria: 'anexos',
+                    titulo: 'Anexo agregado al reporte',
+                    descripcion: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: $enlaceReporte,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->toDateTimeString()
+                );
+
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: $userId,
+                    titulo: 'Nueva imagen en reporte',
+                    mensaje: "Se ha agregado una nueva imagen de evidencia al reporte del mes de {$mesReporte}.",
+                    tipo: 'reporte',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones',
+                    enlace: $enlaceReporte
+                );
+            } else {
+                \App\Models\HistorialProgreso::registrar(
+                    userId: $userId,
+                    categoria: 'reportes',
+                    titulo: 'Actualización de reporte',
+                    descripcion: "Se han actualizado los datos del reporte del mes de {$mesReporte}",
+                    accionTexto: 'Ver reporte',
+                    accionUrl: $enlaceReporte,
+                    progreso: $progresoActual,
+                    fechaExacta: now()->toDateTimeString()
+                );
+
+                \App\Models\Notificacion::crearNotificacion(
+                    userId: $userId,
+                    titulo: 'Reporte actualizado',
+                    mensaje: "El reporte del mes de {$mesReporte} ha sido actualizado correctamente.",
+                    tipo: 'reporte',
+                    origenTipo: 'sistema',
+                    remitenteNombre: 'Notificaciones',
+                    enlace: $enlaceReporte
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial o notificación de actualización de reporte: ' . $e->getMessage());
+        }
     }
 }

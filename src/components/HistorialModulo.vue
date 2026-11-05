@@ -340,7 +340,7 @@ const formatearFechaHoraPartes = (item) => {
   }
 
   const d = new Date(rawDate || fechaStr)
-  if (isNaN(d.getTime())) {
+  if (Number.isNaN(d.getTime())) {
     return { fecha: fechaStr || '', hora: '' }
   }
 

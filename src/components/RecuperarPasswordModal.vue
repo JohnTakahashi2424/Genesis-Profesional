@@ -29,8 +29,8 @@ watch(correo, (nuevoCorreo) => {
     return
   }
 
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!regexEmail.test(correoLimpio)) {
+  const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (correoLimpio.length > 254 || !regexEmail.test(correoLimpio)) {
     errorPaso1.value = 'El formato del correo institucional es inválido.'
     return
   }
@@ -94,8 +94,6 @@ const codigoTexto = computed(() => {
   return digitos.value.join('')
 })
 
-// Validación del paso 1: correo no vacío
-const correoEsValido = computed(() => correo.value.trim().length > 0)
 
 // Validación del paso 3: coincidencia y robustez
 const contrasenasCoinciden = computed(() => {
@@ -125,8 +123,8 @@ const handleEnviarCodigo = async () => {
     return
   }
 
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!regexEmail.test(correoLimpio)) {
+  const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (correoLimpio.length > 254 || !regexEmail.test(correoLimpio)) {
     errorPaso1.value = 'El formato del correo institucional es inválido.'
     return
   }

@@ -93,8 +93,8 @@ const obtenerScoreMes = (item) => {
     const limpio = String(item.fecha_inicio).split('T')[0]
     const partes = limpio.split('-')
     if (partes.length >= 2) {
-      anio = parseInt(partes[0], 10) || 2026
-      mesNum = parseInt(partes[1], 10) || 0
+      anio = Number.parseInt(partes[0], 10) || 2026
+      mesNum = Number.parseInt(partes[1], 10) || 0
     }
   }
 
@@ -121,7 +121,7 @@ const obtenerScoreMes = (item) => {
   if (item.periodo) {
     const matchAnio = String(item.periodo).match(/\b(20\d{2})\b/)
     if (matchAnio) {
-      anio = parseInt(matchAnio[1], 10)
+      anio = Number.parseInt(matchAnio[1], 10)
     }
   }
 
@@ -187,8 +187,11 @@ const cerrarLightbox = () => {
 // Helpers para separar rango y año de fechas
 const formatearRangoPeriodo = (periodo) => {
   if (!periodo) return '01 Ene – 27 Ene'
-  const match = periodo.match(/^(.*?)(\s+\d{4})$/)
-  return match ? match[1].trim() : periodo
+  const lastSpace = periodo.lastIndexOf(' ')
+  if (lastSpace > 0 && /^\d{4}$/.test(periodo.slice(lastSpace + 1).trim())) {
+    return periodo.slice(0, lastSpace).trim()
+  }
+  return periodo
 }
 
 const formatearAnioPeriodo = (periodo) => {
@@ -257,73 +260,73 @@ const verReporteMensual = (rep) => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
           
           <!-- Nombre del pasante -->
-          <div>
+          <div class="min-w-0">
             <h3 class="text-sm font-bold text-gray-900 mb-1">
               Nombre del pasante
             </h3>
-            <p class="text-sm text-gray-700 font-normal">
-              {{ informe.nombre_pasante || 'Dallana Lucia Campos Garcia' }}
+            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ informe.nombre_pasante || (usuario?.nombres ? `${usuario.nombres} ${usuario.apellidos || ''}`.trim() : (usuario?.nombre_completo || usuario?.nombre || 'Pasante')) }}
             </p>
           </div>
 
           <!-- Institución dónde se realizó la pasantía -->
-          <div>
+          <div class="min-w-0">
             <h3 class="text-sm font-bold text-gray-900 mb-1">
               Institución dónde se realizó la pasantía
             </h3>
-            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]">
-              {{ informe.institucion || 'Empresas CASS' }}
+            <p class="text-sm text-gray-700 font-normal break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
+              {{ informe.institucion || 'Sin institución registrada' }}
             </p>
           </div>
 
         </div>
 
         <!-- Presentación -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Presentación
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.presentacion || defaultPresentacion }}
           </p>
         </div>
 
         <!-- Generalidades -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Generalidades
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.generalidades || defaultGeneralidades }}
           </p>
         </div>
 
         <!-- Procedimiento para el proceso de la pasantía* -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Procedimiento para el proceso de la pasantía<span class="text-red-500">*</span>
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.procedimiento_pasantia || defaultProcedimiento }}
           </p>
         </div>
 
         <!-- Descripción de la empresa -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la empresa
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.descripcion_empresa || defaultDescripcionEmpresa }}
           </p>
         </div>
 
         <!-- Descripción de la pasantía -->
-        <div>
+        <div class="min-w-0">
           <h3 class="text-sm font-bold text-gray-900 mb-1">
             Descripción de la pasantía
           </h3>
-          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]">
+          <p class="text-sm text-gray-700 font-normal leading-relaxed text-justify break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
             {{ informe.descripcion_pasantia || defaultDescripcionPasantia }}
           </p>
         </div>

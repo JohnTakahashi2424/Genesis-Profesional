@@ -9,6 +9,7 @@ use App\Models\CurriculumVitae;
 use App\Models\Reporte;
 use App\Models\InformeFinal;
 use App\Models\Notificacion;
+use Illuminate\Support\Facades\Log;
 
 class PasantiaController extends Controller
 {
@@ -45,7 +46,9 @@ class PasantiaController extends Controller
             if (class_exists(CurriculumVitae::class)) {
                 $tieneCv = CurriculumVitae::where('usuario_id', $user->id)->exists();
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) { 
+            Log::error("Error consultando estado de CV en PasantiaController", ['user_id' => $user->id, 'error' => $e->getMessage()]); 
+        }
 
         // 2. Evaluar cantidad de reportes mensuales del usuario
         $cantReportes = 0;
@@ -53,7 +56,9 @@ class PasantiaController extends Controller
             if (class_exists(Reporte::class)) {
                 $cantReportes = Reporte::where('user_id', $user->id)->count();
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) { 
+            Log::error("Error consultando reportes en PasantiaController", ['user_id' => $user->id, 'error' => $e->getMessage()]); 
+        }
 
         // 3. Evaluar si ya tiene informe final registrado
         $tieneInformeFinal = false;
@@ -61,7 +66,9 @@ class PasantiaController extends Controller
             if (class_exists(InformeFinal::class)) {
                 $tieneInformeFinal = InformeFinal::where('user_id', $user->id)->exists();
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) { 
+            Log::error("Error consultando informe final en PasantiaController", ['user_id' => $user->id, 'error' => $e->getMessage()]); 
+        }
 
         // 4. Lógica de coherencia de las 4 fases de pasantía:
         // - Inicialmente todas en gris y pendientes.

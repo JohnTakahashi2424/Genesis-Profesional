@@ -1,0 +1,545 @@
+{
+  "info": {
+    "name": "Génesis Profesional - API Collection",
+    "_postman_id": "genesis-profesional-api-collection",
+    "description": "Colección oficial de endpoints de la plataforma Génesis Profesional (Facultad de Ciencia y Tecnología - UGB). Diseñada para la defensa de grado con peticiones válidas e inválidas según la rúbrica de evaluación de Backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://genesis-profesional.onrender.com/api",
+      "type": "string",
+      "description": "URL base del servidor Backend (o https://genesis-profesional-ugb.netlify.app/api)"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "Token JWT generado automáticamente al hacer login"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Autenticación",
+      "item": [
+        {
+          "name": "POST Login [VÁLIDO - 200 OK]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.token) {",
+                  "        pm.collectionVariables.set('token', json.token);",
+                  "        console.log('Token JWT guardado automáticamente en la colección.');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"usss003024@ugb.edu.sv\",\n  \"contrasena\": \"Password123#\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Petición válida de login. Guarda el token JWT generado automáticamente en la variable {{token}} de la colección."
+          }
+        },
+        {
+          "name": "POST Login [INVÁLIDO - 422 Unprocessable Dominio No UGB]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"usuario_externo@gmail.com\",\n  \"contrasena\": \"Password123#\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Petición inválida para evidenciar validación de seguridad institucional: rechaza dominios que no sean @ugb.edu.sv con código HTTP 422."
+          }
+        },
+        {
+          "name": "POST Login [INVÁLIDO - 401 Credenciales Erróneas]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"usss003024@ugb.edu.sv\",\n  \"contrasena\": \"ClaveTotalmenteErronea999!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Petición inválida con contraseña incorrecta para evidenciar respuesta segura 401 Unauthorized sin revelar si el usuario existe o no."
+          }
+        },
+        {
+          "name": "POST Enviar Código Recuperación [Brevo SMTP API]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"usss003024@ugb.edu.sv\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/enviar-codigo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "enviar-codigo"
+              ]
+            },
+            "description": "Envía un código de 6 dígitos mediante la API REST de Brevo (evitando bloqueos SMTP de puertos)."
+          }
+        },
+        {
+          "name": "POST Logout [Cerrar Sesión]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Reportes Mensuales",
+      "item": [
+        {
+          "name": "GET Listar Reportes [200 OK]",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes"
+              ]
+            },
+            "description": "Devuelve todos los reportes mensuales creados por el estudiante."
+          }
+        },
+        {
+          "name": "GET Formulario Inicial [200 OK]",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/formulario-inicial",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "formulario-inicial"
+              ]
+            },
+            "description": "Obtiene datos sugeridos para nuevo reporte (nombre del pasante, área y mes sugerido)."
+          }
+        },
+        {
+          "name": "POST Crear Reporte [VÁLIDO - 201 Created]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"area_pasantia\": \"Desarrollo Backend\",\n  \"nombre_pasante\": \"Juanito Rodriguez\",\n  \"mes\": \"Agosto\",\n  \"fecha_inicio\": \"2026-08-01\",\n  \"fecha_fin\": \"2026-08-31\",\n  \"objetivo\": \"Documentación y prueba en vivo de endpoints con OpenAPI y Swagger.\",\n  \"actividades\": [\n    {\n      \"numero\": 1,\n      \"actividad\": \"Implementación de Swagger UI en Laravel\",\n      \"fecha\": \"2026-08-05\",\n      \"resultado_aprendizaje\": \"Estructuración de contratos de API RESTful\"\n    },\n    {\n      \"numero\": 2,\n      \"actividad\": \"Pruebas de endpoints con Postman\",\n      \"fecha\": \"2026-08-10\",\n      \"resultado_aprendizaje\": \"Verificación de respuestas 200, 201 y 422\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reportes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes"
+              ]
+            },
+            "description": "Petición válida que inserta el reporte y sus actividades en la base de datos PostgreSQL."
+          }
+        },
+        {
+          "name": "POST Crear Reporte [INVÁLIDO - 422 Objetivo Faltante]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"area_pasantia\": \"Desarrollo Backend\",\n  \"nombre_pasante\": \"Juanito Rodriguez\",\n  \"mes\": \"Agosto\",\n  \"fecha_inicio\": \"2026-08-01\",\n  \"fecha_fin\": \"2026-08-31\",\n  \"objetivo\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reportes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes"
+              ]
+            },
+            "description": "Petición inválida para demostrar en la defensa cómo el backend rechaza datos incompletos con código HTTP 422."
+          }
+        },
+        {
+          "name": "GET Detalle de Reporte [200 OK]",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Informe Final",
+      "item": [
+        {
+          "name": "GET Listar Informes Finales",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/informes-finales",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "informes-finales"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Crear Informe Final [VÁLIDO]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre_pasante\": \"Juanito Rodriguez\",\n  \"institucion\": \"Empresas CASS\",\n  \"presentacion\": \"Presentación ejecutiva del informe final de pasantía.\",\n  \"generalidades\": \"Generalidades de la institución receptora.\",\n  \"procedimiento_pasantia\": \"Procedimiento metodológico aplicado en el proyecto.\",\n  \"descripcion_empresa\": \"Empresa tecnológica de desarrollo de software.\",\n  \"descripcion_pasantia\": \"Desarrollo de módulos e integraciones con Laravel y Vue.\",\n  \"presupuesto_total\": \"$22.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/informes-finales",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "informes-finales"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Notificaciones",
+      "item": [
+        {
+          "name": "GET Contador de No Leídas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notificaciones/contador",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notificaciones",
+                "contador"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Listar Notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notificaciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notificaciones"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Marcar Todas como Leídas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notificaciones/marcar-todas-leidas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notificaciones",
+                "marcar-todas-leidas"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Historial de Progreso & Pasantía",
+      "item": [
+        {
+          "name": "GET Historial de Progreso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/historial-progreso",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "historial-progreso"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Estado Oficial de Pasantía [Público]",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/pasante/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pasante",
+                "estado"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

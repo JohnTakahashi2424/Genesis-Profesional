@@ -111,7 +111,9 @@ const abrirCalendarioInicio = (e) => {
   } catch (err) {
     try {
       el.focus()
-    } catch {}
+    } catch (focusErr) {
+      console.warn('[ReportesModulo] No se pudo enfocar input fecha inicio', focusErr)
+    }
   }
 }
 
@@ -130,7 +132,9 @@ const abrirCalendarioFin = (e) => {
   } catch (err) {
     try {
       el.focus()
-    } catch {}
+    } catch (focusErr) {
+      console.warn('[ReportesModulo] No se pudo enfocar input fecha fin', focusErr)
+    }
   }
 }
 
@@ -142,7 +146,9 @@ const desplegarPicker = (event) => {
       if (typeof el.showPicker === 'function') {
         el.showPicker()
       }
-    } catch {}
+    } catch (pickerErr) {
+      console.warn('[ReportesModulo] showPicker no soportado en este navegador', pickerErr)
+    }
   }
 }
 
@@ -228,7 +234,7 @@ const obtenerNombreMesPeriodo = (item) => {
     ]
     const partes = String(item.fecha_inicio).split('T')[0].split('-')
     if (partes.length >= 2) {
-      const mesNum = parseInt(partes[1], 10)
+      const mesNum = Number.parseInt(partes[1], 10)
       if (mesNum >= 1 && mesNum <= 12) {
         return meses[mesNum - 1]
       }
@@ -386,7 +392,7 @@ const inicializarDatosFormulario = async () => {
       if (data.mes_sugerido) reporteForm.value.mes = data.mes_sugerido
     }
   } catch (e) {
-    // Si falla, se mantienen los valores por defecto
+    console.warn('[ReportesModulo] Datos auxiliares no disponibles:', e)
   }
 }
 
@@ -479,8 +485,8 @@ const abrirInformeFinalDetalleDirecto = async (idDeseado = null) => {
     // Fallback con datos institucionales completos si no hay registros en API
     informeFinalDetalle.value = {
       id: idTarget || 3,
-      nombre_pasante: usuario.value?.nombres ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim() : (usuario.value?.nombre || 'Dallana Lucia Campos Garcia'),
-      institucion: 'Empresas CASS',
+      nombre_pasante: usuario.value?.nombres ? `${usuario.value.nombres} ${usuario.value.apellidos || ''}`.trim() : (usuario.value?.nombre || usuario.value?.nombre_completo || ''),
+      institucion: pasantidaInfo.value?.empresa || '',
       presentacion: 'Por medio de la presente, pongo a su disposición el Reporte Final de Prácticas Profesionales, el cual documenta la labor desarrollada durante mi periodo como pasante de desarrollo de software. Durante este proceso me integré en el ciclo de vida del proyecto de la empresa, participando activamente en la definición de requerimientos, la arquitectura de base de datos, el diseño de interfaz de usuario (UI/UX) y la implementación de módulos funcionales mediante el uso de herramientas de desarrollo web y herramientas de control de versiones.',
       generalidades: 'El presente reporte detalla las actividades desarrolladas durante el periodo de prácticas profesionales en el área de desarrollo de software. El objetivo principal consistió en aplicar conocimientos teóricos y técnicos en un entorno real de trabajo, participando en el análisis de requerimientos, diseño de bases de datos, maquetación de interfaces de usuario y programación de módulos web, garantizando la calidad y funcionalidad de las soluciones implementadas.',
       procedimiento_pasantia: 'El proceso de pasantía se estructuró en cuatro fases consecutivas: en primer lugar, la inducción al entorno tecnológico y asignación de requerimientos; en segundo lugar, el análisis y diseño mediante la creación de diagramas de base de datos y prototipos UI/UX; en tercer lugar, la fase de codificación utilizando controladores, vistas y APIs para la lógica de negocio; y finalmente, las pruebas de integración, optimización de componentes y documentación técnica del código desarrollado.',
@@ -517,7 +523,7 @@ const verDetalle = async (item) => {
 
       let res = null
       const numId = Number(idToFetch)
-      if (numId && !isNaN(numId)) {
+      if (numId && !Number.isNaN(numId)) {
         try {
           res = await axios.get(`/api/informes-finales/${numId}`, { headers })
         } catch (eGet) {
@@ -822,7 +828,9 @@ const enviarReporte = async () => {
       }))
       localStorage.setItem('genesis_historial_updated', Date.now().toString())
       localStorage.setItem('genesis_notificaciones_updated', Date.now().toString())
-    } catch (e) {}
+    } catch (storageErr) {
+      console.warn('[ReportesModulo] Error al actualizar estado en localStorage', storageErr)
+    }
 
     // Refrescar lista y emitir eventos de reactividad
     await cargarReportes()
@@ -1000,7 +1008,7 @@ onUnmounted(() => {
         <!-- BARRA DE BÚSQUEDA REDONDEADA AZUL -->
         <div class="relative flex-1 min-w-[260px] max-w-md">
           <input 
-            v-model="busqueda"
+            v-model="busqueda" id="busqueda-reportes" aria-label="Buscar reportes"
             @input="cargarReportes"
             type="text" 
             placeholder="Buscar..."
@@ -1230,14 +1238,12 @@ onUnmounted(() => {
             
             <!-- Área de pasantía* (Dropdown) -->
             <div id="filtro-area-container" class="md:col-span-4 relative">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label for="btn-dropdown-area" class="block text-xs font-semibold text-slate-700 mb-1.5">
                 Área de pasantía<span class="text-rose-500">*</span>
               </label>
               
               <div class="relative">
-                <button
-                  type="button"
-                  @click.stop="dropdownAreaAbierto = !dropdownAreaAbierto; dropdownMesAbierto = false"
+                <button id="btn-dropdown-area" type="button" @click.stop="dropdownAreaAbierto = !dropdownAreaAbierto; dropdownMesAbierto = false"
                   class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
                   :class="intentoGuardar && !reporteForm.area_pasantia ? 'border-rose-500' : 'border-slate-300'"
                 >
@@ -1276,11 +1282,11 @@ onUnmounted(() => {
 
             <!-- Nombre del pasante* -->
             <div class="md:col-span-5">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label for="reporte-nombre-pasante" class="block text-xs font-semibold text-slate-700 mb-1.5">
                 Nombre del pasante<span class="text-rose-500">*</span>
               </label>
               <input 
-                v-model="reporteForm.nombre_pasante"
+                v-model="reporteForm.nombre_pasante" id="reporte-nombre-pasante"
                 type="text" 
                 placeholder="Nombre del pasante"
                 class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs transition-all"
@@ -1298,15 +1304,13 @@ onUnmounted(() => {
 
             <!-- Mes* (Dropdown con meses del año) -->
             <div id="filtro-mes-container" class="md:col-span-3 relative">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label for="btn-dropdown-mes" class="block text-xs font-semibold text-slate-700 mb-1.5">
                 Mes<span class="text-rose-500">*</span>
               </label>
 
               <div class="relative">
                 <!-- Botón cerrado -->
-                <button
-                  type="button"
-                  @click.stop="dropdownMesAbierto = !dropdownMesAbierto; dropdownAreaAbierto = false"
+                <button id="btn-dropdown-mes" type="button" @click.stop="dropdownMesAbierto = !dropdownMesAbierto; dropdownAreaAbierto = false"
                   class="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm text-left flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#000B58] transition-all shadow-xs"
                   :class="intentoGuardar && !reporteForm.mes ? 'border-rose-500' : 'border-slate-300'"
                 >
@@ -1350,7 +1354,7 @@ onUnmounted(() => {
             
             <!-- Fecha Inicio* -->
             <div>
-              <label 
+              <label for="reporte-fecha-inicio" 
                 @click="abrirCalendarioInicio"
                 class="block text-xs font-semibold text-slate-700 mb-1.5 cursor-pointer"
               >
@@ -1376,7 +1380,7 @@ onUnmounted(() => {
                   </svg>
                 </button>
                 <input 
-                  ref="fechaInicioInputRef"
+                  ref="fechaInicioInputRef" id="reporte-fecha-inicio"
                   v-model="reporteForm.fecha_inicio"
                   type="date"
                   @click="desplegarPicker($event)" 
@@ -1396,7 +1400,7 @@ onUnmounted(() => {
 
             <!-- Fecha Finalización* -->
             <div>
-              <label 
+              <label for="reporte-fecha-fin" 
                 @click="abrirCalendarioFin"
                 class="block text-xs font-semibold text-slate-700 mb-1.5 cursor-pointer"
               >
@@ -1422,7 +1426,7 @@ onUnmounted(() => {
                   </svg>
                 </button>
                 <input 
-                  ref="fechaFinInputRef"
+                  ref="fechaFinInputRef" id="reporte-fecha-fin"
                   v-model="reporteForm.fecha_fin"
                   type="date"
                   @click="desplegarPicker($event)" 
@@ -1444,11 +1448,11 @@ onUnmounted(() => {
 
           <!-- FILA 3: Objetivo* -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label for="reporte-objetivo" class="block text-xs font-semibold text-slate-700 mb-1.5">
               Objetivo<span class="text-rose-500">*</span>
             </label>
             <input 
-              v-model="reporteForm.objetivo"
+              v-model="reporteForm.objetivo" id="reporte-objetivo"
               type="text" 
               placeholder="documentar las actividades desarrolladas en la empresa"
               class="w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#000B58] shadow-xs"
@@ -1495,8 +1499,7 @@ onUnmounted(() => {
 
               <!-- Actividad realizada -->
               <div class="col-span-4">
-                <input 
-                  v-model="act.actividad"
+                <input :id="'act-actividad-' + index" :aria-label="'Actividad realizada fila ' + (index + 1)" v-model="act.actividad"
                   type="text" 
                   placeholder="Actividad realizada"
                   class="w-full px-3 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all"
@@ -1505,8 +1508,7 @@ onUnmounted(() => {
 
               <!-- Fecha -->
               <div class="col-span-3">
-                <input 
-                  v-model="act.fecha"
+                <input :id="'act-fecha-' + index" :aria-label="'Fecha actividad fila ' + (index + 1)" v-model="act.fecha"
                   type="date" 
                   placeholder="dd/mm/aaaa"
                   @click="desplegarPicker($event)"
@@ -1517,8 +1519,7 @@ onUnmounted(() => {
 
               <!-- Resultado de aprendizaje -->
               <div class="col-span-3">
-                <input 
-                  v-model="act.resultado_aprendizaje"
+                <input :id="'act-resultado-' + index" :aria-label="'Resultado aprendizaje fila ' + (index + 1)" v-model="act.resultado_aprendizaje"
                   type="text" 
                   placeholder="Aprendizaje obtenido"
                   class="w-full px-3 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#000B58] transition-all"
@@ -1791,7 +1792,7 @@ onUnmounted(() => {
           <!-- FILA 3: Objetivo -->
           <div class="mb-6">
             <span class="block text-sm font-bold text-slate-900 mb-1">Objetivo</span>
-            <p class="text-sm text-slate-700 leading-relaxed break-words break-all [overflow-wrap:anywhere]">
+            <p class="text-sm text-slate-700 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">
               {{ reporteDetalle.objetivo || 'documentar las actividades desarrolladas en la empresa' }}
             </p>
           </div>
@@ -1817,9 +1818,9 @@ onUnmounted(() => {
                   class="align-top"
                 >
                   <td class="py-4 pr-3 font-normal text-slate-600 select-none">{{ act.numero ?? (idx + 1) }}</td>
-                  <td class="py-4 px-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{{ act.actividad || act.actividad_realizada }}</td>
+                  <td class="py-4 px-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">{{ act.actividad || act.actividad_realizada }}</td>
                   <td class="py-4 px-3 font-normal text-slate-600 whitespace-nowrap">{{ formatearFecha(act.fecha || act.fecha_actividad) }}</td>
-                  <td class="py-4 pl-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
+                  <td class="py-4 pl-3 font-normal text-slate-600 leading-relaxed break-words break-all [overflow-wrap:anywhere]" style="overflow-wrap: anywhere; word-break: break-word;">{{ act.resultado_aprendizaje || act.logros_obtenidos }}</td>
                 </tr>
               </tbody>
             </table>

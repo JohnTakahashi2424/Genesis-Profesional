@@ -97,12 +97,12 @@ class JwtService
             $ttlRestante = max(60, $exp - time());
 
             // Agregar el hash del token a la lista negra por la duración restante de su validez
-            $tokenHash = md5($token);
+            $tokenHash = hash('sha256', $token);
             Cache::put('jwt_blacklist:' . $tokenHash, true, $ttlRestante);
             return true;
         } catch (Exception $e) {
             // Incluso si no se decodifica por expiración, agregarlo a la lista negra por al menos 1 hora
-            Cache::put('jwt_blacklist:' . md5($token), true, 3600);
+            Cache::put('jwt_blacklist:' . hash('sha256', $token), true, 3600);
             return true;
         }
     }
@@ -118,6 +118,6 @@ class JwtService
         if (empty($token)) {
             return true;
         }
-        return Cache::has('jwt_blacklist:' . md5($token));
+        return Cache::has('jwt_blacklist:' . hash('sha256', $token));
     }
 }

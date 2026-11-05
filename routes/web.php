@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 
+// Rutas de diagnóstico exclusivas para entorno local
+if (app()->isLocal()) {
 Route::get('/debug-db', function () {
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
@@ -44,6 +46,7 @@ Route::get('/debug-codigo', function () {
         'creado' => $codigo ? $codigo->created_at : null,
     ]);
 });
+}
 
 // Ruta principal y SPA: sirve la interfaz de Génesis Profesional compilada
 Route::get('/', function () {

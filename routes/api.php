@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RecuperacionPasswordController;
 use App\Http\Controllers\PasantiaController;
 use App\Http\Controllers\CvController;
 use App\Http\Controllers\ReporteController;
@@ -31,28 +32,35 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('api.auth.login');
 
     // Verificación preliminar de correo para recuperación
-    Route::post('/verificar-correo-recuperacion', [AuthController::class, 'verificarCorreoRecuperacion'])->name('api.auth.verificar_correo_recuperacion');
+    Route::post('/verificar-correo-recuperacion', [RecuperacionPasswordController::class, 'verificarCorreoRecuperacion'])->name('api.auth.verificar_correo_recuperacion');
 
     // Recuperación de contraseña: envío de código vía Brevo SMTP
-    Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigo'])->name('api.auth.enviar_codigo');
+    Route::post('/enviar-codigo', [RecuperacionPasswordController::class, 'enviarCodigo'])->name('api.auth.enviar_codigo');
 
     // Recuperación de contraseña: comprobación del código de 6 dígitos
-    Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo'])->name('api.auth.verificar_codigo');
+    Route::post('/verificar-codigo', [RecuperacionPasswordController::class, 'verificarCodigo'])->name('api.auth.verificar_codigo');
 
     // Recuperación de contraseña: cambio seguro de contraseña
-    Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
+    Route::post('/recuperar', [RecuperacionPasswordController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
-// Rutas públicas de consulta de estado de pasantía (permite consulta con o sin token JWT)
-Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+// Conteo rápido de notificaciones no leídas (soporta JWT o query params)
+Route::get('/notificaciones/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador');
 
 // Rutas protegidas mediante autenticación JWT
 Route::middleware('jwt.auth')->group(function () {
     // Cierre de sesión y destrucción de token
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
 
-    // Rutas del Módulo de Portafolio / Perfil
+    // Rutas de Pasantías
+    Route::get('/pasante/estado', [PasantiaController::class, 'obtenerEstado'])->name('api.pasante.estado');
+
+    // Rutas del Módulo de Portafolio
     Route::prefix('portafolio')->group(function () {
+        Route::get('/', [PortafolioController::class, 'index'])->name('api.portafolio.index');
+        Route::post('/', [PortafolioController::class, 'store'])->name('api.portafolio.store');
+        Route::put('/{id}', [PortafolioController::class, 'update'])->name('api.portafolio.update');
+        Route::delete('/{id}', [PortafolioController::class, 'destroy'])->name('api.portafolio.destroy');
         Route::get('/obtener/{usuarioId}', [PortafolioController::class, 'obtener'])->name('api.portafolio.obtener');
         Route::post('/guardar', [PortafolioController::class, 'guardar'])->name('api.portafolio.guardar');
     });
@@ -84,7 +92,7 @@ Route::middleware('jwt.auth')->group(function () {
 
     // Rutas del Módulo de Notificaciones
     Route::prefix('notificaciones')->group(function () {
-        Route::get('/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador');
+        Route::get('/contador', [NotificacionController::class, 'contador'])->name('api.notificaciones.contador_auth');
         Route::get('/', [NotificacionController::class, 'index'])->name('api.notificaciones.index');
         Route::post('/', [NotificacionController::class, 'store'])->name('api.notificaciones.store');
         Route::patch('/{id}/leer', [NotificacionController::class, 'marcarLeida'])->name('api.notificaciones.leer');
