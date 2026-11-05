@@ -124,8 +124,8 @@ watch(() => form.value.correo, (nuevoCorreo) => {
     return
   }
 
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!regexEmail.test(correoLimpio)) {
+  const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (correoLimpio.length > 254 || !regexEmail.test(correoLimpio)) {
     if (tocados.value.correo) errores.value.correo = 'Ingrese un correo electrónico válido'
     return
   }
@@ -216,7 +216,7 @@ const validarCorreoSintaxis = (mostrarError = true) => {
     }
     return false
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoNormalizado)) {
+  if (correoNormalizado.length > 254 || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(correoNormalizado)) {
     if (mostrarError) {
       tocados.value.correo = true
       errores.value.correo = 'Ingrese un correo electrónico válido'
@@ -618,7 +618,7 @@ const cerrarYIrALogin = () => {
 
         <!-- Checkbox Términos y Condiciones -->
         <div class="mb-6 text-left">
-          <label class="flex items-start gap-2.5 text-xs text-gray-800 cursor-pointer select-none leading-tight">
+          <label for="checkbox-terminos" class="flex items-start gap-2.5 text-xs text-gray-800 cursor-pointer select-none leading-tight">
             <input 
               type="checkbox"
               v-model="form.aceptaTerminos"
