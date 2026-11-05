@@ -47,70 +47,7 @@ class InformeFinalController extends Controller
         if ($userId) {
             $reportesQuery->where('user_id', $userId);
         }
-        $reportesDisponibles = $reportesQuery->get();
-
-        // Ordenar del mes mayor al menor (ej: Diciembre -> Noviembre -> Octubre -> Septiembre -> Agosto)
-        $mesesNum = [
-            'enero' => 1, 'ene' => 1, 'ener' => 1,
-            'febrero' => 2, 'feb' => 2, 'febr' => 2,
-            'marzo' => 3, 'mar' => 3,
-            'abril' => 4, 'abr' => 4,
-            'mayo' => 5, 'may' => 5,
-            'junio' => 6, 'jun' => 6,
-            'julio' => 7, 'jul' => 7,
-            'agosto' => 8, 'ago' => 8, 'agost' => 8,
-            'septiembre' => 9, 'sep' => 9, 'sept' => 9, 'setiembre' => 9,
-            'octubre' => 10, 'oct' => 10,
-            'noviembre' => 11, 'nov' => 11,
-            'diciembre' => 12, 'dic' => 12,
-        ];
-
-        $reportesDisponibles = $reportesDisponibles->sort(function ($a, $b) use ($mesesNum) {
-            $anioA = 2026;
-            $mesA = 0;
-            if ($a->fecha_inicio) {
-                $p = explode('-', explode('T', (string)$a->fecha_inicio)[0]);
-                if (count($p) >= 2) {
-                    $anioA = (int)$p[0];
-                    $mesA = (int)$p[1];
-                }
-            }
-            if (!$mesA && $a->mes) {
-                $m = strtolower(trim((string)$a->mes));
-                foreach ($mesesNum as $k => $v) {
-                    if (str_starts_with($m, $k)) { $mesA = $v; break; }
-                }
-            }
-            if (preg_match('/\b(20\d{2})\b/', (string)$a->periodo, $mA)) {
-                $anioA = (int)$mA[1];
-            }
-            $scoreA = ($anioA * 100) + $mesA;
-
-            $anioB = 2026;
-            $mesB = 0;
-            if ($b->fecha_inicio) {
-                $p = explode('-', explode('T', (string)$b->fecha_inicio)[0]);
-                if (count($p) >= 2) {
-                    $anioB = (int)$p[0];
-                    $mesB = (int)$p[1];
-                }
-            }
-            if (!$mesB && $b->mes) {
-                $m = strtolower(trim((string)$b->mes));
-                foreach ($mesesNum as $k => $v) {
-                    if (str_starts_with($m, $k)) { $mesB = $v; break; }
-                }
-            }
-            if (preg_match('/\b(20\d{2})\b/', (string)$b->periodo, $mB)) {
-                $anioB = (int)$mB[1];
-            }
-            $scoreB = ($anioB * 100) + $mesB;
-
-            if ($scoreB !== $scoreA) {
-                return $scoreB <=> $scoreA;
-            }
-            return $b->id <=> $a->id;
-        })->values();
+        $reportesDisponibles = $this->ordenarReportesPorMes($reportesQuery->get());
 
         // Mapear única y exclusivamente los reportes reales creados por este usuario
         $reportesFormateados = $reportesDisponibles->map(function ($rep) {
@@ -360,60 +297,11 @@ class InformeFinalController extends Controller
             }
 
             // 3. Crear filas dinámicas del presupuesto
-            $totalGeneralPresupuesto = 0;
-            if (!empty($validated['presupuesto_items'])) {
-                foreach ($validated['presupuesto_items'] as $index => $itemData) {
-                    $montos = $itemData['montos'] ?? [];
-                    // Asegurar que todos los montos sean numéricos
-                    $montosLimpios = [];
-                    $totalFila = 0;
-                    foreach ($montos as $col => $val) {
-                        $valNum = (float)$val;
-                        $montosLimpios[$col] = $valNum;
-                        $totalFila += $valNum;
-                    }
-
-                    $itemCreado = $informe->presupuestoItems()->create([
-                        'gasto'  => $itemData['gasto'],
-                        'orden'  => $itemData['orden'] ?? ($index + 1),
-                        'montos' => $montosLimpios,
-                        'total'  => $totalFila,
-                    ]);
-
-                    $totalGeneralPresupuesto += $totalFila;
-                }
-            }
-
-            // Actualizar total consolidado del presupuesto
+            $totalGeneralPresupuesto = $this->crearFilasPresupuesto($informe, $validated['presupuesto_items'] ?? []);
             $informe->update(['presupuesto_total' => $totalGeneralPresupuesto]);
 
-            // 4. Registrar en el Historial de Progreso
-            try {
-                $esEnvio = ($informe->estado === 'Enviado');
-                $tituloProgreso = $esEnvio ? 'Envío de Informe Final' : 'Creación de Informe Final';
-                HistorialProgreso::registrar(
-                    userId: (int)$userId,
-                    categoria: 'reportes',
-                    titulo: $tituloProgreso,
-                    descripcion: 'Se ha enviado el informe final',
-                    accionTexto: 'Ver informe final',
-                    accionUrl: '/reportes/informe-final/' . $informe->id,
-                    progreso: 100
-                );
-
-                // 5. Crear notificación automática en el sistema
-                Notificacion::crearNotificacion(
-                    userId: (int)$userId,
-                    titulo: 'Informe final enviado',
-                    mensaje: "Tu informe final para {$informe->institucion} ha sido enviado de manera exitosa y se encuentra en revisión.",
-                    tipo: 'reporte',
-                    origenTipo: 'sistema',
-                    remitenteNombre: 'Notificaciones',
-                    enlace: '/reportes/informe-final/' . $informe->id
-                );
-            } catch (\Throwable $e) {
-                Log::warning('No se pudo registrar notificación/historial para informe final: ' . $e->getMessage());
-            }
+            // 4. Registrar en historial y notificaciones
+            $this->registrarEventosInforme($informe, (int)$userId);
 
             return response()->json([
                 'exito' => true,
@@ -767,6 +655,117 @@ class InformeFinalController extends Controller
         }
 
         return $urlsFinales;
+    }
+
+    /**
+     * Ordena reportes mensuales descendentemente por año y mes.
+     */
+    private function ordenarReportesPorMes($reportes)
+    {
+        $mesesNum = [
+            'enero' => 1, 'ene' => 1, 'ener' => 1,
+            'febrero' => 2, 'feb' => 2, 'febr' => 2,
+            'marzo' => 3, 'mar' => 3,
+            'abril' => 4, 'abr' => 4,
+            'mayo' => 5, 'may' => 5,
+            'junio' => 6, 'jun' => 6,
+            'julio' => 7, 'jul' => 7,
+            'agosto' => 8, 'ago' => 8, 'agost' => 8,
+            'septiembre' => 9, 'sep' => 9, 'sept' => 9, 'setiembre' => 9,
+            'octubre' => 10, 'oct' => 10,
+            'noviembre' => 11, 'nov' => 11,
+            'diciembre' => 12, 'dic' => 12,
+        ];
+
+        return $reportes->sort(function ($a, $b) use ($mesesNum) {
+            $scoreA = $this->calcularScorePeriodoReporte($a, $mesesNum);
+            $scoreB = $this->calcularScorePeriodoReporte($b, $mesesNum);
+
+            return $scoreA === $scoreB ? ($b->id <=> $a->id) : ($scoreB <=> $scoreA);
+        })->values();
+    }
+
+    private function calcularScorePeriodoReporte($rep, array $mesesNum): int
+    {
+        $anio = 2026;
+        $mes = 0;
+        if ($rep->fecha_inicio) {
+            $p = explode('-', explode('T', (string)$rep->fecha_inicio)[0]);
+            if (count($p) >= 2) {
+                $anio = (int)$p[0];
+                $mes = (int)$p[1];
+            }
+        }
+        if (!$mes && $rep->mes) {
+            $m = strtolower(trim((string)$rep->mes));
+            foreach ($mesesNum as $k => $v) {
+                if (str_starts_with($m, $k)) { $mes = $v; break; }
+            }
+        }
+        if (preg_match('/\b(20\d{2})\b/', (string)$rep->periodo, $mA)) {
+            $anio = (int)$mA[1];
+        }
+        return ($anio * 100) + $mes;
+    }
+
+    /**
+     * Registra las filas dinámicas del presupuesto y calcula el total general.
+     */
+    private function crearFilasPresupuesto(InformeFinal $informe, array $items): float
+    {
+        $totalGeneral = 0.0;
+        foreach ($items as $index => $itemData) {
+            $montos = $itemData['montos'] ?? [];
+            $montosLimpios = [];
+            $totalFila = 0.0;
+            foreach ($montos as $col => $val) {
+                $valNum = (float)$val;
+                $montosLimpios[$col] = $valNum;
+                $totalFila += $valNum;
+            }
+
+            $informe->presupuestoItems()->create([
+                'gasto'  => $itemData['gasto'],
+                'orden'  => $itemData['orden'] ?? ($index + 1),
+                'montos' => $montosLimpios,
+                'total'  => $totalFila,
+            ]);
+
+            $totalGeneral += $totalFila;
+        }
+        return $totalGeneral;
+    }
+
+    /**
+     * Registra historial y notificaciones del informe final.
+     */
+    private function registrarEventosInforme(InformeFinal $informe, int $userId): void
+    {
+        try {
+            $esEnvio = ($informe->estado === 'Enviado');
+            $tituloProgreso = $esEnvio ? 'Envío de Informe Final' : 'Creación de Informe Final';
+            HistorialProgreso::registrar(
+                userId: $userId,
+                categoria: 'reportes',
+                titulo: $tituloProgreso,
+                descripcion: 'Se ha enviado el informe final',
+                accionTexto: 'Ver informe final',
+                accionUrl: '/reportes/informe-final/' . $informe->id,
+                progreso: 100
+            );
+
+            Notificacion::crearNotificacion(
+                userId: $userId,
+                titulo: 'Informe final enviado',
+                mensaje: "Tu informe final para {$informe->institucion} ha sido enviado de manera exitosa y se encuentra en revisión.",
+                tipo: 'reporte',
+                origenTipo: 'sistema',
+                remitenteNombre: 'Notificaciones',
+                enlace: '/reportes/informe-final/' . $informe->id
+            );
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo registrar notificación/historial para informe final: ' . $e->getMessage());
+        }
     }
 }
 
