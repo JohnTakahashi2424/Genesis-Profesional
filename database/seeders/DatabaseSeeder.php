@@ -189,7 +189,7 @@ class DatabaseSeeder extends Seeder
             'nombres' => 'Ing. Carlos',
             'apellidos' => 'Ramírez',
             'correo_institucional' => 'supervisor@ugb.edu.sv',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'Genesis2026!UGB#Secure')),
             'cargo' => 'supervisor',
         ]);
 
@@ -197,7 +197,7 @@ class DatabaseSeeder extends Seeder
             'nombres' => 'Dr. Roberto',
             'apellidos' => 'Méndez',
             'correo_institucional' => 'vicedecano@ugb.edu.sv',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'Genesis2026!UGB#Secure')),
             'cargo' => 'vice_decano',
         ]);
 
@@ -206,7 +206,7 @@ class DatabaseSeeder extends Seeder
             'nombres' => 'Emerson',
             'apellidos' => 'Chavarria',
             'correo_institucional' => 'usss027724@ugb.edu.sv',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'Genesis2026!UGB#Secure')),
             'rol' => 'pasante',
             'estado' => 'activo'
         ]);
@@ -215,7 +215,7 @@ class DatabaseSeeder extends Seeder
             'nombres' => 'Ana',
             'apellidos' => 'Martínez',
             'correo_institucional' => 'usm123456@ugb.edu.sv',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'Genesis2026!UGB#Secure')),
             'rol' => 'pasante',
             'estado' => 'activo'
         ]);
@@ -224,7 +224,7 @@ class DatabaseSeeder extends Seeder
             'nombres' => 'Ing. Carlos',
             'apellidos' => 'Ramírez',
             'correo_institucional' => 'supervisor@ugb.edu.sv',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'Genesis2026!UGB#Secure')),
             'rol' => 'supervisor',
             'estado' => 'activo'
         ]);
@@ -233,7 +233,7 @@ class DatabaseSeeder extends Seeder
             'nombres' => 'Dr. Roberto',
             'apellidos' => 'Méndez',
             'correo_institucional' => 'vicedecano@ugb.edu.sv',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'Genesis2026!UGB#Secure')),
             'rol' => 'vice_decano',
             'estado' => 'activo'
         ]);

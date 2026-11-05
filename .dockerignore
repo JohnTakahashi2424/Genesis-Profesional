@@ -1,7 +1,10 @@
 node_modules
 .git
 .env
-tests
+.env.*
+scripts/
+tests/
 storage/*.key
 .phpunit.result.cache
-
+*.sql
+*.log

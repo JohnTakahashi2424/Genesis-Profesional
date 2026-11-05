@@ -38,6 +38,8 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+USER www-data
+
 EXPOSE 8080
 
 ENTRYPOINT ["docker-entrypoint.sh"]
