@@ -199,7 +199,7 @@ const abrirCrearCv = () => {
   mensajeExito.value = ''
 }
 
-// Subir foto de perfil (Base64)
+// Subir foto de perfil (Base64 optimizado a max 256px para guardar al instante)
 const handleSubirFoto = (evento) => {
   const archivo = evento.target.files[0]
   if (!archivo) return
@@ -209,8 +209,35 @@ const handleSubirFoto = (evento) => {
   }
   const reader = new FileReader()
   reader.onload = (e) => {
-    formCv.value.perfil.fotoUrl = e.target.result
-    imgErrorWizard.value = false
+    const img = new Image()
+    img.onload = () => {
+      const maxDim = 256
+      let w = img.width
+      let h = img.height
+      if (w > h) {
+        if (w > maxDim) {
+          h = Math.round((h * maxDim) / w)
+          w = maxDim
+        }
+      } else {
+        if (h > maxDim) {
+          w = Math.round((w * maxDim) / h)
+          h = maxDim
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, w, h)
+      formCv.value.perfil.fotoUrl = canvas.toDataURL('image/jpeg', 0.88)
+      imgErrorWizard.value = false
+    }
+    img.onerror = () => {
+      formCv.value.perfil.fotoUrl = e.target.result
+      imgErrorWizard.value = false
+    }
+    img.src = e.target.result
   }
   reader.readAsDataURL(archivo)
 }
@@ -402,7 +429,7 @@ const buildCvHtml = () => {
   </div>`
 }
 
-// Generar PDF capturando el HTML del CV en un contenedor A4 fuera de pantalla
+// Generar PDF capturando el HTML del CV en un contenedor A4 fuera de pantalla (optimizado a alta velocidad)
 const generarPdfDoc = async () => {
   // Contenedor invisible a ancho A4 (794px = 210mm)
   const container = document.createElement('div')
@@ -426,12 +453,12 @@ const generarPdfDoc = async () => {
   })))
 
   // Breve pausa para asegurar render completo
-  await new Promise(r => setTimeout(r, 150))
+  await new Promise(r => setTimeout(r, 60))
 
   try {
     const el = container.firstElementChild
     const canvas = await html2canvas(el, {
-      scale: 3,
+      scale: 1.8,
       useCORS: true,
       allowTaint: true,
       logging: false,
@@ -442,21 +469,20 @@ const generarPdfDoc = async () => {
 
     document.body.removeChild(container)
 
-    const imgData = canvas.toDataURL('image/png')
+    const imgData = canvas.toDataURL('image/jpeg', 0.90)
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pageW = 210
     const pageH = 297
     const imgH = (canvas.height * pageW) / canvas.width
 
     if (imgH <= pageH) {
-      pdf.addImage(imgData, 'PNG', 0, 0, pageW, imgH)
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH)
     } else {
-      // Múltiples páginas si el contenido excede A4
       let posY = 0
       let remaining = imgH
       while (remaining > 0) {
         const sliceH = Math.min(remaining, pageH)
-        pdf.addImage(imgData, 'PNG', 0, -posY, pageW, imgH)
+        pdf.addImage(imgData, 'JPEG', 0, -posY, pageW, imgH)
         remaining -= sliceH
         posY += sliceH
         if (remaining > 0) pdf.addPage()
@@ -482,39 +508,131 @@ const descargarPdfDirecto = async () => {
   }
 }
 
-// Imprimir CV
-const imprimirCvDirecto = () => {
-  const originalTitle = document.title
-  document.title = ' '
-  window.print()
+// Imprimir CV de forma limpia, aislada en un iframe sin alterar la página ni mostrar marcas ni 2 páginas
+const imprimirCvDirecto = async () => {
+  const previewEl = document.getElementById('cv-card-preview')
+  if (!previewEl) return
+
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
+
+  const headStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+    .map(el => el.outerHTML)
+    .join('\n')
+
+  const doc = iframe.contentWindow.document
+  doc.open()
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>&zwnj;</title>
+      ${headStyles}
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          width: 210mm !important;
+          height: 297mm !important;
+          max-height: 297mm !important;
+          overflow: hidden !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .print-page-wrapper {
+          padding: 10mm !important;
+          width: 210mm !important;
+          height: 297mm !important;
+          max-height: 297mm !important;
+          box-sizing: border-box !important;
+          background: #ffffff !important;
+          overflow: hidden !important;
+        }
+        .cv-card-print {
+          width: 100% !important;
+          background: #ffffff !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 8px !important;
+          overflow: hidden !important;
+          box-shadow: none !important;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-page-wrapper">
+        <div class="cv-card-print">
+          ${previewEl.innerHTML}
+        </div>
+      </div>
+    </body>
+    </html>
+  `)
+  doc.close()
+
+  // Esperar a que las imágenes en el iframe carguen
+  const imgs = Array.from(doc.querySelectorAll('img'))
+  await Promise.all(imgs.map(img => new Promise(resolve => {
+    if (img.complete && img.naturalWidth > 0) return resolve()
+    img.onload = resolve
+    img.onerror = resolve
+  })))
+
   setTimeout(() => {
-    document.title = originalTitle
-  }, 1000)
+    iframe.contentWindow.focus()
+    iframe.contentWindow.print()
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe)
+      }
+    }, 2000)
+  }, 250)
 }
 
-// Guardar CV en Backend y regresar a la lista
+// Guardar CV en Backend y regresar a la lista de forma ultra-optimizada
 const guardarCvFinal = async () => {
   cargandoGuardar.value = true
   mensajeError.value = ''
 
   try {
-    const doc = await generarPdfDoc()
-    const pdfBase64 = doc.output('datauristring')
-
     const u = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
     const usuarioId = usuario.value.id || usuario.value.user_id || u.id || 1
 
-    // Si la foto es un Data URL base64, subirla directamente a Firebase Storage
-    if (formCv.value.perfil.fotoUrl && formCv.value.perfil.fotoUrl.startsWith('data:')) {
-      try {
-        const ext = formCv.value.perfil.fotoUrl.includes('image/webp') ? 'webp' : 'png'
-        const rutaFirebase = `cv_fotos/${usuarioId}/foto_${Date.now()}.${ext}`
-        const urlFotoCloud = await subirImagenBase64(formCv.value.perfil.fotoUrl, rutaFirebase)
-        formCv.value.perfil.fotoUrl = urlFotoCloud
-      } catch (fbErr) {
-        console.warn('Advertencia al subir foto a Firebase Storage:', fbErr)
+    // Ejecutar subida de foto a la nube (si es base64) y generación de PDF en paralelo
+    const subirFotoPromise = (async () => {
+      if (formCv.value.perfil.fotoUrl && formCv.value.perfil.fotoUrl.startsWith('data:')) {
+        try {
+          const rutaFirebase = `cv_fotos/${usuarioId}/foto_${Date.now()}.jpg`
+          const urlFotoCloud = await subirImagenBase64(formCv.value.perfil.fotoUrl, rutaFirebase)
+          formCv.value.perfil.fotoUrl = urlFotoCloud
+        } catch (fbErr) {
+          console.warn('Advertencia al subir foto a Firebase Storage:', fbErr)
+        }
       }
-    }
+    })()
+
+    const [doc] = await Promise.all([
+      generarPdfDoc(),
+      subirFotoPromise
+    ])
+
+    const pdfBase64 = doc.output('datauristring')
 
     const payload = {
       usuario_id: usuarioId,
@@ -1522,39 +1640,6 @@ const eliminarCv = async (cvId) => {
   </div>
 </template>
 
-<style>
-@page {
-  size: A4 portrait;
-  margin: 0;
-}
-
-@media print {
-  html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    width: 210mm !important;
-    height: 297mm !important;
-  }
-  body * {
-    visibility: hidden !important;
-  }
-  #cv-card-preview, #cv-card-preview * {
-    visibility: visible !important;
-  }
-  #cv-card-preview {
-    position: absolute !important;
-    left: 10mm !important;
-    top: 10mm !important;
-    width: calc(210mm - 20mm) !important;
-    max-width: calc(210mm - 20mm) !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background-color: white !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-}
+<style scoped>
+/* Estilos locales para el módulo de CV */
 </style>
