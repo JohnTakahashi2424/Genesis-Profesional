@@ -7,21 +7,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use App\Models\CurriculumVitae;
+use App\Http\Requests\GuardarCvRequest;
+use App\Services\CvStorageService;
 
 class CvController extends Controller
 {
     /**
-     * Guardar un NUEVO CV para un usuario (permite mÃºltiples CVs por usuario).
+     * Guardar un NUEVO CV para un usuario (permite múltiples CVs por usuario).
      */
-    public function guardar(Request $request)
+    public function guardar(GuardarCvRequest $request, CvStorageService $storageService)
     {
-        $request->validate([
-            'usuario_id'  => 'required|integer',
-            'pdf_base64'  => 'required|string',
-            'titulo_cv'   => 'nullable|string|max:255',
-            'cv_id'       => 'nullable|integer',
-        ]);
-
         $usuarioId = $request->usuario_id;
         $cvId = $request->cv_id;
 
@@ -38,21 +33,18 @@ class CvController extends Controller
             return response()->json(['mensaje' => 'Usuario no encontrado.'], 404);
         }
 
-        // Decodificar el PDF de base64 (removiendo cualquier prefijo de URI de datos de forma segura)
-        $pdfData = base64_decode(preg_replace('#^data:.*?base64,#i', '', $request->pdf_base64));
+        // Delegar decodificación y almacenamiento del PDF
+        $pdfInfo = $storageService->guardarPdf(
+            $usuarioId,
+            $request->pdf_base64,
+            $request->titulo_cv,
+            $usuario->nombres ?? 'Usuario'
+        );
 
-        // Nombre del archivo basado en el tÃ­tulo del CV
-        $tituloCv   = $request->titulo_cv ?? ('CV_' . ($usuario->nombres ?? 'Usuario'));
-        $nombreArchivo = str_replace(' ', '_', $tituloCv) . '_' . $usuarioId . '_' . time() . '.pdf';
-
-        // Ruta: storage/app/public/cvs/{usuario_id}/
-        $carpeta  = "cvs/{$usuarioId}";
-        $ruta     = "{$carpeta}/{$nombreArchivo}";
-
-        // Guardar en disco
-        Storage::disk('public')->put($ruta, $pdfData);
-
-        $urlPublica = "/api/storage/{$ruta}";
+        $tituloCv      = $pdfInfo['titulo_cv'];
+        $nombreArchivo = $pdfInfo['nombre_archivo'];
+        $ruta          = $pdfInfo['ruta_archivo'];
+        $urlPublica    = $pdfInfo['url_publica'];
 
         // Buscar si el usuario ya tiene un CV registrado por cvId o por su usuario_id
         $cv = null;
@@ -63,48 +55,12 @@ class CvController extends Controller
             $cv = CurriculumVitae::where('usuario_id', $usuarioId)->orderByDesc('id')->first();
         }
 
-        // Procesar foto de perfil
+        // Procesar foto de perfil mediante servicio
         $fotoInput = $request->perfil['fotoUrl'] ?? $request->perfil['foto_url'] ?? null;
-        $fotoUrl = null;
-
-        if ($fotoInput && !empty($fotoInput)) {
-            if (preg_match('#^data:image/(\w+);base64,#i', $fotoInput, $matches)) {
-                $ext = strtolower($matches[1]);
-                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                    $ext = 'png';
-                }
-                $fotoDecoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $fotoInput));
-                $nombreFoto = 'foto_' . time() . '.' . $ext;
-                $carpetaFoto = "cv_fotos/{$usuarioId}";
-                $rutaFoto = "{$carpetaFoto}/{$nombreFoto}";
-                
-                Storage::disk('public')->put($rutaFoto, $fotoDecoded);
-
-                $publicPath = public_path("storage/{$rutaFoto}");
-                if (!file_exists(dirname($publicPath))) {
-                    @mkdir(dirname($publicPath), 0777, true);
-                }
-                @file_put_contents($publicPath, $fotoDecoded);
-
-                $fotoUrl = "/api/storage/{$rutaFoto}";
-            } else {
-                $fotoUrl = str_starts_with($fotoInput, '/storage/') ? ('/api' . $fotoInput) : $fotoInput;
-            }
-        } else if ($cv && $cv->foto_url) {
-            $fotoUrl = str_starts_with($cv->foto_url, '/storage/') ? ('/api' . $cv->foto_url) : $cv->foto_url;
-        }
+        $fotoUrl = $storageService->procesarFoto($usuarioId, $fotoInput, $cv?->foto_url);
 
         if ($usuarioId && $fotoUrl) {
-            try {
-                $userObj = \App\Models\User::find($usuarioId);
-                if ($userObj) {
-                    $userObj->foto = $fotoUrl;
-                    $userObj->foto_url = $fotoUrl;
-                    $userObj->save();
-                }
-            } catch (\Throwable $e) {
-                // Ignore if User model columns vary
-            }
+            $storageService->sincronizarFotoUsuario($usuarioId, $fotoUrl);
         }
 
         $data = [
@@ -189,7 +145,7 @@ class CvController extends Controller
                 progreso: 15
             );
 
-            if (!empty($fotoInput)) {
+            if (!empty($fotoInput) && !empty($fotoUrl)) {
                 \App\Models\HistorialProgreso::registrar(
                     userId: (int)$usuarioId,
                     categoria: 'perfil',
