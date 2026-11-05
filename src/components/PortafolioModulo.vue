@@ -1,11 +1,13 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 const emit = defineEmits(['volver'])
 
 // Estado del usuario activo
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Estado del formulario
 const form = ref({
@@ -25,7 +27,7 @@ const exitoMensaje = ref('')
 const portafolios = ref([])
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('genesis_token')
+  const token = authStorage.getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -42,7 +44,7 @@ const cargarPortafolios = async () => {
       portafolios.value = res.data.data || []
     }
   } catch (err) {
-    console.warn('Error al cargar enlaces de portafolio:', err)
+    logger.warn('Error al cargar enlaces de portafolio:', err)
     // Fallback a ruta individual heredada si existiese
     try {
       const userId = usuario.value?.id || usuario.value?.user_id || 0
@@ -129,7 +131,7 @@ const guardarPortafolio = async () => {
       }
     }
   } catch (err) {
-    console.error('Error al guardar portafolio:', err)
+    logger.error('Error al guardar portafolio:', err)
     errorMensaje.value = err.response?.data?.mensaje || 'Error de conexión al guardar el portafolio.'
   } finally {
     guardando.value = false
@@ -169,7 +171,7 @@ const eliminarPortafolio = async (id) => {
     }
     await cargarPortafolios()
   } catch (err) {
-    console.error('Error al eliminar portafolio:', err)
+    logger.error('Error al eliminar portafolio:', err)
     alert(err.response?.data?.mensaje || 'No fue posible eliminar el enlace.')
   }
 }
