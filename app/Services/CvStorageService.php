@@ -53,12 +53,18 @@ class CvStorageService
 
             Storage::disk('public')->put($rutaFoto, $fotoDecoded);
 
-            $publicPath = public_path("storage/{$rutaFoto}");
-            $dirPath = dirname($publicPath);
+            $safeNombre = basename($nombreFoto);
+            $safeFolder = (int)$usuarioId;
+            $dirPath = public_path("storage/cv_fotos/{$safeFolder}");
             if (!is_dir($dirPath)) {
-                mkdir($dirPath, 0755, true);
+                @mkdir($dirPath, 0755, true);
             }
-            file_put_contents($publicPath, $fotoDecoded);
+            $publicPath = "{$dirPath}/{$safeNombre}";
+            $baseStorage = realpath(public_path('storage')) ?: public_path('storage');
+            $realTargetDir = realpath($dirPath) ?: $dirPath;
+            if (str_starts_with($realTargetDir, $baseStorage)) {
+                \Illuminate\Support\Facades\File::put($publicPath, $fotoDecoded);
+            }
 
             return "/api/storage/{$rutaFoto}";
         }
@@ -83,7 +89,10 @@ class CvStorageService
                 $user->save();
             }
         } catch (\Throwable $e) {
-            // Silencioso ante variaciones de columnas en entornos heterogéneos
+            \Illuminate\Support\Facades\Log::warning("No se pudo sincronizar avatar de usuario en CvStorageService", [
+                'user_id' => $usuarioId,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
