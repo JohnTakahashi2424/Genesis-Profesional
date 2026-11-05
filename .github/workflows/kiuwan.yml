@@ -46,7 +46,7 @@ jobs:
             -n "Genesis-Profesional" \
             -s "${{ github.workspace }}" \
             -l "${{ github.run_number }}" \
-            -cr \
+            -wr \
             --user "$KIUWAN_USER" \
             --pass "$KIUWAN_PASS" \
-            --exclude "**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
+            --exclude-patterns "**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
