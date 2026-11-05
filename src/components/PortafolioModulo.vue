@@ -182,20 +182,6 @@ onMounted(() => {
 <template>
   <div class="w-full max-w-7xl mx-auto px-2 sm:px-6 py-6 font-sans">
     
-    <!-- Mensaje de éxito flotante/alerta -->
-    <div 
-      v-if="exitoMensaje" 
-      class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center justify-between shadow-xs transition-all"
-    >
-      <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-        </svg>
-        <span>{{ exitoMensaje }}</span>
-      </div>
-      <button @click="exitoMensaje = ''" class="text-emerald-600 hover:text-emerald-900 font-bold ml-4">✕</button>
-    </div>
-
     <!-- Mensaje de error flotante/alerta -->
     <div 
       v-if="errorMensaje" 
@@ -378,24 +364,24 @@ onMounted(() => {
                   type="button"
                   @click="iniciarEdicion(item)"
                   title="Editar enlace"
-                  class="text-gray-800 hover:text-[#000B58] p-1 rounded-sm transition-colors cursor-pointer"
+                  class="text-gray-800 hover:text-[#000B58] p-1 rounded-sm transition-colors cursor-pointer shrink-0"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none">
+                    <path d="M15.8 4.2C16.4 3.6 17.4 3.6 18 4.2L19.8 6C20.4 6.6 20.4 7.6 19.8 8.2L17.5 10.5L13.5 6.5L15.8 4.2Z" fill="currentColor" />
+                    <path d="M12.2 7.8L16.2 11.8L6.8 21.2H2.8V17.2L12.2 7.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none" />
+                    <path d="M5.5 18.5L7 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                   </svg>
                 </button>
 
-                <!-- Botón Eliminar (Basurero Rojo exactamente igual a la captura) -->
+                <!-- Botón Eliminar (Basurero Rojo exactamente igual a la captura de Figma) -->
                 <button 
                   type="button"
                   @click="eliminarPortafolio(item.id)"
                   title="Eliminar enlace"
-                  class="text-red-500 hover:text-red-700 p-1 rounded-sm transition-colors cursor-pointer"
+                  class="hover:opacity-80 p-1 transition-opacity cursor-pointer shrink-0"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#EF4444">
-                    <path d="M6 7H18V20C18 20.5304 17.7893 21.0391 17.4142 21.4142C17.0391 21.7893 16.5304 22 16 22H8C7.46957 22 6.96086 21.7893 6.58579 21.4142C6.21071 21.0391 6 20.5304 6 20V7Z" />
-                    <path d="M4 4H20V6H4V4Z" />
-                    <path d="M9 2H15V4H9V2Z" />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[19px]" viewBox="0 0 34 37" fill="none">
+                    <path d="M12.3636 30.0625V13.1042C12.3636 12.8793 12.2912 12.6947 12.1463 12.5501C12.0014 12.4056 11.8163 12.3333 11.5909 12.3333H10.0455C9.82008 12.3333 9.63494 12.4056 9.49006 12.5501C9.34517 12.6947 9.27273 12.8793 9.27273 13.1042V30.0625C9.27273 30.2873 9.34517 30.472 9.49006 30.6165C9.63494 30.7611 9.82008 30.8333 10.0455 30.8333H11.5909C11.8163 30.8333 12.0014 30.7611 12.1463 30.6165C12.2912 30.472 12.3636 30.2873 12.3636 30.0625ZM18.5455 30.0625V13.1042C18.5455 12.8793 18.473 12.6947 18.3281 12.5501C18.1832 12.4056 17.9981 12.3333 17.7727 12.3333H16.2273C16.0019 12.3333 15.8168 12.4056 15.6719 12.5501C15.527 12.6947 15.4545 12.8793 15.4545 13.1042V30.0625C15.4545 30.2873 15.527 30.472 15.6719 30.6165C15.8168 30.7611 16.0019 30.8333 16.2273 30.8333H17.7727C17.9981 30.8333 18.1832 30.7611 18.3281 30.6165C18.473 30.472 18.5455 30.2873 18.5455 30.0625ZM24.7273 30.0625V13.1042C24.7273 12.8793 24.6548 12.6947 24.5099 12.5501C24.3651 12.4056 24.1799 12.3333 23.9545 12.3333H22.4091C22.1837 12.3333 21.9986 12.4056 21.8537 12.5501C21.7088 12.6947 21.6364 12.8793 21.6364 13.1042V30.0625C21.6364 30.2873 21.7088 30.472 21.8537 30.6165C21.9986 30.7611 22.1837 30.8333 22.4091 30.8333H23.9545C24.1799 30.8333 24.3651 30.7611 24.5099 30.6165C24.6548 30.472 24.7273 30.2873 24.7273 30.0625ZM11.5909 6.16667H22.4091L21.25 3.34831C21.1373 3.20378 21.0005 3.11545 20.8395 3.08333H13.1847C13.0237 3.11545 12.8868 3.20378 12.7741 3.34831L11.5909 6.16667ZM34 6.9375V8.47917C34 8.70399 33.9276 8.88867 33.7827 9.0332C33.6378 9.17773 33.4527 9.25 33.2273 9.25H30.9091V32.0859C30.9091 33.4188 30.5308 34.5711 29.7741 35.5426C29.0175 36.5142 28.108 37 27.0455 37H6.95455C5.89205 37 4.98248 36.5303 4.22585 35.5908C3.46922 34.6514 3.09091 33.5152 3.09091 32.1823V9.25H0.772727C0.547348 9.25 0.362216 9.17773 0.21733 9.0332C0.0724432 8.88867 0 8.70399 0 8.47917V6.9375C0 6.71267 0.0724432 6.52799 0.21733 6.38346C0.362216 6.23893 0.547348 6.16667 0.772727 6.16667H8.23438L9.92472 2.14388C10.1662 1.5497 10.6009 1.04384 11.2287 0.626302C11.8565 0.208767 12.4924 0 13.1364 0H20.8636C21.5076 0 22.1435 0.208767 22.7713 0.626302C23.3991 1.04384 23.8338 1.5497 24.0753 2.14388L25.7656 6.16667H33.2273C33.4527 6.16667 33.6378 6.23893 33.7827 6.38346C33.9276 6.52799 34 6.71267 34 6.9375Z" fill="#DF0000" fill-opacity="0.88"/>
                   </svg>
                 </button>
 
