@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger'
 /**
  * Subida Cloud Gratuita Permanente (sin tarjeta de crédito ni restricciones CORS).
  * Soporta almacenamiento directo y público para fotos de perfil y evidencias de reportes.
@@ -34,7 +35,7 @@ export async function subirImagenBase64(dataUrl, destino = '') {
       return result.data.link
     }
   } catch (error) {
-    console.warn('Error en subida cloud, manteniendo dataUrl local:', error)
+    logger.warn('Error en subida cloud, manteniendo dataUrl local:', error)
   }
 
   return dataUrl
@@ -66,7 +67,7 @@ export async function subirArchivoFirebase(archivo, destino = '') {
       return result.data.link
     }
   } catch (error) {
-    console.warn('Error en subida de archivo a Cloud Storage:', error)
+    logger.warn('Error en subida de archivo a Cloud Storage:', error)
   }
 
   // Fallback a DataURL para no perder la imagen seleccionada por el usuario

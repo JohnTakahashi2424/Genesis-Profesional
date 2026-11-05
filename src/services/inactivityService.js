@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger'
 import authService from './authService'
 
 const TIEMPO_INACTIVIDAD_MS = 3 * 60 * 1000 // 3 minutos (180,000 ms)
@@ -22,7 +23,7 @@ function resetearTimer() {
   // Si hay sesión activa en local
   if (authService.isAuthenticated()) {
     timerInactividad = setTimeout(async () => {
-      console.warn('Cerrando sesión por inactividad de 3 minutos.')
+      logger.warn('Cerrando sesión por inactividad de 3 minutos.')
       try {
         await authService.logout()
       } catch (e) {
