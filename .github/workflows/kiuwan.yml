@@ -21,19 +21,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2. Configurar Java JDK (Requisito indispensable para Kiuwan)
+      # 2. Configurar Java JDK (requisito del Local Analyzer)
       - name: Configurar Java JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      # 3. Descargar y ejecutar el escáner con la integración nativa por comandos
-      - name: Ejecutar Análisis de Código en Kiuwan
-        uses: kiuwan/github-actions@v1
-        with:
-          userid: ${{ secrets.KIUWAN_USER }}
-          password: ${{ secrets.KIUWAN_PASS }}
-          softwareName: "Genesis-Profesional"
-          sourcePath: ${{ github.workspace }}
-          additionalParameters: "--exclude **/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
+      # 3. Descargar el Kiuwan Local Analyzer
+      - name: Descargar Kiuwan Local Analyzer
+        run: |
+          curl -fSL -o KiuwanLocalAnalyzer.zip \
+            "https://www.kiuwan.com/pub/analyzer/KiuwanLocalAnalyzer.zip"
+          unzip -q KiuwanLocalAnalyzer.zip -d "$HOME/kiuwan"
+          chmod +x "$HOME/kiuwan/KiuwanLocalAnalyzer/bin/agent.sh"
+
+      # 4. Ejecutar el análisis
+      - name: Ejecutar análisis en Kiuwan
+        env:
+          KIUWAN_USER: ${{ secrets.KIUWAN_USER }}
+          KIUWAN_PASS: ${{ secrets.KIUWAN_PASS }}
+        run: |
+          "$HOME/kiuwan/KiuwanLocalAnalyzer/bin/agent.sh" \
+            -n "Genesis-Profesional" \
+            -s "${{ github.workspace }}" \
+            -l "${{ github.run_number }}" \
+            -cr \
+            --user "$KIUWAN_USER" \
+            --pass "$KIUWAN_PASS" \
+            --exclude "**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
