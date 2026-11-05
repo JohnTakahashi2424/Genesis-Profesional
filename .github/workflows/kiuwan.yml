@@ -3,11 +3,11 @@ name: Kiuwan Security Analysis
 on:
   push:
     branches:
-      - testing
+      - Testing
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
-      - testing
+      - Testing
 
 jobs:
   kiuwan-scan:
