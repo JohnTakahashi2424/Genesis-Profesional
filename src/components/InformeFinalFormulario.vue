@@ -890,11 +890,14 @@ const finalizarEnvio = () => {
             class="border-2 border-dashed border-gray-400 rounded-xl bg-gray-50/70 py-10 px-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100/70 transition-all text-center"
             :class="{ 'border-blue-500 bg-blue-50/50': isDragging }"
           >
-            <input id="inf-file-input"<input 
+            <label for="inf-file-input" class="sr-only">Subir archivos anexos del informe final</label>
+            <input 
+              id="inf-file-input"
               ref="fileInputRef" 
               type="file" 
               multiple 
               class="hidden" 
+              aria-label="Subir archivos anexos del informe final"
               @change="handleFileSelect"
             />
 
