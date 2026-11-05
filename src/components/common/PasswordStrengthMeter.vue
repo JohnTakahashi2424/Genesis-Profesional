@@ -14,7 +14,7 @@ const emit = defineEmits(['update:isValid', 'score-change'])
 const tieneMinimo8 = computed(() => props.password.length >= 8)
 const tieneMayuscula = computed(() => /[A-Z]/.test(props.password))
 const tieneMinuscula = computed(() => /[a-z]/.test(props.password))
-const tieneNumeroOSimbolo = computed(() => /[0-9@$!%*?&._#\-]/.test(props.password))
+const tieneNumeroOSimbolo = computed(() => /[0-9@$!%*?&._#-]/.test(props.password))
 
 // Criterios cumplidos en total (0 a 4)
 const puntaje = computed(() => {

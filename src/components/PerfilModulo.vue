@@ -151,12 +151,10 @@ const handleGuardadoExitoso = async () => {
           type="button"
           class="h-[36px] w-[122px] rounded-[10px] border border-gray-800 bg-white hover:bg-gray-50 text-gray-900 text-sm font-medium transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
         >
-          <span>Editar</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-            <path d="M15.8 4.2C16.4 3.6 17.4 3.6 18 4.2L19.8 6C20.4 6.6 20.4 7.6 19.8 8.2L17.5 10.5L13.5 6.5L15.8 4.2Z" fill="currentColor" />
-            <path d="M12.2 7.8L16.2 11.8L6.8 21.2H2.8V17.2L12.2 7.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none" />
-            <path d="M5.5 18.5L7 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
           </svg>
+          <span>Editar</span>
         </button>
 
         <!-- Botón Descargar (Azul marino oscuro con círculo y flecha abajo) -->
