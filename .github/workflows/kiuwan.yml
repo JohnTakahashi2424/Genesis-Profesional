@@ -21,21 +21,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2. Configurar Java JDK (Requisito del motor de Kiuwan)
+      # 2. Configurar Java JDK (Requisito indispensable para Kiuwan)
       - name: Configurar Java JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      # 3. Descargar e instalar el Kiuwan Local Analyzer Oficial de forma nativa
-      - name: Descargar e instalar Kiuwan Local Analyzer
-        run: |
-          curl -sSLo kla.zip https://kiuwan.com
-          unzip -q kla.zip -d kla
-          chmod +x kla/bin/agent.sh
-
-      # 4. Ejecutar el escaneo directo aplicando credenciales y exclusiones de Laravel/React
+      # 3. Descargar y ejecutar el escáner con la integración nativa por comandos
       - name: Ejecutar Análisis de Código en Kiuwan
-        run: |
-          ./kla/bin/agent.sh --user "${{ secrets.KIUWAN_USER }}" --password "${{ secrets.KIUWAN_PASS }}" --softwareName "Genesis-Profesional" --sourcePath "${{ github.workspace }}" --exclude "**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
+        uses: kiuwan/github-actions@v1
+        with:
+          userid: ${{ secrets.KIUWAN_USER }}
+          password: ${{ secrets.KIUWAN_PASS }}
+          softwareName: "Genesis-Profesional"
+          sourcePath: ${{ github.workspace }}
+          additionalParameters: "--exclude **/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
