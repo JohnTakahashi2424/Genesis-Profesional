@@ -1,0 +1,36 @@
+name: Kiuwan Security Analysis
+
+on:
+  push:
+    branches:
+      - testing
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - testing
+
+jobs:
+  kiuwan-scan:
+    name: Ejecutar Kiuwan Local Analyzer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código fuente
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Java JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Kiuwan Code Scan
+        uses: porrige51122/Kiuwan-Local-Analysis-Action@v1.3
+        with:
+          user: ${{ secrets.KIUWAN_USER }}
+          pass: ${{ secrets.KIUWAN_PASS }}
+          software_name: "Genesis-Profesional"
+          source_path: ${{ github.workspace }}
+          additional_parameters: "--exclude **/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
