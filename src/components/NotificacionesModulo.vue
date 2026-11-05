@@ -1,11 +1,14 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+import { logger } from '../utils/logger'
+
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 
 const emit = defineEmits(['volver', 'navegar', 'actualizar-contador'])
 
 // Datos del usuario autenticado
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Estados de control: POR DEFECTO AMBOS CERRADOS
 const dropdownEstadoAbierto = ref(false)
@@ -57,7 +60,7 @@ const cargarNotificaciones = async (silencioso = false) => {
       cargando.value = true
     }
     const userId = usuario.value?.id || usuario.value?.user_id || ''
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     
     const config = {
       params: {
@@ -92,7 +95,7 @@ const cargarNotificaciones = async (silencioso = false) => {
       emit('actualizar-contador', res.data.no_leidas_count)
     }
   } catch (e) {
-    console.error('Error al cargar notificaciones:', e)
+    logger.error('Error al cargar notificaciones:', e)
     if (!silencioso && notificaciones.value.length === 0) {
       notificaciones.value = []
     }
@@ -142,7 +145,7 @@ onMounted(() => {
         cargarNotificaciones(true)
       }
     } catch (e) {
-      console.warn('BroadcastChannel notificaciones no disponible:', e)
+      logger.warn('BroadcastChannel notificaciones no disponible:', e)
     }
   }
 
@@ -174,7 +177,7 @@ const verDetalleNotificacion = async (item) => {
   if (!item.leido_at) {
     item.leido_at = new Date().toISOString()
     try {
-      const token = localStorage.getItem('genesis_token')
+      const token = authStorage.getToken()
       const userId = usuario.value?.id || usuario.value?.user_id || ''
       const config = {
         params: userId ? { user_id: userId } : {}
@@ -189,7 +192,7 @@ const verDetalleNotificacion = async (item) => {
         emit('actualizar-contador')
       }
     } catch (e) {
-      console.warn('No se pudo marcar como leída en API:', e?.message)
+      logger.warn('No se pudo marcar como leída en API:', e?.message)
     }
   }
 }
@@ -204,7 +207,7 @@ const eliminarNotificacion = async (id) => {
   eliminandoId.value = id
   try {
     const userId = usuario.value?.id || usuario.value?.user_id || ''
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const config = {
       params: userId ? { user_id: userId } : {}
     }
@@ -219,7 +222,7 @@ const eliminarNotificacion = async (id) => {
       emit('actualizar-contador')
     }
   } catch (e) {
-    console.error('Error al eliminar la notificación:', e?.message || '')
+    logger.error('Error al eliminar la notificación:', e?.message || '')
   } finally {
     eliminandoId.value = null
   }

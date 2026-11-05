@@ -1,11 +1,14 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+import { logger } from '../utils/logger'
+
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
 const emit = defineEmits(['volver', 'guardado'])
 
 // Usuario autenticado en sesión
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 
 // Estado de carga y envío
 const cargando = ref(true)
@@ -374,7 +377,7 @@ const cargarDatosIniciales = async () => {
   cargando.value = true
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const config = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       params: userId ? { user_id: userId } : {}
@@ -446,7 +449,7 @@ const enviarInforme = async () => {
 
   try {
     const userId = usuario.value?.id || usuario.value?.user_id
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     
     // Preparar FormData para soportar subida de archivos anexos
     const formData = new FormData()
@@ -509,7 +512,7 @@ const enviarInforme = async () => {
           canalSync.close()
         }
       } catch (e) {
-        console.warn('BroadcastChannel no disponible:', e)
+        logger.warn('BroadcastChannel no disponible:', e)
       }
 
       try {
@@ -520,14 +523,14 @@ const enviarInforme = async () => {
         localStorage.setItem('genesis_historial_updated', Date.now().toString())
         window.dispatchEvent(new CustomEvent('pasantia-actualizada'))
         localStorage.setItem('genesis_pasantia_updated', Date.now().toString())
-      } catch (e) {}
+      } catch (errBroadcast) { logger.warn('BroadcastChannel no disponible:', errBroadcast) }
 
       toastExitoVisible.value = true
     } else {
       mensajeError.value = res.data?.mensaje || 'Ocurrió un error al registrar el informe final.'
     }
   } catch (err) {
-    console.error('Error al enviar informe final:', err)
+    logger.error('Error al enviar informe final:', err)
     mensajeError.value = err.response?.data?.mensaje || 'Error de conexión con el servidor al guardar el informe final.'
   } finally {
     enviando.value = false
