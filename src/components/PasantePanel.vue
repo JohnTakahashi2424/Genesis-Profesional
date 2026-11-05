@@ -1,4 +1,6 @@
 <script setup>
+import { authStorage } from '../utils/storage'
+import { logger } from '../utils/logger'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 
@@ -14,7 +16,7 @@ import NotificacionesModulo from './NotificacionesModulo.vue'
 const emit = defineEmits(['logout'])
 
 // Obtener datos del usuario desde localStorage o fallback
-const usuario = ref(JSON.parse(localStorage.getItem('genesis_usuario') || '{}'))
+const usuario = ref(authStorage.getUser())
 const itemActivo = ref('inicio')
 const reportesVistaInicial = ref('tabla')
 
@@ -77,7 +79,7 @@ const cargarContadorNotificaciones = async (conteoDirecto = null) => {
       return
     }
 
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const config = {
       params: {}
     }
@@ -108,7 +110,7 @@ const cargarContadorNotificaciones = async (conteoDirecto = null) => {
         notificacionesNoLeidas.value = resFallback.data.no_leidas_count
       }
     } catch (e) {
-      console.warn('Error al consultar contador de notificaciones:', error?.message)
+      logger.warn('Error al consultar contador de notificaciones:', error?.message)
     }
   }
 }
@@ -116,7 +118,7 @@ const cargarContadorNotificaciones = async (conteoDirecto = null) => {
 watch(itemActivo, async (newVal) => {
   if (newVal === 'inicio' || newVal === 'perfil') {
     imgErrorPasante.value = false
-    usuario.value = JSON.parse(localStorage.getItem('genesis_usuario') || '{}')
+    usuario.value = authStorage.getUser()
     await cargarEstadoPasantia()
   }
   await cargarContadorNotificaciones()
@@ -143,7 +145,7 @@ const cargarEstadoPasantia = async () => {
   try {
     const userId = usuario.value?.id || usuario.value?.user_id || 0
     const correo = usuario.value?.correo || usuario.value?.email || ''
-    const token = localStorage.getItem('genesis_token')
+    const token = authStorage.getToken()
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
     const res = await axios.get('/api/pasante/estado', {
@@ -230,10 +232,10 @@ const cargarEstadoPasantia = async () => {
         pasantidaInfo.value.fases.fase_4.estado = 'pendiente'
       }
     } catch (eLive) {
-      console.warn('Error al verificar estado en vivo:', eLive)
+      logger.warn('Error al verificar estado en vivo:', eLive)
     }
   } catch (err) {
-    console.warn('Usando estado inicial de pasantía:', err)
+    logger.warn('Usando estado inicial de pasantía:', err)
   }
 }
 
@@ -296,24 +298,27 @@ const navegarA = (item, subvista = null, targetId = null) => {
   }
 }
 
+const manejarPopState = () => {
+  itemActivo.value = mapPathToItem(window.location.pathname)
+}
+
+const manejarStoragePanel = (e) => {
+  cargarEstadoPasantia()
+  if (e.key === 'genesis_notificaciones_updated') {
+    cargarContadorNotificaciones()
+  }
+}
+
 onMounted(async () => {
   await cargarEstadoPasantia()
   itemActivo.value = mapPathToItem(window.location.pathname)
   await cargarContadorNotificaciones()
 
-  window.addEventListener('popstate', () => {
-    itemActivo.value = mapPathToItem(window.location.pathname)
-  })
-
+  window.addEventListener('popstate', manejarPopState)
   window.addEventListener('focus', cargarContadorNotificaciones)
   window.addEventListener('pasantia-actualizada', cargarEstadoPasantia)
   window.addEventListener('notificaciones-actualizadas', cargarContadorNotificaciones)
-  window.addEventListener('storage', (e) => {
-    cargarEstadoPasantia()
-    if (e.key === 'genesis_notificaciones_updated') {
-      cargarContadorNotificaciones()
-    }
-  })
+  window.addEventListener('storage', manejarStoragePanel)
 
   if (typeof BroadcastChannel !== 'undefined') {
     try {
@@ -321,7 +326,9 @@ onMounted(async () => {
       canalNotifPanel.onmessage = () => {
         cargarContadorNotificaciones()
       }
-    } catch (e) {}
+    } catch (e) {
+      logger.warn('BroadcastChannel no disponible:', e)
+    }
   }
 
   // Sondeo en tiempo real cada 15 segundos
@@ -333,17 +340,21 @@ onMounted(async () => {
 onUnmounted(() => {
   if (intervalNotificaciones) {
     clearInterval(intervalNotificaciones)
+    intervalNotificaciones = null
   }
   if (canalNotifPanel) {
     canalNotifPanel.close()
+    canalNotifPanel = null
   }
+  window.removeEventListener('popstate', manejarPopState)
   window.removeEventListener('focus', cargarContadorNotificaciones)
+  window.removeEventListener('pasantia-actualizada', cargarEstadoPasantia)
   window.removeEventListener('notificaciones-actualizadas', cargarContadorNotificaciones)
+  window.removeEventListener('storage', manejarStoragePanel)
 })
 
 const handleLogout = () => {
-  localStorage.removeItem('genesis_token')
-  localStorage.removeItem('genesis_usuario')
+  authStorage.clear()
   emit('logout')
 }
 </script>
