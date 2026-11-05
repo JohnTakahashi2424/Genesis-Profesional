@@ -36,7 +36,12 @@ jobs:
           unzip -q KiuwanLocalAnalyzer.zip -d "$HOME/kiuwan"
           chmod +x "$HOME/kiuwan/KiuwanLocalAnalyzer/bin/agent.sh"
 
-      # 4. Ejecutar el análisis
+      # 4. (Diagnóstico) Ver las opciones reales de esta versión. Se puede borrar después.
+      - name: Ver opciones del agente
+        run: |
+          "$HOME/kiuwan/KiuwanLocalAnalyzer/bin/agent.sh" --help || true
+
+      # 5. Ejecutar el análisis
       - name: Ejecutar análisis en Kiuwan
         env:
           KIUWAN_USER: ${{ secrets.KIUWAN_USER }}
@@ -49,4 +54,4 @@ jobs:
             -wr \
             --user "$KIUWAN_USER" \
             --pass "$KIUWAN_PASS" \
-            --exclude-patterns "**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
+            exclude.patterns="**/node_modules/**,**/vendor/**,**/public/storage/**,**/storage/framework/**"
