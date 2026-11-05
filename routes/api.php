@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RecuperacionPasswordController;
 use App\Http\Controllers\PasantiaController;
 use App\Http\Controllers\CvController;
 use App\Http\Controllers\ReporteController;
@@ -31,16 +32,16 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('api.auth.login');
 
     // Verificación preliminar de correo para recuperación
-    Route::post('/verificar-correo-recuperacion', [AuthController::class, 'verificarCorreoRecuperacion'])->name('api.auth.verificar_correo_recuperacion');
+    Route::post('/verificar-correo-recuperacion', [RecuperacionPasswordController::class, 'verificarCorreoRecuperacion'])->name('api.auth.verificar_correo_recuperacion');
 
     // Recuperación de contraseña: envío de código vía Brevo SMTP
-    Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigo'])->name('api.auth.enviar_codigo');
+    Route::post('/enviar-codigo', [RecuperacionPasswordController::class, 'enviarCodigo'])->name('api.auth.enviar_codigo');
 
     // Recuperación de contraseña: comprobación del código de 6 dígitos
-    Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo'])->name('api.auth.verificar_codigo');
+    Route::post('/verificar-codigo', [RecuperacionPasswordController::class, 'verificarCodigo'])->name('api.auth.verificar_codigo');
 
     // Recuperación de contraseña: cambio seguro de contraseña
-    Route::post('/recuperar', [AuthController::class, 'recuperar'])->name('api.auth.recuperar');
+    Route::post('/recuperar', [RecuperacionPasswordController::class, 'recuperar'])->name('api.auth.recuperar');
 });
 
 // Conteo rápido de notificaciones no leídas (soporta JWT o query params)
