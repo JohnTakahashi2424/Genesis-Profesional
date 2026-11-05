@@ -1,7 +1,7 @@
 FROM php:8.2-cli
 
 # Instalar dependencias del sistema y extensiones de PHP necesarias
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libpng-dev \
     libjpeg-dev \
@@ -24,11 +24,14 @@ RUN echo "post_max_size = 50M" >> /usr/local/etc/php/conf.d/uploads.ini \
 
 WORKDIR /app
 
-# Copiar archivos del proyecto
-COPY . .
+# Copiar primero archivos de definición de dependencias para optimizar la caché de capas
+COPY composer.json composer.lock ./
 
-# Instalar dependencias de PHP con Composer
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Instalar dependencias de PHP con Composer antes de copiar el código fuente completo
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Copiar archivos del proyecto de forma controlada
+COPY . .
 
 # Permisos para storage y cache
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
@@ -43,4 +46,3 @@ USER www-data
 EXPOSE 8080
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-
