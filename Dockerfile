@@ -24,17 +24,27 @@ RUN echo "post_max_size = 50M" >> /usr/local/etc/php/conf.d/uploads.ini \
 
 WORKDIR /app
 
-# Copiar primero archivos de definición de dependencias para optimizar la caché de capas
+# 1. Copiar manifiestos de dependencias para optimizar la caché de capas
 COPY composer.json composer.lock ./
 
-# Instalar dependencias de PHP con Composer antes de copiar el código fuente completo
+# 2. Instalar dependencias de producción antes de copiar el código fuente
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Copiar archivos del proyecto de forma controlada
-COPY . .
+# 3. Copiado selectivo en lista blanca (Whitelist) de archivos productivos de Laravel
+# Elimina 'COPY . .' para prevenir fuga accidental de secretos o artefactos de desarrollo (CWE-200 / S6476)
+COPY app/ ./app/
+COPY bootstrap/ ./bootstrap/
+COPY config/ ./config/
+COPY database/ ./database/
+COPY public/ ./public/
+COPY resources/ ./resources/
+COPY routes/ ./routes/
+COPY storage/ ./storage/
+COPY artisan ./artisan
 
-# Permisos para storage y cache
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
+# 4. Asegurar directorios de runtime requeridos por Laravel
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data /app/storage /app/bootstrap/cache \
     && chmod -R 775 /app/storage /app/bootstrap/cache
 
 # Copiar script de inicio
