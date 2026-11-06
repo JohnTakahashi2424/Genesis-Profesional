@@ -38,6 +38,17 @@ class CvStorageServiceTest extends TestCase
         $this->assertStringStartsWith('/api/storage/cv_fotos/999/', $resultado);
     }
 
+    public function test_procesar_foto_fuerza_extension_segura_ante_tipo_no_permitido(): void
+    {
+        // Data URL con mime type no permitido (ej. php/executable)
+        $maliciousBase64 = 'data:image/php;base64,PD9waHAgZWNobyAnaGVsbG8nOyA/Pg==';
+        $resultado = $this->service->procesarFoto(999, $maliciousBase64);
+
+        $this->assertNotNull($resultado);
+        // Debe forzar extension png segura
+        $this->assertStringEndsWith('.png', $resultado);
+    }
+
     public function test_guardar_pdf_guarda_archivo_correctamente(): void
     {
         $pdfBase64 = 'data:application/pdf;base64,JVBERi0xLjQK';
