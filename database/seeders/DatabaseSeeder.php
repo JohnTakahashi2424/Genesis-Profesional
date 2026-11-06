@@ -224,7 +224,7 @@ class DatabaseSeeder extends Seeder
             'estado' => 'activo'
         ]);
 
-        $usuarioSuper = DB::table('usuarios')->insertGetId([
+        DB::table('usuarios')->insertGetId([
             'nombres' => 'Ing. Carlos',
             'apellidos' => 'Ramírez',
             'correo_institucional' => 'supervisor@ugb.edu.sv',
@@ -233,7 +233,7 @@ class DatabaseSeeder extends Seeder
             'estado' => 'activo'
         ]);
 
-        $usuarioVice = DB::table('usuarios')->insertGetId([
+        DB::table('usuarios')->insertGetId([
             'nombres' => 'Dr. Roberto',
             'apellidos' => 'Méndez',
             'correo_institucional' => 'vicedecano@ugb.edu.sv',
