@@ -51,6 +51,10 @@ const formatTexto = (val) => {
 
 const normalizarUrlFoto = (url) => {
   if (!url) return ''
+  // Si es un archivo legacy en disco efímero de Render (que no existe físicamente), evitar la petición para prevenir 404
+  if (typeof url === 'string' && /cv_fotos\/\d+\/foto_/i.test(url)) {
+    return ''
+  }
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
   if (url.startsWith('/api/storage/')) return url
   if (url.startsWith('api/storage/')) return '/' + url
@@ -58,6 +62,13 @@ const normalizarUrlFoto = (url) => {
   if (url.startsWith('storage/')) return '/api/' + url
   if (url.startsWith('/')) return url
   return '/api/storage/' + url
+}
+
+const handleImgError = () => {
+  imgErrorWizard.value = true
+  if (formCv.value.perfil.fotoUrl && !formCv.value.perfil.fotoUrl.startsWith('data:')) {
+    formCv.value.perfil.fotoUrl = ''
+  }
 }
 
 // Formulario del CV (inicia limpio para usar placeholders)
@@ -365,7 +376,7 @@ const buildCvHtml = () => {
   const data = formCv.value
   const color = data.diseno.color || '#010C67'
   const fuente = data.diseno.fuente || 'Montserrat'
-  const fotoUrl = data.perfil.fotoUrl || ''
+  const fotoUrl = (!imgErrorWizard.value && data.perfil.fotoUrl) ? data.perfil.fotoUrl : ''
 
   const fotoHtml = fotoUrl
     ? `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" crossorigin="anonymous" />`
@@ -877,7 +888,7 @@ const eliminarCv = async (cvId) => {
               <div class="px-6 pt-0 pb-3 flex items-center gap-5 -mt-6">
                 <!-- Foto circular con borde blanco solapada a la barra de color -->
                 <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border-2 border-white flex items-center justify-center overflow-hidden shrink-0 shadow-md">
-                  <img v-if="formCv.perfil.fotoUrl && !imgErrorWizard" :src="formCv.perfil.fotoUrl" @error="imgErrorWizard = true" class="w-full h-full object-cover" />
+                  <img v-if="formCv.perfil.fotoUrl && !imgErrorWizard" :src="formCv.perfil.fotoUrl" @error="handleImgError" class="w-full h-full object-cover" />
                   <span v-else class="text-3xl text-gray-400">👤</span>
                 </div>
                 <!-- Nombre y carrera en negro/oscuro -->
@@ -1275,7 +1286,7 @@ const eliminarCv = async (cvId) => {
               <label for="cv-subir-foto-input" class="relative cursor-pointer group flex flex-col items-start gap-1">
                 <input id="cv-subir-foto-input" type="file" accept="image/*" class="hidden" @change="handleSubirFoto" />
                 <div class="relative w-[100px] h-[100px] rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                  <img v-if="formCv.perfil.fotoUrl && !imgErrorWizard" :src="formCv.perfil.fotoUrl" @error="imgErrorWizard = true" class="w-full h-full object-cover" />
+                  <img v-if="formCv.perfil.fotoUrl && !imgErrorWizard" :src="formCv.perfil.fotoUrl" @error="handleImgError" class="w-full h-full object-cover" />
                   <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 95 97" fill="none" class="w-14 h-14 text-gray-700">
                     <path d="M47.2461 0C53.5114 0 59.52 2.35451 63.9502 6.54555C68.3804 10.7366 70.8692 16.4209 70.8692 22.3479C70.8692 28.275 68.3804 33.9592 63.9502 38.1503C59.52 42.3413 53.5114 44.6958 47.2461 44.6958C40.9809 44.6958 34.9723 42.3413 30.5421 38.1503C26.1119 33.9592 23.6231 28.275 23.6231 22.3479C23.6231 16.4209 26.1119 10.7366 30.5421 6.54555C34.9723 2.35451 40.9809 0 47.2461 0ZM47.2461 55.8698C73.3496 55.8698 94.4923 65.8705 94.4923 78.2177L83.4054 88.2347L65.6386 94.5426L44.4171 96.3449L20.2345 91.8392L0 82.8278V78.2177C0 65.8705 21.1426 55.8698 47.2461 55.8698Z" fill="currentColor"/>
                   </svg>

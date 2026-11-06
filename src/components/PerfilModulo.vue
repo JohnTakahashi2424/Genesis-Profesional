@@ -18,6 +18,10 @@ const cvRaw = ref(null)
 
 const normalizarUrlFoto = (url) => {
   if (!url) return ''
+  // Si es un archivo legacy en disco efímero de Render (que no existe físicamente), omitir para evitar peticiones y errores 404
+  if (typeof url === 'string' && /cv_fotos\/\d+\/foto_/i.test(url)) {
+    return ''
+  }
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
   if (url.startsWith('/api/storage/')) return url
   if (url.startsWith('api/storage/')) return '/' + url
