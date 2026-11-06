@@ -20,8 +20,8 @@ class GuardarCvRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'usuario_id'  => 'required|integer',
-            'pdf_base64'  => 'required|string',
+            'usuario_id'  => 'nullable|integer',
+            'pdf_base64'  => 'nullable|string',
             'titulo_cv'   => 'nullable|string|max:255',
             'cv_id'       => 'nullable|integer',
             'perfil'      => 'nullable|array',

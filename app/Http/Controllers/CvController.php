@@ -20,6 +20,12 @@ class CvController extends Controller
         $usuarioId = $request->usuario_id;
         $cvId = $request->cv_id;
 
+        // Si usuario_id no viene en el body, obtenerlo del usuario autenticado vía JWT
+        if (!$usuarioId) {
+            $jwtUser = $request->attributes->get('jwt_user');
+            $usuarioId = $jwtUser->id ?? null;
+        }
+
         // Verificar que el usuario existe en la tabla 'usuarios' o 'users'
         $usuario = null;
         if (Schema::hasTable('usuarios')) {
@@ -29,23 +35,42 @@ class CvController extends Controller
             $usuario = DB::table('users')->where('id', $usuarioId)->first();
         }
 
+        // Si aún no se encuentra, reintentar con el ID del token JWT
         if (!$usuario) {
-            return response()->json(['mensaje' => 'Usuario no encontrado.'], 404);
+            $jwtUser = $request->attributes->get('jwt_user');
+            if ($jwtUser && !empty($jwtUser->id) && $jwtUser->id != $usuarioId) {
+                $usuarioId = $jwtUser->id;
+                $usuario = (Schema::hasTable('users') ? DB::table('users')->where('id', $usuarioId)->first() : null)
+                    ?? (Schema::hasTable('usuarios') ? DB::table('usuarios')->where('id', $usuarioId)->first() : null);
+            }
         }
 
-        // Delegar decodificación y almacenamiento del PDF
-        try {
-            $pdfInfo = $storageService->guardarPdf(
-                $usuarioId,
-                $request->pdf_base64,
-                $request->titulo_cv,
-                $usuario->nombres ?? 'Usuario'
-            );
-        } catch (\InvalidArgumentException $e) {
-            return response()->json([
-                'mensaje' => $e->getMessage(),
-                'errores' => ['pdf_base64' => [$e->getMessage()]],
-            ], 422);
+        if (!$usuario) {
+            return response()->json(['mensaje' => 'Usuario no encontrado en la base de datos.'], 404);
+        }
+
+        // Delegar decodificación y almacenamiento del PDF (tolerante si es opcional o vacío)
+        $pdfInfo = [
+            'titulo_cv'      => $request->titulo_cv ?: ('CV_' . ($usuario->nombres ?? 'Usuario')),
+            'nombre_archivo' => null,
+            'ruta_archivo'   => null,
+            'url_publica'    => null,
+        ];
+
+        if (!empty($request->pdf_base64)) {
+            try {
+                $pdfInfo = $storageService->guardarPdf(
+                    $usuarioId,
+                    $request->pdf_base64,
+                    $request->titulo_cv,
+                    $usuario->nombres ?? 'Usuario'
+                );
+            } catch (\InvalidArgumentException $e) {
+                return response()->json([
+                    'mensaje' => $e->getMessage(),
+                    'errores' => ['pdf_base64' => [$e->getMessage()]],
+                ], 422);
+            }
         }
 
         $tituloCv      = $pdfInfo['titulo_cv'];

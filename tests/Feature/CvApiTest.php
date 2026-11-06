@@ -73,5 +73,38 @@ class CvApiTest extends TestCase
         $response = $this->deleteJson('/api/cv/eliminar/1');
         $response->assertStatus(401);
     }
+
+    public function test_guardar_cv_exitoso(): void
+    {
+        $user = User::create([
+            'nombres' => 'Test',
+            'apellidos' => 'User',
+            'correo_institucional' => 'testcv2@ugb.edu.sv',
+            'password' => bcrypt('password123'),
+            'rol' => 'estudiante',
+            'estado' => 'activo'
+        ]);
+
+        $token = JwtService::generarToken($user);
+
+        $validPdf = 'data:application/pdf;base64,' . base64_encode("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF");
+
+        $response = $this->withHeaders(['Authorization' => "Bearer {$token}"])
+            ->postJson('/api/cv/guardar', [
+                'usuario_id' => $user->id,
+                'pdf_base64' => $validPdf,
+                'titulo_cv' => 'Mi CV Test',
+                'perfil' => [
+                    'nombre' => 'Test User',
+                    'email' => 'testcv2@ugb.edu.sv',
+                    'fotoUrl' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+                ],
+                'objetivos' => ['objetivo' => 'Aprender'],
+                'logros' => ['habilidades' => 'PHP, Vue'],
+                'diseno' => ['color' => '#010C67', 'fuente' => 'Montserrat']
+            ]);
+
+        $response->assertStatus(200);
+    }
 }
 
