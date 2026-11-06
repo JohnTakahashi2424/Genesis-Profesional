@@ -56,9 +56,7 @@ class CvStorageService
             $safeNombre = basename($nombreFoto);
             $safeFolder = (int)$usuarioId;
             $dirPath = public_path("storage/cv_fotos/{$safeFolder}");
-            if (!is_dir($dirPath)) {
-                @mkdir($dirPath, 0755, true);
-            }
+            \Illuminate\Support\Facades\File::ensureDirectoryExists($dirPath, 0755);
             $publicPath = "{$dirPath}/{$safeNombre}";
             $baseStorage = realpath(public_path('storage')) ?: public_path('storage');
             $realTargetDir = realpath($dirPath) ?: $dirPath;
