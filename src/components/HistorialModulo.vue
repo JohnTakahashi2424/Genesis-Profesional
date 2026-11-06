@@ -27,7 +27,7 @@ const catalogoIndicadores = [
   },
   {
     clave: 'reportes',
-    titulo: 'Actividad de creación/envio y observaciones de reportes',
+    titulo: 'Actividad de creación/envío y observaciones de reportes',
     borderClass: 'border-2 border-[#1E3A8A]',
     destino: 'reportes'
   },
@@ -45,7 +45,7 @@ const catalogoIndicadores = [
   },
   {
     clave: 'reportes_aprobados',
-    titulo: 'Actividad de reportes aprovados',
+    titulo: 'Actividad de reportes aprobados',
     borderClass: 'border-2 border-[#16A34A]',
     destino: 'reportes'
   },

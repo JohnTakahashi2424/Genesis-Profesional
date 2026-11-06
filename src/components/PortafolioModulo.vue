@@ -1,5 +1,6 @@
 <script setup>
 import { authStorage } from '../utils/storage'
+import { logger } from '../utils/logger'
 
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
@@ -56,7 +57,7 @@ const cargarPortafolios = async () => {
           portafolios.value = [
             {
               id: 1,
-              titulo: 'My portafolio',
+              titulo: 'Mi portafolio',
               link_portafolio: resOld.data.link_portafolio
             }
           ]
@@ -182,53 +183,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 font-sans">
+  <div class="w-full max-w-7xl mx-auto px-2 sm:px-6 py-6 font-sans">
     
-    <!-- Encabezado de Sección -->
-    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-5">
-      <div>
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 shadow-2xs">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-              Portafolio Profesional
-            </h1>
-            <p class="text-sm text-slate-500 mt-0.5">
-              Gestiona y comparte enlaces a tus proyectos, repositorios y perfiles web.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
-          <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-          {{ portafolios.length }} {{ portafolios.length === 1 ? 'enlace registrado' : 'enlaces registrados' }}
-        </span>
-      </div>
-    </div>
-
     <!-- Mensaje de éxito -->
     <div 
       v-if="exitoMensaje" 
-      class="mb-6 px-4 py-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center justify-between shadow-xs transition-all"
+      class="mb-6 px-4 py-3 rounded-lg bg-[#EAFBF1] border border-[#6CE9A6] text-[#027A48] text-sm font-medium flex items-center justify-between shadow-2xs transition-all"
     >
       <div class="flex items-center gap-2.5">
-        <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+        <span class="w-5 h-5 rounded-full bg-[#12B76A] text-white flex items-center justify-center shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
           </svg>
         </span>
         <span>{{ exitoMensaje }}</span>
       </div>
-      <button @click="exitoMensaje = ''" class="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <button @click="exitoMensaje = ''" class="text-[#027A48] hover:opacity-80 p-1 cursor-pointer">✕</button>
     </div>
 
     <!-- Mensaje de error -->
@@ -236,7 +206,7 @@ onMounted(() => {
       v-if="errorMensaje" 
       class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium flex items-center justify-between shadow-xs transition-all"
     >
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-rose-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
         </svg>
@@ -245,98 +215,96 @@ onMounted(() => {
       <button @click="errorMensaje = ''" class="text-rose-600 hover:text-rose-900 font-bold ml-4">✕</button>
     </div>
 
-    <!-- GRID DE 2 COLUMNAS -->
+    <!-- CONTENEDOR PRINCIPAL: 2 COLUMNAS (ALTA FIDELIDAD CON CAPTURA FIGMA - IMAGEN 2) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start min-w-0">
       
       <!-- ========================================================================= -->
-      <!-- COLUMNA IZQUIERDA: FORMULARIO                                            -->
+      <!-- COLUMNA IZQUIERDA: FORMULARIO "Añade un nuevo enlace de portafolio"      -->
       <!-- ========================================================================= -->
-      <div class="lg:col-span-5 min-w-0">
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs min-w-0">
+      <div class="lg:col-span-5 min-w-0 lg:mt-[29px]">
+        <div class="bg-[#F0F4FA] border border-[#7FA9E0] rounded-[16px] p-7 sm:p-9 shadow-xs min-w-0">
           
-          <div class="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">
-                {{ modoEdicion ? 'Editar enlace' : 'Añadir nuevo enlace' }}
-              </h2>
-              <p class="text-xs text-slate-500 mt-0.5">
-                {{ modoEdicion ? 'Actualiza los datos del enlace seleccionado.' : 'Completa el título y la URL pública.' }}
+          <!-- Título elegante en fuente Lora/Serif centrado a dos líneas -->
+          <h2 
+            class="text-2xl sm:text-[26px] font-normal text-center text-black mb-8 leading-snug tracking-normal px-2 break-words"
+            style="font-family: 'Lora', Georgia, serif;"
+          >
+            <template v-if="modoEdicion">
+              Editar enlace de<br>portafolio
+            </template>
+            <template v-else>
+              Añade un nuevo enlace de<br>portafolio
+            </template>
+          </h2>
+
+          <form @submit.prevent="guardarPortafolio" novalidate class="space-y-5">
+            <!-- Campo 1: Título* -->
+            <div class="min-w-0">
+              <label for="porta-titulo" class="block text-sm font-semibold text-gray-900 mb-1.5">
+                Título<span class="text-red-500">*</span>
+              </label>
+              <input 
+                id="porta-titulo"
+                v-model="form.titulo"
+                type="text"
+                placeholder="Mi portafolio"
+                :class="intentoGuardar && !form.titulo.trim() ? 'border-red-500 focus:border-red-600 bg-red-50/20' : 'border-[#7FA9E0] focus:border-blue-600'"
+                class="w-full px-4 py-2.5 rounded-[8px] bg-white border text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs transition-colors"
+              />
+              <p v-if="intentoGuardar && !form.titulo.trim()" class="flex items-center gap-1.5 text-xs text-red-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Este campo es obligatorio.</span>
               </p>
             </div>
-            <span v-if="modoEdicion" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-              En edición
-            </span>
-          </div>
 
-          <form @submit.prevent="guardarPortafolio" novalidate class="space-y-4">
-            <!-- Campo 1: Título -->
+            <!-- Campo 2: Link del portafolio* -->
             <div class="min-w-0">
-              <label for="porta-titulo" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Título del proyecto / enlace <span class="text-rose-500">*</span>
+              <label for="porta-link" class="block text-sm font-semibold text-gray-900 mb-1.5">
+                Link del portafolio<span class="text-red-500">*</span>
               </label>
-              <div class="relative">
-                <input 
-                  id="porta-titulo"
-                  v-model="form.titulo"
-                  type="text"
-                  placeholder="Ej. Mi Portafolio Web, Repositorio GitHub"
-                  :class="intentoGuardar && !form.titulo.trim() ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'"
-                  class="w-full px-3.5 py-2.5 rounded-xl bg-white border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all shadow-2xs"
-                />
-              </div>
-              <p v-if="intentoGuardar && !form.titulo.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-500 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              <input 
+                id="porta-link"
+                v-model="form.link"
+                type="text"
+                placeholder="http://portafolio.com"
+                :class="intentoGuardar && !form.link.trim() ? 'border-red-500 focus:border-red-600 bg-red-50/20' : 'border-[#7FA9E0] focus:border-blue-600'"
+                class="w-full px-4 py-2.5 rounded-[8px] bg-white border text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs transition-colors"
+              />
+              <p v-if="intentoGuardar && !form.link.trim()" class="flex items-center gap-1.5 text-xs text-red-500 font-medium mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
                 </svg>
-                <span>El título es obligatorio.</span>
-              </p>
-            </div>
-
-            <!-- Campo 2: Link del portafolio -->
-            <div class="min-w-0">
-              <label for="porta-link" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                URL / Enlace del portafolio <span class="text-rose-500">*</span>
-              </label>
-              <div class="relative">
-                <input 
-                  id="porta-link"
-                  v-model="form.link"
-                  type="text"
-                  placeholder="https://ejemplo.com/mi-portafolio"
-                  :class="intentoGuardar && !form.link.trim() ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100 bg-rose-50/20' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'"
-                  class="w-full px-3.5 py-2.5 rounded-xl bg-white border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all shadow-2xs font-mono text-xs sm:text-sm"
-                />
-              </div>
-              <p v-if="intentoGuardar && !form.link.trim()" class="flex items-center gap-1.5 text-xs text-rose-500 font-medium mt-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-500 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                </svg>
-                <span>El link es obligatorio.</span>
+                <span>Este campo es obligatorio.</span>
               </p>
             </div>
 
             <!-- Botones de Acción -->
-            <div class="pt-3 flex items-center gap-3">
+            <div class="pt-2 flex items-center gap-3">
               <button 
                 type="submit"
                 :disabled="guardando"
-                class="flex-1 bg-[#00135c] hover:bg-[#002080] text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer disabled:opacity-60"
+                class="bg-[#000B58] hover:bg-[#001064] text-white px-5 py-2.5 rounded-[8px] text-sm font-medium inline-flex items-center gap-2.5 transition-colors shadow-2xs cursor-pointer disabled:opacity-60"
               >
-                <svg v-if="guardando" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                <!-- Ícono de disquete (Floppy Disk) idéntico a la captura -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
                 </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{{ guardando ? 'Guardando...' : (modoEdicion ? 'Actualizar enlace' : 'Agregar enlace') }}</span>
+                <span>{{ guardando ? 'Guardando...' : (modoEdicion ? 'Actualizar portafolio' : 'Agregar portafolio') }}</span>
               </button>
 
               <button 
                 v-if="modoEdicion"
                 type="button"
                 @click="resetFormulario"
-                class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+                class="px-4 py-2.5 rounded-[8px] text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200/60 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -346,131 +314,107 @@ onMounted(() => {
       </div>
 
       <!-- ========================================================================= -->
-      <!-- COLUMNA DERECHA: LISTADO DE ENLACES                                      -->
+      <!-- COLUMNA DERECHA: LISTADO DE ENLACES (ALTA FIDELIDAD CON CAPTURA FIGMA)   -->
       <!-- ========================================================================= -->
       <div class="lg:col-span-7 min-w-0">
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs min-h-[380px] flex flex-col min-w-0">
+        
+        <!-- CABECERA SUPERIOR: Título, Link, Acciones (Alineados fuera del recuadro) -->
+        <div class="grid grid-cols-12 text-sm text-gray-500 font-normal px-5 mb-2 select-none">
+          <div class="col-span-4 pl-1">Título</div>
+          <div class="col-span-5 pl-1">Link</div>
+          <div class="col-span-3 text-right pr-4">Acciones</div>
+        </div>
+
+        <!-- RECUADRO AZUL PRINCIPAL QUE CONTIENE LAS CARDS BLANCAS -->
+        <div class="border border-[#7FA9E0] rounded-[16px] p-5 sm:p-6 bg-white min-h-[420px] flex flex-col justify-start min-w-0">
           
-          <!-- Encabezado de la tarjeta derecha -->
-          <div class="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-slate-100">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">
-                Enlaces Guardados
-              </h2>
-              <p class="text-xs text-slate-500 mt-0.5">
-                Tus proyectos visibles para tutores y evaluadores.
-              </p>
-            </div>
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-              {{ portafolios.length }} {{ portafolios.length === 1 ? 'ítem' : 'ítems' }}
-            </span>
-          </div>
-
-          <!-- Cabecera de columnas para el listado -->
-          <div v-if="portafolios.length > 0" class="bg-slate-50/80 rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 grid grid-cols-12 gap-3 mb-3 border border-slate-100 select-none">
-            <div class="col-span-4 text-left">Título</div>
-            <div class="col-span-5 text-left">Enlace</div>
-            <div class="col-span-3 text-right">Acciones</div>
-          </div>
-
           <!-- Spinner de carga -->
-          <div v-if="cargando" class="flex-1 flex flex-col items-center justify-center py-16 text-slate-400">
-            <svg class="animate-spin h-8 w-8 text-[#00135c] mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <div v-if="cargando" class="flex flex-col items-center justify-center py-16 text-gray-400">
+            <svg class="animate-spin h-8 w-8 text-[#000B58] mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
             </svg>
-            <span class="text-sm font-medium text-slate-600">Cargando portafolios...</span>
+            <span class="text-xs">Cargando portafolios...</span>
           </div>
 
-          <!-- Estado vacío -->
+          <!-- Estado vacío si no hay enlaces aún -->
           <div 
             v-else-if="portafolios.length === 0" 
-            class="flex-1 flex flex-col items-center justify-center py-16 text-center"
+            class="flex flex-col items-center justify-center py-20 text-center text-gray-400"
           >
-            <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400 mb-4 shadow-2xs">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </div>
-            <h3 class="text-base font-semibold text-slate-800">Aún no tienes enlaces añadidos</h3>
-            <p class="text-xs text-slate-500 mt-1 max-w-sm">
-              Utiliza el formulario de la izquierda para registrar tus repositorios o sitios de proyectos.
-            </p>
+            <p class="text-sm font-medium text-gray-500">Aún no tienes enlaces añadidos</p>
+            <p class="text-xs text-gray-400 mt-1">Usa el formulario de la izquierda para agregar tu portafolio.</p>
           </div>
 
-          <!-- Lista de enlaces -->
-          <div v-else class="space-y-2.5 flex-1">
+          <!-- Lista de enlaces (Cards blancas con borde azul #7FA9E0) -->
+          <div v-else class="space-y-4">
             <div 
               v-for="item in portafolios" 
               :key="item.id"
-              class="border border-slate-200/90 hover:border-blue-300 rounded-xl px-4 py-3 bg-white hover:bg-slate-50/60 grid grid-cols-12 items-center gap-3 transition-all shadow-2xs group min-w-0"
-              :class="modoEdicion && idEditando === item.id ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50/20' : ''"
+              class="border border-[#7FA9E0] rounded-[12px] px-5 py-3.5 bg-white grid grid-cols-12 items-center min-w-0 shadow-2xs hover:shadow-xs transition-shadow"
+              :class="modoEdicion && idEditando === item.id ? 'ring-2 ring-[#000B58]' : ''"
             >
-              <!-- 1. Título con icono -->
-              <div class="col-span-4 min-w-0 flex items-center gap-2.5">
-                <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </div>
+              <!-- 1. Título -->
+              <div class="col-span-4 min-w-0 pr-2">
                 <span 
-                  class="font-semibold text-slate-900 text-sm truncate block" 
+                  class="font-bold text-gray-900 text-sm truncate block break-words [overflow-wrap:anywhere]" 
                   :title="item.titulo"
+                  style="overflow-wrap: anywhere; word-break: break-word;"
                 >
                   {{ item.titulo || 'Mi portafolio' }}
                 </span>
               </div>
 
               <!-- 2. Link -->
-              <div class="col-span-5 min-w-0">
+              <div class="col-span-5 min-w-0 pr-2">
                 <a 
                   :href="(item.link_portafolio || item.link || '').startsWith('http') ? (item.link_portafolio || item.link) : 'https://' + (item.link_portafolio || item.link)"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-mono hover:underline truncate inline-flex items-center gap-1.5 max-w-full"
+                  class="text-sm text-gray-700 hover:text-blue-600 hover:underline truncate block [overflow-wrap:anywhere]"
                   :title="item.link_portafolio || item.link"
+                  style="overflow-wrap: anywhere; word-break: break-all;"
                 >
-                  <span class="truncate">{{ item.link_portafolio || item.link }}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-slate-400 group-hover:text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  {{ item.link_portafolio || item.link }}
                 </a>
               </div>
 
-              <!-- 3. Acciones (Editar y Eliminar) -->
-              <div class="col-span-3 flex items-center justify-end gap-1 shrink-0">
-                <!-- Botón Editar -->
+              <!-- 3. Acciones (Lápiz y Basurero Rojo de Figma) -->
+              <div class="col-span-3 flex items-center justify-end gap-3 pr-1 shrink-0">
+                
+                <!-- Botón Editar (Lápiz) -->
                 <button 
                   type="button"
                   @click="iniciarEdicion(item)"
                   title="Editar enlace"
-                  class="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                  class="text-gray-800 hover:text-[#000B58] p-1 rounded-sm transition-colors cursor-pointer shrink-0"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                   </svg>
                 </button>
 
-                <!-- Botón Eliminar -->
+                <!-- Botón Eliminar (Basurero Rojo exactamente igual a la captura de Figma) -->
                 <button 
                   type="button"
                   @click="eliminarPortafolio(item.id)"
                   title="Eliminar enlace"
-                  class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                  class="hover:opacity-80 p-1 transition-opacity cursor-pointer shrink-0"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[19px]" viewBox="0 0 34 37" fill="none">
+                    <path d="M12.3636 30.0625V13.1042C12.3636 12.8793 12.2912 12.6947 12.1463 12.5501C12.0014 12.4056 11.8163 12.3333 11.5909 12.3333H10.0455C9.82008 12.3333 9.63494 12.4056 9.49006 12.5501C9.34517 12.6947 9.27273 12.8793 9.27273 13.1042V30.0625C9.27273 30.2873 9.34517 30.472 9.49006 30.6165C9.63494 30.7611 9.82008 30.8333 10.0455 30.8333H11.5909C11.8163 30.8333 12.0014 30.7611 12.1463 30.6165C12.2912 30.472 12.3636 30.2873 12.3636 30.0625ZM18.5455 30.0625V13.1042C18.5455 12.8793 18.473 12.6947 18.3281 12.5501C18.1832 12.4056 17.9981 12.3333 17.7727 12.3333H16.2273C16.0019 12.3333 15.8168 12.4056 15.6719 12.5501C15.527 12.6947 15.4545 12.8793 15.4545 13.1042V30.0625C15.4545 30.2873 15.527 30.472 15.6719 30.6165C15.8168 30.7611 16.0019 30.8333 16.2273 30.8333H17.7727C17.9981 30.8333 18.1832 30.7611 18.3281 30.6165C18.473 30.472 18.5455 30.2873 18.5455 30.0625ZM24.7273 30.0625V13.1042C24.7273 12.8793 24.6548 12.6947 24.5099 12.5501C24.3651 12.4056 24.1799 12.3333 23.9545 12.3333H22.4091C22.1837 12.3333 21.9986 12.4056 21.8537 12.5501C21.7088 12.6947 21.6364 12.8793 21.6364 13.1042V30.0625C21.6364 30.2873 21.7088 30.472 21.8537 30.6165C21.9986 30.7611 22.1837 30.8333 22.4091 30.8333H23.9545C24.1799 30.8333 24.3651 30.7611 24.5099 30.6165C24.6548 30.472 24.7273 30.2873 24.7273 30.0625ZM11.5909 6.16667H22.4091L21.25 3.34831C21.1373 3.20378 21.0005 3.11545 20.8395 3.08333H13.1847C13.0237 3.11545 12.8868 3.20378 12.7741 3.34831L11.5909 6.16667ZM34 6.9375V8.47917C34 8.70399 33.9276 8.88867 33.7827 9.0332C33.6378 9.17773 33.4527 9.25 33.2273 9.25H30.9091V32.0859C30.9091 33.4188 30.5308 34.5711 29.7741 35.5426C29.0175 36.5142 28.108 37 27.0455 37H6.95455C5.89205 37 4.98248 36.5303 4.22585 35.5908C3.46922 34.6514 3.09091 33.5152 3.09091 32.1823V9.25H0.772727C0.547348 9.25 0.362216 9.17773 0.21733 9.0332C0.0724432 8.88867 0 8.70399 0 8.47917V6.9375C0 6.71267 0.0724432 6.52799 0.21733 6.38346C0.362216 6.23893 0.547348 6.16667 0.772727 6.16667H8.23438L9.92472 2.14388C10.1662 1.5497 10.6009 1.04384 11.2287 0.626302C11.8565 0.208767 12.4924 0 13.1364 0H20.8636C21.5076 0 22.1435 0.208767 22.7713 0.626302C23.3991 1.04384 23.8338 1.5497 24.0753 2.14388L25.7656 6.16667H33.2273C33.4527 6.16667 33.6378 6.23893 33.7827 6.38346C33.9276 6.52799 34 6.71267 34 6.9375Z" fill="#DF0000" fill-opacity="0.88"/>
                   </svg>
                 </button>
+
               </div>
             </div>
           </div>
 
         </div>
+
       </div>
 
     </div>
 
   </div>
 </template>
-

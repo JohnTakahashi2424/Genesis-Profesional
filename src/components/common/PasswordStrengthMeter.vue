@@ -147,7 +147,7 @@ watch(puntaje, (score) => {
           :class="tieneNumeroOSimbolo ? 'bi bi-check-circle-fill text-[#16a34a]' : 'bi bi-check-circle text-gray-400'"
           class="text-sm transition-colors shrink-0"
         ></i>
-        <span>Un numero o símbolo</span>
+        <span>Un número o símbolo</span>
       </div>
     </div>
   </div>
