@@ -88,10 +88,14 @@ class SafeFileResolver
     /**
      * Servir un archivo de almacenamiento validado con cabeceras de seguridad.
      */
-    public static function serveStorage(string $path): BinaryFileResponse
+    public static function serveStorage(string $path): \Symfony\Component\HttpFoundation\Response
     {
         $realFile = self::resolveStorageFile($path);
         if (!$realFile) {
+            // Si el archivo físico desapareció del disco efímero de Render (ej. fotos de CV previas a la persistencia Base64)
+            if (preg_match('#^cv_fotos/\d+/foto_\d+\.(png|jpe?g|webp)$#i', $path)) {
+                return self::serveDefaultAvatarSvg();
+            }
             abort(404);
         }
 
@@ -118,6 +122,25 @@ class SafeFileResolver
         }
 
         return $response;
+    }
+
+    /**
+     * Retorna un avatar SVG neutral con código 200 cuando una foto histórica de CV
+     * no se encuentra en el disco efímero del servidor, evitando errores 404 en la consola.
+     */
+    public static function serveDefaultAvatarSvg(): \Symfony\Component\HttpFoundation\Response
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">'
+             . '<circle cx="64" cy="64" r="64" fill="#E2E8F0"/>'
+             . '<circle cx="64" cy="46" r="24" fill="#94A3B8"/>'
+             . '<path d="M20,112 C20,88 39,78 64,78 C89,78 108,88 108,112 Z" fill="#94A3B8"/>'
+             . '</svg>';
+
+        return response($svg, 200, [
+            'Content-Type'           => 'image/svg+xml',
+            'Cache-Control'          => 'public, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /**

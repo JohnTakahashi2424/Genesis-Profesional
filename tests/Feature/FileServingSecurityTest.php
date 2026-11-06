@@ -412,4 +412,13 @@ class FileServingSecurityTest extends TestCase
         $this->assertEquals(404, $response->getStatusCode());
         $this->assertFalse(str_contains($response->getContent(), $this->sentinelContent));
     }
+
+    public function test_api_storage_cv_fotos_inexistente_retorna_avatar_svg_200(): void
+    {
+        $response = $this->get('/api/storage/cv_fotos/18/foto_1793846998.png');
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $response->assertHeader('Content-Type', 'image/svg+xml');
+        $this->assertStringContainsString('<svg', $response->getContent());
+    }
 }
