@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use App\Support\SafeFileResolver;
 use App\Models\User;
 
 class CvStorageService
@@ -12,10 +14,47 @@ class CvStorageService
      */
     public function guardarPdf(int $usuarioId, string $pdfBase64, ?string $tituloCv, ?string $nombreUsuario = 'Usuario'): array
     {
-        $pdfData = base64_decode(preg_replace('#^data:.*?base64,#i', '', $pdfBase64));
+        // 1. Validar longitud de cadena Base64 antes de decodificar (máximo ~14MB base64 para 10MB binario)
+        $maxBase64Length = 14 * 1024 * 1024;
+        if (strlen($pdfBase64) > $maxBase64Length) {
+            throw new \InvalidArgumentException('El archivo excede el tamaño máximo permitido de 10MB.');
+        }
+
+        // 2. Extraer la porción base64 tolerando "data:" en cualquier mayúscula/minúscula y metadata (ej. filename=)
+        $cleanBase64 = $pdfBase64;
+        if (stripos($pdfBase64, 'data:') === 0) {
+            $commaPos = strpos($pdfBase64, ',');
+            if ($commaPos !== false) {
+                $cleanBase64 = substr($pdfBase64, $commaPos + 1);
+            }
+        }
+
+        // 3. Tolerar y normalizar: eliminar saltos de línea (\r, \n) y convertir espacios a '+' (decodificación HTTP/URL)
+        $cleanBase64 = str_replace(["\r", "\n"], '', $cleanBase64);
+        $cleanBase64 = str_replace(' ', '+', $cleanBase64);
+
+        $pdfData = base64_decode($cleanBase64, true);
+
+        if ($pdfData === false) {
+            throw new \InvalidArgumentException('Formato de datos base64 inválido.');
+        }
+
+        // 2. Validar tamaño máximo binario (10MB)
+        $maxBytes = 10 * 1024 * 1024;
+        if (strlen($pdfData) > $maxBytes) {
+            throw new \InvalidArgumentException('El archivo excede el tamaño máximo permitido de 10MB.');
+        }
+
+        // 3. Validar cabecera mágica %PDF-
+        if (!str_starts_with($pdfData, '%PDF-')) {
+            throw new \InvalidArgumentException('El archivo no tiene una cabecera PDF válida.');
+        }
+
         $titulo = $tituloCv ?: ('CV_' . $nombreUsuario);
-        $nombreArchivo = str_replace(' ', '_', $titulo) . '_' . $usuarioId . '_' . time() . '.pdf';
-        $carpeta = "cvs/{$usuarioId}";
+        $slugTitulo = Str::slug($titulo, '_') ?: 'cv';
+        $safeUserId = (int)$usuarioId;
+        $nombreArchivo = "{$slugTitulo}_{$safeUserId}_" . time() . '.pdf';
+        $carpeta = "cvs/{$safeUserId}";
         $ruta = "{$carpeta}/{$nombreArchivo}";
 
         Storage::disk('public')->put($ruta, $pdfData);
@@ -53,17 +92,16 @@ class CvStorageService
 
             Storage::disk('public')->put($rutaFoto, $fotoDecoded);
 
-            $safeNombre = basename($nombreFoto);
-            $safeFolder = (int)$usuarioId;
-            $dirPath = public_path("storage/cv_fotos/{$safeFolder}");
-            if (!is_dir($dirPath)) {
-                @mkdir($dirPath, 0755, true);
-            }
-            $publicPath = "{$dirPath}/{$safeNombre}";
-            $baseStorage = realpath(public_path('storage')) ?: public_path('storage');
-            $realTargetDir = realpath($dirPath) ?: $dirPath;
-            if (str_starts_with($realTargetDir, $baseStorage)) {
-                \Illuminate\Support\Facades\File::put($publicPath, $fotoDecoded);
+            // Fallback de sincronización física en public/storage únicamente en desarrollo local (ej. Windows/OneDrive)
+            if (app()->isLocal()) {
+                $safeNombre = \App\Support\SafeFileResolver::sanitizeFilename(basename($nombreFoto));
+                $safeFolder = (int)$usuarioId;
+                $dirPath = public_path("storage/cv_fotos/{$safeFolder}");
+                \Illuminate\Support\Facades\File::ensureDirectoryExists($dirPath, 0755);
+                $publicPath = $dirPath . DIRECTORY_SEPARATOR . $safeNombre;
+                if (\App\Support\SafeFileResolver::isPathWithinBase($dirPath, public_path('storage'))) {
+                    \Illuminate\Support\Facades\File::put($publicPath, $fotoDecoded);
+                }
             }
 
             return "/api/storage/{$rutaFoto}";
