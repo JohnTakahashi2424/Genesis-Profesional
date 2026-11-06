@@ -432,6 +432,52 @@ const buildCvHtml = () => {
   </div>`
 }
 
+// Generador fallback directo de PDF con jsPDF para garantizar exportación y guardado sin fallos
+const generarPdfFallback = () => {
+  const doc = new jsPDF('p', 'mm', 'a4')
+  const data = formCv.value
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.text(data.perfil.nombre || 'Currículum Vitae', 20, 25)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  if (data.perfil.educacion) doc.text(data.perfil.educacion, 20, 32)
+  doc.text(`Email: ${data.perfil.email || ''} | Teléfono: ${data.perfil.telefono || ''}`, 20, 39)
+  if (data.perfil.direccion) doc.text(`Dirección: ${data.perfil.direccion}`, 20, 46)
+
+  let y = 56
+  if (data.perfil.sobreMi) {
+    doc.setFont('helvetica', 'bold')
+    doc.text('Sobre mí:', 20, y)
+    y += 6
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(data.perfil.sobreMi, 170)
+    doc.text(lines, 20, y)
+    y += (lines.length * 5) + 6
+  }
+
+  if (data.objetivos.conocimientos) {
+    doc.setFont('helvetica', 'bold')
+    doc.text('Conocimientos:', 20, y)
+    y += 6
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(data.objetivos.conocimientos, 170)
+    doc.text(lines, 20, y)
+    y += (lines.length * 5) + 6
+  }
+
+  if (data.objetivos.objetivo) {
+    doc.setFont('helvetica', 'bold')
+    doc.text('Mi objetivo:', 20, y)
+    y += 6
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(data.objetivos.objetivo, 170)
+    doc.text(lines, 20, y)
+  }
+
+  return doc
+}
+
 // Generar PDF capturando el elemento con alta fidelidad y máxima velocidad
 const generarPdfDoc = async () => {
   const previewEl = document.getElementById('cv-card-preview')
@@ -462,7 +508,7 @@ const generarPdfDoc = async () => {
     const canvas = await html2canvas(targetEl, {
       scale: 1.2,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       logging: false,
       backgroundColor: '#ffffff'
     })
@@ -483,7 +529,8 @@ const generarPdfDoc = async () => {
     if (container && document.body.contains(container)) {
       document.body.removeChild(container)
     }
-    throw err
+    logger.warn('Error capturando canvas de CV, usando generador directo jsPDF:', err)
+    return generarPdfFallback()
   }
 }
 
@@ -612,16 +659,22 @@ const guardarCvFinal = async () => {
 
   try {
     const u = authStorage.getUser()
-    const usuarioId = usuario.value.id || usuario.value.user_id || u.id || 1
+    const usuarioId = usuario.value?.id || usuario.value?.user_id || u?.id || 1
 
-    // Opción 1: Generar el PDF y mantener la foto en Base64 para persistencia directa en PostgreSQL
-    const doc = await generarPdfDoc()
-    const pdfBase64 = doc.output('datauristring')
+    let pdfBase64 = null
+    try {
+      const doc = await generarPdfDoc()
+      pdfBase64 = doc.output('datauristring')
+    } catch (pdfErr) {
+      logger.warn('Error al generar PDF en guardarCvFinal:', pdfErr)
+      const fallbackDoc = generarPdfFallback()
+      pdfBase64 = fallbackDoc.output('datauristring')
+    }
 
     const payload = {
       usuario_id: usuarioId,
       pdf_base64: pdfBase64,
-      titulo_cv: formCv.value.tituloCv,
+      titulo_cv: formCv.value.tituloCv || 'Mi CV',
       cv_id: formCv.value.id,
       perfil: formCv.value.perfil,
       objetivos: formCv.value.objetivos,
@@ -648,7 +701,15 @@ const guardarCvFinal = async () => {
       emit('volver')
     }
   } catch (err) {
-    mensajeError.value = err.response?.data?.mensaje || 'Error al guardar el CV'
+    logger.error('Error al guardar CV:', err)
+    const backendMsg = err.response?.data?.mensaje
+    const backendErrors = err.response?.data?.errores
+    if (backendErrors && typeof backendErrors === 'object') {
+      const primerError = Object.values(backendErrors).flat()[0]
+      mensajeError.value = primerError || backendMsg || 'Error al guardar el CV'
+    } else {
+      mensajeError.value = backendMsg || err.message || 'Error al guardar el CV. Por favor verifique los datos o su conexión.'
+    }
   } finally {
     cargandoGuardar.value = false
   }
@@ -825,6 +886,10 @@ const eliminarCv = async (cvId) => {
             </p>
           </div>
 
+          <div v-if="mensajeError" class="mb-4 bg-rose-50 border border-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between gap-2 shadow-2xs">
+            <span class="font-medium">{{ mensajeError }}</span>
+            <button @click="mensajeError = ''" class="font-bold text-rose-500 hover:text-rose-700 cursor-pointer">✕</button>
+          </div>
 
           <div class="flex items-center justify-between pt-2">
             <button 
@@ -877,6 +942,31 @@ const eliminarCv = async (cvId) => {
           <h2 class="text-center text-xl font-serif text-gray-800 tracking-tight" style="font-family: 'Lora', Georgia, serif;">
             Vista previa
           </h2>
+
+          <!-- Alerta de Error en Vista Previa -->
+          <div v-if="mensajeError" class="mx-auto max-w-2xl bg-rose-50 border border-rose-300 text-rose-800 px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm shadow-xs animate-fade-in">
+            <div class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span class="font-medium">{{ mensajeError }}</span>
+            </div>
+            <button @click="mensajeError = ''" class="text-rose-500 hover:text-rose-700 font-bold p-1 cursor-pointer">✕</button>
+          </div>
+
+          <!-- Alerta de Éxito en Vista Previa -->
+          <div v-if="mensajeExito" class="mx-auto max-w-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm shadow-xs animate-fade-in">
+            <div class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9 12l2 2 4-4"></path>
+              </svg>
+              <span class="font-medium">{{ mensajeExito }}</span>
+            </div>
+            <button @click="mensajeExito = ''" class="text-emerald-500 hover:text-emerald-700 font-bold p-1 cursor-pointer">✕</button>
+          </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <!-- Plantilla CV Renderizada (Lado Izquierdo) Fiel a Diseño Figma -->
@@ -1081,13 +1171,17 @@ const eliminarCv = async (cvId) => {
               <button
                 @click="guardarCvFinal"
                 :disabled="cargandoGuardar"
-                class="w-[110px] h-[34px] rounded-[6px] bg-[#010C67] hover:bg-[#00083D] text-white text-xs font-serif font-medium transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
+                class="w-[110px] h-[34px] rounded-[6px] bg-[#010C67] hover:bg-[#00083D] text-white text-xs font-serif font-medium transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 shrink-0"
                 style="font-family: 'Lora', Georgia, serif;"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 22 22" fill="none" class="shrink-0 text-white">
+                <svg v-if="cargandoGuardar" class="animate-spin w-3.5 h-3.5 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 22 22" fill="none" class="shrink-0 text-white">
                   <path d="M4.58333 19.25H17.4167C17.9029 19.25 18.3692 19.0569 18.713 18.713C19.0568 18.3692 19.25 17.9029 19.25 17.4167V7.33335C19.2507 7.21271 19.2276 7.09312 19.182 6.98143C19.1363 6.86975 19.0691 6.76817 18.9842 6.68252L15.3175 3.01585C15.2318 2.93089 15.1303 2.86368 15.0186 2.81806C14.9069 2.77244 14.7873 2.74932 14.6667 2.75002H4.58333C4.0971 2.75002 3.63079 2.94317 3.28699 3.28699C2.94315 3.6308 2.75 4.09712 2.75 4.58335V17.4167C2.75 17.9029 2.94315 18.3692 3.28697 18.713C3.63079 19.0569 4.0971 19.25 4.58333 19.25ZM13.75 17.4167H8.25V12.8333H13.75V17.4167ZM11.9167 6.41668H10.0833V4.58335H11.9167V6.41668ZM4.58333 4.58335H6.41667V8.25002H13.75V4.58335H14.2908L17.4167 7.70918V17.4167H15.5833V12.8333C15.5833 12.3471 15.3902 11.8808 15.0464 11.537C14.7025 11.1932 14.2362 11 13.75 11H8.25C7.76377 11 7.29745 11.1932 6.95364 11.537C6.60982 11.8808 6.41667 12.3471 6.41667 12.8333V17.4167H4.58333V4.58335Z" fill="currentColor"/>
                 </svg>
-                <span>Guardar</span>
+                <span>{{ cargandoGuardar ? 'Guardando...' : 'Guardar' }}</span>
               </button>
 
               <!-- Descargar CV -->
@@ -1193,6 +1287,19 @@ const eliminarCv = async (cvId) => {
               {{ num }}
             </button>
           </div>
+        </div>
+
+        <!-- Mensaje de Error en el Wizard (Pasos 1 a 4) -->
+        <div v-if="mensajeError" class="mx-6 sm:mx-8 mt-3 bg-rose-50 border border-rose-300 text-rose-800 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between gap-2 shadow-2xs animate-fade-in">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-rose-600 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span class="font-medium">{{ mensajeError }}</span>
+          </div>
+          <button @click="mensajeError = ''" class="text-rose-500 hover:text-rose-700 font-bold p-1 cursor-pointer">✕</button>
         </div>
 
         <!-- Contenido principal del Paso -->
