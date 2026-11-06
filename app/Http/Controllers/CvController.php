@@ -34,12 +34,19 @@ class CvController extends Controller
         }
 
         // Delegar decodificación y almacenamiento del PDF
-        $pdfInfo = $storageService->guardarPdf(
-            $usuarioId,
-            $request->pdf_base64,
-            $request->titulo_cv,
-            $usuario->nombres ?? 'Usuario'
-        );
+        try {
+            $pdfInfo = $storageService->guardarPdf(
+                $usuarioId,
+                $request->pdf_base64,
+                $request->titulo_cv,
+                $usuario->nombres ?? 'Usuario'
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'mensaje' => $e->getMessage(),
+                'errores' => ['pdf_base64' => [$e->getMessage()]],
+            ], 422);
+        }
 
         $tituloCv      = $pdfInfo['titulo_cv'];
         $nombreArchivo = $pdfInfo['nombre_archivo'];

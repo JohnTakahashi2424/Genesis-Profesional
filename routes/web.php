@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Support\SafeFileResolver;
 
 // Rutas de diagnóstico exclusivas para entorno local
 if (app()->isLocal()) {
@@ -62,34 +63,15 @@ Route::get('/', function () {
     ], 200, [], JSON_UNESCAPED_UNICODE);
 });
 
-// Ruta para servir assets compilados
+// Ruta para servir assets compilados con proteccion contra Path Traversal
 Route::get('/assets/{file}', function ($file) {
-    $path = public_path("assets/{$file}");
-    if (!file_exists($path)) {
-        $path = base_path("dist/assets/{$file}");
-    }
-    if (file_exists($path)) {
-        $extension = pathinfo($file, PATHINFO_EXTENSION);
-        $contentType = match ($extension) {
-            'js' => 'application/javascript',
-            'css' => 'text/css',
-            'svg' => 'image/svg+xml',
-            'png' => 'image/png',
-            default => 'application/octet-stream',
-        };
-        return response()->file($path, ['Content-Type' => $contentType]);
-    }
-    abort(404);
-})->where('file', '.*');
+    return SafeFileResolver::serveAsset($file);
+})->where('file', '[A-Za-z0-9._\-]+');
 
-// Ruta de respaldo (Fallback) para servir archivos de almacenamiento público en entornos con problemas de enlaces simbólicos (ej. OneDrive)
+// Ruta de respaldo (Fallback) para servir archivos de almacenamiento publico con aislamiento estricto
 Route::get('/storage/{path}', function ($path) {
-    $filePath = storage_path("app/public/{$path}");
-    if (file_exists($filePath)) {
-        return response()->file($filePath);
-    }
-    abort(404);
-})->where('path', '.*');
+    return SafeFileResolver::serveStorage($path);
+})->where('path', '[A-Za-z0-9._\-/]+');
 
 // Rutas SPA para landing, modales y paneles del sistema (pasante, estudiante, etc.)
 $spaHandler = function () {

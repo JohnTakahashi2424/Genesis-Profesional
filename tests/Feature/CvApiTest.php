@@ -3,9 +3,16 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use App\Models\User;
+use App\Services\JwtService;
 
 class CvApiTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->artisan('migrate');
+    }
     /**
      * Prueba que el guardado de CV exige autenticación JWT
      */
@@ -17,6 +24,36 @@ class CvApiTest extends TestCase
         ]);
 
         $response->assertStatus(401);
+    }
+
+    /**
+     * Prueba que el guardado de CV con payload inválido devuelve 422 y no 500
+     */
+    public function test_guardar_cv_con_archivo_invalido_devuelve_422(): void
+    {
+        $user = User::create([
+            'nombres' => 'Test',
+            'apellidos' => 'User',
+            'correo_institucional' => 'testcv@ugb.edu.sv',
+            'password' => bcrypt('password123'),
+            'rol' => 'estudiante',
+            'estado' => 'activo'
+        ]);
+
+        $token = JwtService::generarToken($user);
+
+        $response = $this->withHeaders(['Authorization' => "Bearer {$token}"])
+            ->postJson('/api/cv/guardar', [
+                'usuario_id' => $user->id,
+                'pdf_base64' => 'data:application/pdf;base64,' . base64_encode('TEXTO_PLANO_NO_PDF'),
+                'titulo_cv' => 'CV_Invalido'
+            ]);
+
+        $response->assertStatus(422)
+                 ->assertJsonStructure([
+                     'mensaje',
+                     'errores' => ['pdf_base64']
+                 ]);
     }
 
     /**

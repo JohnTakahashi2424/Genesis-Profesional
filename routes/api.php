@@ -10,6 +10,7 @@ use App\Http\Controllers\HistorialProgresoController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InformeFinalController;
 use App\Http\Controllers\PortafolioController;
+use App\Support\SafeFileResolver;
 
 /*
 |--------------------------------------------------------------------------
@@ -113,28 +114,7 @@ Route::middleware('jwt.auth')->group(function () {
     });
 });
 
-// Serving storage files cleanly via API to avoid Windows symlink 403 errors
+// Serving storage files cleanly via API with strict path traversal, extension and directory isolation
 Route::get('/storage/{path}', function ($path) {
-    $filePath = storage_path("app/public/{$path}");
-    if (!file_exists($filePath)) {
-        $filePath = public_path("storage/{$path}");
-    }
-    if (file_exists($filePath) && !is_dir($filePath)) {
-        $ext = pathinfo($filePath, PATHINFO_EXTENSION);
-        $mime = match (strtolower($ext)) {
-            'pdf'  => 'application/pdf',
-            'webp' => 'image/webp',
-            'png'  => 'image/png',
-            'jpg', 'jpeg' => 'image/jpeg',
-            'gif'  => 'image/gif',
-            'svg'  => 'image/svg+xml',
-            default => 'application/octet-stream',
-        };
-        return response()->file($filePath, [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
-    }
-    return response()->json(['mensaje' => 'Archivo no encontrado'], 404);
-})->where('path', '.*');
+    return SafeFileResolver::serveStorage($path);
+})->where('path', '[A-Za-z0-9._\-/]+');

@@ -51,7 +51,7 @@
                                     "contrasena": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "Password123#"
+                                        "example": "********"
                                     }
                                 },
                                 "type": "object"
@@ -137,12 +137,12 @@
                                     "password": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "ClaveSegura2026#"
+                                        "example": "********"
                                     },
                                     "password_confirmation": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "ClaveSegura2026#"
+                                        "example": "********"
                                     }
                                 },
                                 "type": "object"
@@ -276,12 +276,12 @@
                                     "contrasena": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "NuevaPassword2026#"
+                                        "example": "********"
                                     },
                                     "contrasena_confirmation": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "NuevaPassword2026#"
+                                        "example": "********"
                                     }
                                 },
                                 "type": "object"
