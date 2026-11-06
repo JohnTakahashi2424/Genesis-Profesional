@@ -603,30 +603,8 @@ const guardarCvFinal = async () => {
     const u = authStorage.getUser()
     const usuarioId = usuario.value.id || usuario.value.user_id || u.id || 1
 
-    // Subida opcional ultra-rápida (con límite para no congelar la UI)
-    const subirFotoPromise = (async () => {
-      if (formCv.value.perfil.fotoUrl && formCv.value.perfil.fotoUrl.startsWith('data:')) {
-        try {
-          const timeout = new Promise(resolve => setTimeout(resolve, 800))
-          const rutaFirebase = `cv_fotos/${usuarioId}/foto_${Date.now()}.jpg`
-          const urlCloud = await Promise.race([
-            subirImagenBase64(formCv.value.perfil.fotoUrl, rutaFirebase),
-            timeout
-          ])
-          if (urlCloud && typeof urlCloud === 'string' && !urlCloud.startsWith('data:')) {
-            formCv.value.perfil.fotoUrl = urlCloud
-          }
-        } catch (fbErr) {
-          logger.warn('Subida cloud omitida por timeout:', fbErr)
-        }
-      }
-    })()
-
-    const [doc] = await Promise.all([
-      generarPdfDoc(),
-      subirFotoPromise
-    ])
-
+    // Opción 1: Generar el PDF y mantener la foto en Base64 para persistencia directa en PostgreSQL
+    const doc = await generarPdfDoc()
     const pdfBase64 = doc.output('datauristring')
 
     const payload = {

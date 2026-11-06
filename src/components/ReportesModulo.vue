@@ -696,9 +696,39 @@ const handleFileUpload = (event) => {
 
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (reporteForm.value.evidencias.length < 6) {
-        reporteForm.value.evidencias.push(e.target.result)
+      const img = new Image()
+      img.onload = () => {
+        // Optimizar y comprimir a max 800px para persistencia ultra-ligera en PostgreSQL (~40-60KB por foto)
+        const maxDim = 800
+        let w = img.width
+        let h = img.height
+        if (w > h) {
+          if (w > maxDim) {
+            h = Math.round((h * maxDim) / w)
+            w = maxDim
+          }
+        } else {
+          if (h > maxDim) {
+            w = Math.round((w * maxDim) / h)
+            h = maxDim
+          }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, w, h)
+        const base64Optimizado = canvas.toDataURL('image/jpeg', 0.82)
+        if (reporteForm.value.evidencias.length < 6) {
+          reporteForm.value.evidencias.push(base64Optimizado)
+        }
       }
+      img.onerror = () => {
+        if (reporteForm.value.evidencias.length < 6) {
+          reporteForm.value.evidencias.push(e.target.result)
+        }
+      }
+      img.src = e.target.result
     }
     reader.readAsDataURL(file)
   }
@@ -755,25 +785,8 @@ const enviarReporte = async () => {
     if (token) headers['Authorization'] = `Bearer ${token}`
     if (userId) headers['X-User-Id'] = userId
 
-    // Subir evidencias a Firebase Storage para almacenamiento permanente en la nube
-    let evidenciasCloud = []
-    if (Array.isArray(reporteForm.value.evidencias) && reporteForm.value.evidencias.length > 0) {
-      evidenciasCloud = await Promise.all(
-        reporteForm.value.evidencias.map(async (ev, idx) => {
-          if (ev && typeof ev === 'string' && ev.startsWith('data:')) {
-            try {
-              const ext = ev.includes('image/png') ? 'png' : 'jpeg'
-              const ruta = `reportes/evidencias/${userId || 1}/evidencia_${Date.now()}_${idx}.${ext}`
-              return await subirImagenBase64(ev, ruta)
-            } catch (err) {
-              logger.warn('Error al subir evidencia a Firebase:', err)
-              return ev
-            }
-          }
-          return ev
-        })
-      )
-    }
+    // Opción 1: Persistencia directa en Base de Datos PostgreSQL (Base64)
+    const evidenciasCloud = Array.isArray(reporteForm.value.evidencias) ? [...reporteForm.value.evidencias] : []
 
     const payload = {
       user_id: userId,
