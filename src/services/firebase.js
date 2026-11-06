@@ -1,81 +1,50 @@
 import { logger } from '../utils/logger'
+
 /**
- * Subida Cloud Gratuita Permanente (sin tarjeta de crédito ni restricciones CORS).
- * Soporta almacenamiento directo y público para fotos de perfil y evidencias de reportes.
+ * Almacenamiento y Persistencia de Medios (Opción 1: Base64 en Base de Datos PostgreSQL).
+ * Elimina la dependencia de servicios de terceros como Imgur para evitar cuotas horarias (HTTP 429)
+ * y garantiza que las fotos y evidencias persistan permanentemente ante reinicios de Render (disco efímero).
  */
 
-const IMGUR_CLIENT_ID = '1ced6c8b16c5b08'
-
 /**
- * Subir una imagen en formato base64 / Data URL a Cloud Storage público.
+ * Subir una imagen en formato base64 / Data URL para almacenamiento persistente.
+ * Retorna la cadena DataURL directamente para almacenamiento en PostgreSQL.
  * @param {string} dataUrl - Cadena en formato data:image/...;base64,...
- * @param {string} destino - Nombre o referencia del archivo
- * @returns {Promise<string>} URL pública permanente de descarga
+ * @param {string} destino - Nombre o referencia del archivo (opcional)
+ * @returns {Promise<string>} Data URL persistente en Base de Datos
  */
 export async function subirImagenBase64(dataUrl, destino = '') {
-  if (!dataUrl || !dataUrl.startsWith('data:')) {
-    return dataUrl
-  }
-
-  try {
-    const base64Clean = dataUrl.replace(/^data:image\/\w+;base64,/, '')
-    const formData = new FormData()
-    formData.append('image', base64Clean)
-
-    const response = await fetch('https://api.imgur.com/3/image', {
-      method: 'POST',
-      headers: {
-        Authorization: `Client-ID ${IMGUR_CLIENT_ID}`
-      },
-      body: formData
-    })
-
-    const result = await response.json()
-    if (result && result.success && result.data && result.data.link) {
-      return result.data.link
-    }
-  } catch (error) {
-    logger.warn('Error en subida cloud, manteniendo dataUrl local:', error)
-  }
-
+  if (!dataUrl) return ''
+  // Si ya es un Data URL Base64 o una URL absoluta/relativa, retornarla directamente
   return dataUrl
 }
 
 /**
- * Subir un archivo (File o Blob) directamente a Cloud Storage público.
+ * Convertir un archivo (File o Blob) a Data URL Base64 para almacenamiento en Base de Datos.
  * @param {File|Blob} archivo - Archivo seleccionado del input
- * @param {string} destino - Nombre o referencia del archivo
- * @returns {Promise<string>} URL pública permanente de descarga
+ * @param {string} destino - Nombre o referencia del archivo (opcional)
+ * @returns {Promise<string>} Data URL en Base64
  */
 export async function subirArchivoFirebase(archivo, destino = '') {
   if (!archivo) return ''
 
-  try {
-    const formData = new FormData()
-    formData.append('image', archivo)
-
-    const response = await fetch('https://api.imgur.com/3/image', {
-      method: 'POST',
-      headers: {
-        Authorization: `Client-ID ${IMGUR_CLIENT_ID}`
-      },
-      body: formData
-    })
-
-    const result = await response.json()
-    if (result && result.success && result.data && result.data.link) {
-      return result.data.link
-    }
-  } catch (error) {
-    logger.warn('Error en subida de archivo a Cloud Storage:', error)
+  if (typeof archivo === 'string') {
+    return archivo
   }
 
-  // Fallback a DataURL para no perder la imagen seleccionada por el usuario
+  // Convertir a DataURL Base64 de forma local e instantánea (0ms de latencia de red, 0 errores 429)
   return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = () => resolve('')
-    reader.readAsDataURL(archivo)
+    try {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => {
+        logger.warn('Error al leer archivo local a Base64')
+        resolve('')
+      }
+      reader.readAsDataURL(archivo)
+    } catch (err) {
+      logger.warn('Excepción al convertir archivo a DataURL:', err)
+      resolve('')
+    }
   })
 }
-

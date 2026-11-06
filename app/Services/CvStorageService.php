@@ -69,7 +69,11 @@ class CvStorageService
     }
 
     /**
-     * Procesa y almacena la fotografía de perfil en disco.
+     * Procesa y almacena la fotografía de perfil.
+     * En Opción 1 (Persistencia en Base de Datos): guarda la copia de respaldo en disco
+     * y retorna la cadena Base64 directamente para almacenarla en la columna 'foto_url' (TEXT)
+     * de PostgreSQL, garantizando permanencia ante reinicios de Render (disco efímero)
+     * y eliminando cualquier dependencia o error 429 de servicios externos como Imgur.
      */
     public function procesarFoto(int $usuarioId, ?string $fotoInput, ?string $fotoActual = null): ?string
     {
@@ -84,6 +88,7 @@ class CvStorageService
             $ext = strtolower($matches[1]);
             if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                 $ext = 'png';
+                $fotoInput = preg_replace('#^data:image/\w+;base64,#i', 'data:image/png;base64,', $fotoInput);
             }
             $fotoDecoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $fotoInput));
             $nombreFoto = 'foto_' . time() . '.' . $ext;
@@ -92,7 +97,7 @@ class CvStorageService
 
             Storage::disk('public')->put($rutaFoto, $fotoDecoded);
 
-            // Fallback de sincronización física en public/storage únicamente en desarrollo local (ej. Windows/OneDrive)
+            // Sincronización física únicamente en entorno local (ej. Windows/OneDrive)
             if (app()->isLocal()) {
                 $safeNombre = \App\Support\SafeFileResolver::sanitizeFilename(basename($nombreFoto));
                 $safeFolder = (int)$usuarioId;
@@ -104,7 +109,8 @@ class CvStorageService
                 }
             }
 
-            return "/api/storage/{$rutaFoto}";
+            // Opción 1: Retornar Base64 para persistencia permanente en PostgreSQL
+            return $fotoInput;
         }
 
         return str_starts_with($fotoInput, '/storage/') ? ('/api' . $fotoInput) : $fotoInput;

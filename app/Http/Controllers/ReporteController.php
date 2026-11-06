@@ -389,7 +389,10 @@ class ReporteController extends Controller
     }
 
     /**
-     * Procesar imágenes de evidencias (soporta base64, multipart uploads o URLs).
+     * Procesar imágenes de evidencias.
+     * En el Escenario Recomendado (Persistencia en Base de Datos):
+     * Mantiene las cadenas Base64 directamente en la columna JSON de PostgreSQL
+     * para que nunca se pierdan ante reinicios de disco efímero en Render ni fallen con 404 o 429.
      */
     private function procesarEvidencias(Request $request, array $existentes = []): array
     {
@@ -399,12 +402,18 @@ class ReporteController extends Controller
             $urls = [];
             foreach ($request->evidencias as $index => $item) {
                 if (is_string($item) && preg_match('#^data:image/(\w+);base64,#i', $item, $matches)) {
-                    $ext = strtolower($matches[1]);
-                    $decoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $item));
-                    $filename = 'evidencia_' . time() . "_{$index}." . $ext;
-                    $path = "reportes/evidencias/{$filename}";
-                    Storage::disk('public')->put($path, $decoded);
-                    $urls[] = "/api/storage/{$path}";
+                    // Guardar copia de respaldo en disco público si está disponible
+                    try {
+                        $ext = strtolower($matches[1]);
+                        $decoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $item));
+                        $filename = 'evidencia_' . time() . "_{$index}." . $ext;
+                        $path = "reportes/evidencias/{$filename}";
+                        Storage::disk('public')->put($path, $decoded);
+                    } catch (\Throwable $e) {
+                        // Silencioso: la prioridad es la persistencia Base64 en PostgreSQL
+                    }
+                    // Retornar la cadena Base64 directamente para persistencia en BD
+                    $urls[] = $item;
                 } elseif (is_string($item)) {
                     $urls[] = $item;
                 }

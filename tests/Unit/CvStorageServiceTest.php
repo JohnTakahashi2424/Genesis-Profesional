@@ -35,7 +35,8 @@ class CvStorageServiceTest extends TestCase
         $resultado = $this->service->procesarFoto(999, $base64);
 
         $this->assertNotNull($resultado);
-        $this->assertStringStartsWith('/api/storage/cv_fotos/999/', $resultado);
+        // En Opción 1, retorna el dataUrl Base64 para persistencia en base de datos
+        $this->assertStringStartsWith('data:image/png;base64,', $resultado);
     }
 
     public function test_procesar_foto_fuerza_extension_segura_ante_tipo_no_permitido(): void
@@ -45,8 +46,8 @@ class CvStorageServiceTest extends TestCase
         $resultado = $this->service->procesarFoto(999, $maliciousBase64);
 
         $this->assertNotNull($resultado);
-        // Debe forzar extension png segura
-        $this->assertStringEndsWith('.png', $resultado);
+        // Debe forzar extension png segura en el Data URL
+        $this->assertStringStartsWith('data:image/png;base64,', $resultado);
     }
 
     public function test_procesar_foto_omite_escritura_en_public_storage_fuera_de_entorno_local(): void
@@ -62,8 +63,7 @@ class CvStorageServiceTest extends TestCase
         $resultado = $this->service->procesarFoto($userId, $base64);
 
         $this->assertNotNull($resultado);
-        // Debe existir en el disco storage/app/public
-        $this->assertTrue(\Illuminate\Support\Facades\Storage::disk('public')->exists(str_replace('/api/storage/', '', $resultado)));
+        $this->assertStringStartsWith('data:image/png;base64,', $resultado);
         // NO debe haberse escrito en public_path('storage') en entorno no-local
         $this->assertFalse(\Illuminate\Support\Facades\File::exists($publicDir));
     }
