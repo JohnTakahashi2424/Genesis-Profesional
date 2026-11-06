@@ -8,3 +8,11 @@ storage/*.key
 .phpunit.result.cache
 *.sql
 *.log
+public/storage/*
+!public/storage/**/.gitkeep
+storage/app/public/*
+!storage/app/public/**/.gitkeep
+storage/logs/*
+!storage/logs/**/.gitkeep
+storage/framework/testing/*
+!storage/framework/testing/**/.gitkeep
