@@ -10,12 +10,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Limpiar cualquier registro previo con variantes mayúsculas o minúsculas
+        // 1. Sincronizar la secuencia de PostgreSQL ANTES del insert para evitar errores de llave primaria duplicada
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("SELECT setval(pg_get_serial_sequence('estudiantes', 'id'), COALESCE((SELECT MAX(id) FROM estudiantes), 1))");
+        }
+
+        // 2. Limpiar cualquier registro previo con variantes mayúsculas o minúsculas
         DB::table('estudiantes')
             ->whereIn('codigo_estudiante', ['USIS034921', 'usis034921'])
             ->orWhereIn('correo_secundario', ['USIS034921@ugb.edu.sv', 'usis034921@ugb.edu.sv'])
             ->delete();
 
+        // 3. Insertar el estudiante con datos completos
         DB::table('estudiantes')->insert([
             'codigo_estudiante'       => 'usis034921',
             'nombres'                 => 'Rigoberto Alexander',
@@ -38,9 +44,9 @@ return new class extends Migration
             'updated_at'              => now(),
         ]);
 
-        // Resetear la secuencia de PostgreSQL para evitar conflictos de PK si el motor es pgsql
+        // 4. Volver a sincronizar la secuencia de PostgreSQL para futuras inserciones
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement("SELECT setval(pg_get_serial_sequence('estudiantes', 'id'), (SELECT MAX(id) FROM estudiantes))");
+            DB::statement("SELECT setval(pg_get_serial_sequence('estudiantes', 'id'), COALESCE((SELECT MAX(id) FROM estudiantes), 1))");
         }
     }
 
