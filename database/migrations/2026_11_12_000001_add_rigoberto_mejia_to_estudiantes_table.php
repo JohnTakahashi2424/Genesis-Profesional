@@ -38,8 +38,10 @@ return new class extends Migration
                 'updated_at'              => now(),
             ]);
 
-            // Resetear la secuencia de PostgreSQL para evitar conflictos de PK
-            DB::statement("SELECT setval(pg_get_serial_sequence('estudiantes', 'id'), (SELECT MAX(id) FROM estudiantes))");
+            // Resetear la secuencia de PostgreSQL para evitar conflictos de PK si el motor es pgsql
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement("SELECT setval(pg_get_serial_sequence('estudiantes', 'id'), (SELECT MAX(id) FROM estudiantes))");
+            }
         }
     }
 
