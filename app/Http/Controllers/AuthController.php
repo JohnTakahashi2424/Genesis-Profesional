@@ -34,7 +34,7 @@ class AuthController extends Controller
         }
 
         // 2. Buscar el usuario en la tabla 'users'
-        $user = User::where('correo_institucional', $correo)->first();
+        $user = User::whereRaw('LOWER(correo_institucional) = ?', [$correo])->first();
 
         if (!$user) {
             return response()->json([
@@ -113,7 +113,7 @@ class AuthController extends Controller
         }
 
         // 3. Comprobar que no exista ya registrado en users
-        if (User::where('correo_institucional', $correo)->exists()) {
+        if (User::whereRaw('LOWER(correo_institucional) = ?', [$correo])->exists()) {
             return response()->json([
                 'status' => 'error',
                 'mensaje' => 'No es posible procesar el registro: este correo ya se encuentra registrado.'
@@ -121,8 +121,9 @@ class AuthController extends Controller
         }
 
         // 4. Verificación obligatoria contra el padrón en la BD (estudiantes o personal)
-        $estudiante = Estudiante::where('correo_secundario', $correo)
-            ->orWhere('correo_principal', $correo)
+        $estudiante = Estudiante::whereRaw('LOWER(correo_secundario) = ?', [$correo])
+            ->orWhereRaw('LOWER(correo_principal) = ?', [$correo])
+            ->orWhereRaw('LOWER(codigo_estudiante) = ?', [explode('@', $correo)[0]])
             ->first();
 
         $personal = null;
@@ -240,7 +241,7 @@ class AuthController extends Controller
         }
 
         // 2. Verificar si ya existe una cuenta de usuario con este correo
-        $existe = User::where('correo_institucional', $correo)->exists();
+        $existe = User::whereRaw('LOWER(correo_institucional) = ?', [$correo])->exists();
         if ($existe) {
             return response()->json([
                 'status' => 'error',
@@ -250,8 +251,9 @@ class AuthController extends Controller
         }
 
         // 3. Verificación OBLIGATORIA en la base de datos (padrón de estudiantes o personal)
-        $estudiante = Estudiante::where('correo_secundario', $correo)
-            ->orWhere('correo_principal', $correo)
+        $estudiante = Estudiante::whereRaw('LOWER(correo_secundario) = ?', [$correo])
+            ->orWhereRaw('LOWER(correo_principal) = ?', [$correo])
+            ->orWhereRaw('LOWER(codigo_estudiante) = ?', [explode('@', $correo)[0]])
             ->first();
 
         $personal = null;
