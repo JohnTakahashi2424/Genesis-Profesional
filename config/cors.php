@@ -27,6 +27,7 @@ return [
 
     'allowed_origins_patterns' => [
         '#^https://.*--genesis-profesional-ugb\.netlify\.app$#',
+        '#^https://.*\.vercel\.app$#',
     ],
 
     'allowed_headers' => ['*'],
