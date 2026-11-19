@@ -1,10 +1,11 @@
 #!/bin/sh
 set -e
 
-# Asegurar APP_KEY para evitar error 500
+# Validar que APP_KEY este configurada como variable de entorno en Render
 if [ -z "$APP_KEY" ]; then
-    echo "Configuring fallback APP_KEY..."
-    export APP_KEY="base64:75j3gP3U+O0sV/mXwT5Q6lR98qE4K2Z1+dC9aB3vF8w="
+    echo "ERROR FATAL: APP_KEY no esta configurada como variable de entorno." >&2
+    echo "Configurala en Render: Dashboard -> Genesis-Profesional -> Environment -> APP_KEY" >&2
+    exit 1
 fi
 
 # Asignar DATABASE_URL a DB_URL si está presente en Render
@@ -24,7 +25,9 @@ php artisan route:clear || true
 # Ejecutar migraciones automáticas si hay conexión configurada
 if [ -n "$DB_URL" ] || [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ]; then
     echo "Running database migrations..."
-    php artisan migrate --force || true
+    if ! php artisan migrate --force; then
+        echo "ADVERTENCIA: Las migraciones fallaron - revisar logs de Render." >&2
+    fi
 fi
 
 # Iniciar servidor Laravel en el puerto asignado por Render ($PORT)
