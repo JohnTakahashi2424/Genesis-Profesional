@@ -8,6 +8,11 @@ if [ -z "$APP_KEY" ]; then
     exit 1
 fi
 
+# Validar JWT_SECRET si se usa autenticacion JWT
+if [ -z "$JWT_SECRET" ]; then
+    echo "ADVERTENCIA: JWT_SECRET no esta configurada. Si usas tokens JWT, configura esta variable en Render." >&2
+fi
+
 # Asignar DATABASE_URL a DB_URL si está presente en Render
 if [ -n "$DATABASE_URL" ] && [ -z "$DB_URL" ]; then
     export DB_URL="$DATABASE_URL"

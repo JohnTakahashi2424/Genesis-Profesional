@@ -118,3 +118,12 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('/storage/{path}', function ($path) {
     return SafeFileResolver::serveStorage($path);
 })->where('path', '[A-Za-z0-9._\-/]+');
+
+// Healthcheck endpoint para Render y monitoreo
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toISOString(),
+        'app' => config('app.name'),
+    ]);
+});

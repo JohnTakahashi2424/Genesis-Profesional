@@ -55,4 +55,8 @@ USER www-data
 
 EXPOSE 8080
 
+# Healthcheck: Render verifica que la app responde antes de marcarla Live
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/api/health || exit 1
+
 ENTRYPOINT ["docker-entrypoint.sh"]
